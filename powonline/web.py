@@ -1,7 +1,11 @@
 from flask import Flask
 from flask_restful import Resource, Api
 
-from powonline.core import make_dummy_team_dict, make_dummy_station_dict
+from powonline.core import (
+    make_dummy_team_dict,
+    make_dummy_station_dict,
+    make_dummy_route_dict,
+)
 
 
 class Team(Resource):
@@ -30,6 +34,19 @@ class Station(Resource):
         return output
 
 
+class Route(Resource):
+
+    def get(self):
+        output = {
+            'items': [
+                make_dummy_route_dict(name='route2'),
+                make_dummy_route_dict(name='route1'),
+                make_dummy_route_dict(name='route3'),
+            ]
+        }
+        return output
+
+
 def make_app():
     '''
     Application factory
@@ -38,4 +55,5 @@ def make_app():
     api = Api(app)
     api.add_resource(Team, '/team')
     api.add_resource(Station, '/station')
+    api.add_resource(Route, '/route')
     return app

@@ -53,6 +53,20 @@ def make_dummy_station_dict(**overlay):
     return output
 
 
+def make_dummy_route_dict(**overlay):
+    '''
+    Creates a new dict as it might be returned by the backend. This should only
+    contain JSON serialisable values!
+
+    Using the "overlay" kwargs, you can change default values.
+    '''
+    output = {
+        'name': 'Example Route',
+    }
+    output.update(**overlay)
+    return output
+
+
 class TestPublicAPIAsManager(unittest.TestCase):
 
     def setUp(self):
@@ -90,7 +104,18 @@ class TestPublicAPIAsManager(unittest.TestCase):
         self.assertCountEqual(items, expected)
 
     def test_fetch_list_of_routes(self):
-        self.skipTest('TODO')
+        response = self.app.get('/route')
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.content_type, 'application/json')
+        response_text = response.data.decode(response.charset)
+        data = json.loads(response_text)
+        items = data['items']
+        expected = [
+            make_dummy_route_dict(name='route1'),
+            make_dummy_route_dict(name='route2'),
+            make_dummy_route_dict(name='route3'),
+        ]
+        self.assertCountEqual(items, expected)
 
     def test_update_team(self):
         self.skipTest('TODO')
