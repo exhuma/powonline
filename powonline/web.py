@@ -2,10 +2,11 @@ from flask import Flask, request
 from flask_restful import Resource, Api
 
 from powonline.core import (
+    TEAM_ROUTE_MAP,
+    USER_STATION_MAP,
     make_dummy_route_dict,
     make_dummy_station_dict,
     make_dummy_team_dict,
-    USER_STATION_MAP,
 )
 
 
@@ -94,22 +95,43 @@ class Route(Resource):
         return '', 204
 
 
-class UserStationList(Resource):
+class StationUserList(Resource):
 
-    def post(self, username):
+    def post(self, station_name):
         new_assignment = request.get_json()
-        assigned_station = USER_STATION_MAP.get(username)
+        user_name = new_assignment['name']
+        assigned_station = USER_STATION_MAP.get(user_name)
         if assigned_station:
             return 'User is already assigned to a station', 400
-        USER_STATION_MAP[username] = new_assignment['name']
+        USER_STATION_MAP[user_name] = station_name
         return '', 204
 
 
-class UserStation(Resource):
+class StationUser(Resource):
 
-    def delete(self, username, station_name):
+    def delete(self, station_name, user_name):
         if station_name in USER_STATION_MAP:
             del(USER_STATION_MAP[station_name])
+        return '', 204
+
+
+class RouteTeamList(Resource):
+
+    def post(self, route_name):
+        new_assignment = request.get_json()
+        team_name = new_assignment['name']
+        assigned_route = TEAM_ROUTE_MAP.get(team_name)
+        if assigned_route:
+            return 'Team is already assigned to a route', 400
+        TEAM_ROUTE_MAP[team_name] = route_name
+        return '', 204
+
+
+class RouteTeam(Resource):
+
+    def delete(self, route_name, team_name):
+        if team_name in TEAM_ROUTE_MAP:
+            del(TEAM_ROUTE_MAP[team_name])
         return '', 204
 
 
@@ -125,6 +147,8 @@ def make_app():
     api.add_resource(Station, '/station/<name>')
     api.add_resource(RouteList, '/route')
     api.add_resource(Route, '/route/<name>')
-    api.add_resource(UserStationList, '/user/<username>/stations')
-    api.add_resource(UserStation, '/user/<username>/stations/<station_name>')
+    api.add_resource(StationUserList, '/station/<station_name>/users')
+    api.add_resource(StationUser, '/station/<station_name>/users/<user_name>')
+    api.add_resource(RouteTeamList, '/route/<route_name>/teams')
+    api.add_resource(RouteTeam, '/route/<route_name>/teams/<team_name>')
     return app

@@ -78,6 +78,7 @@ class TestPublicAPIAsManager(unittest.TestCase):
     def tearDown(self):
         from powonline import core
         core.USER_STATION_MAP.clear()
+        core.TEAM_ROUTE_MAP.clear()
 
     def test_fetch_list_of_teams(self):
         response = self.app.get('/team')
@@ -253,37 +254,48 @@ class TestPublicAPIAsManager(unittest.TestCase):
         self.assertEqual(response.status_code, 204, response.data)
 
     def test_assign_user_to_station(self):
-        simplestation = {'name': 'example-station'}
-        response = self.app.post('/user/johndoe/stations',
+        simpleuser = {'name': 'example-user'}
+        response = self.app.post('/station/example-station/users',
                                  headers={'Content-Type': 'application/json'},
-                                 data=json.dumps(simplestation))
+                                 data=json.dumps(simpleuser))
         self.assertEqual(response.status_code, 204, response.data)
 
     def test_assign_user_to_two_stations(self):
-        simplestation_1 = {'name': 'example-station-1'}
-        simplestation_2 = {'name': 'example-station-2'}
-        response = self.app.post('/user/johndoe/stations',
+        simpleuser = {'name': 'example-user'}
+        response = self.app.post('/station/example-station-1/users',
                                  headers={'Content-Type': 'application/json'},
-                                 data=json.dumps(simplestation_1))
+                                 data=json.dumps(simpleuser))
         self.assertEqual(response.status_code, 204, response.data)
-        response = self.app.post('/user/johndoe/stations',
+        response = self.app.post('/station/example-station-2/users',
                                  headers={'Content-Type': 'application/json'},
-                                 data=json.dumps(simplestation_2))
+                                 data=json.dumps(simpleuser))
         self.assertEqual(response.status_code, 400, response.data)
 
     def test_unassign_user_from_station(self):
-        response = self.app.delete('/user/johndoe/stations/somestation')
+        response = self.app.delete('/station/example-station/users/some-user')
         self.assertEqual(response.status_code, 204, response.data)
 
     def test_assign_team_to_route(self):
-        self.skipTest('TODO')
+        simpleteam = {'name': 'example-team'}
+        response = self.app.post('/route/example-route/teams',
+                                 headers={'Content-Type': 'application/json'},
+                                 data=json.dumps(simpleteam))
+        self.assertEqual(response.status_code, 204, response.data)
 
     def test_assign_team_to_two_routes(self):
-        # should fail
-        self.skipTest('TODO')
+        simpleteam = {'name': 'example-team'}
+        response = self.app.post('/route/example-route-1/teams',
+                                 headers={'Content-Type': 'application/json'},
+                                 data=json.dumps(simpleteam))
+        self.assertEqual(response.status_code, 204, response.data)
+        response = self.app.post('/route/example-route-2/teams',
+                                 headers={'Content-Type': 'application/json'},
+                                 data=json.dumps(simpleteam))
+        self.assertEqual(response.status_code, 400, response.data)
 
     def test_unassign_team_from_route(self):
-        self.skipTest('TODO')
+        response = self.app.delete('/route/example-route/teams/someteam')
+        self.assertEqual(response.status_code, 204, response.data)
 
     def test_assign_role_to_user(self):
         self.skipTest('TODO')
