@@ -35,6 +35,24 @@ def make_dummy_team_dict(**overlay):
     return output
 
 
+def make_dummy_station_dict(**overlay):
+    '''
+    Creates a new dict as it might be returned by the backend. This should only
+    contain JSON serialisable values!
+
+    Using the "overlay" kwargs, you can change default values.
+    '''
+    output = {
+        'name': 'Example Station',
+        'contact': 'Example Contact',
+        'phone': '12345',
+        'is_start': False,
+        'is_end': False,
+    }
+    output.update(**overlay)
+    return output
+
+
 class TestPublicAPIAsManager(unittest.TestCase):
 
     def setUp(self):
@@ -56,10 +74,20 @@ class TestPublicAPIAsManager(unittest.TestCase):
             make_dummy_team_dict(name='team3'),
         ]
         self.assertCountEqual(items, expected)
-        self.skipTest('TODO')
 
     def test_fetch_list_of_stations(self):
-        self.skipTest('TODO')
+        response = self.app.get('/station')
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.content_type, 'application/json')
+        response_text = response.data.decode(response.charset)
+        data = json.loads(response_text)
+        items = data['items']
+        expected = [
+            make_dummy_station_dict(name='station1'),
+            make_dummy_station_dict(name='station2'),
+            make_dummy_station_dict(name='station3'),
+        ]
+        self.assertCountEqual(items, expected)
 
     def test_fetch_list_of_routes(self):
         self.skipTest('TODO')

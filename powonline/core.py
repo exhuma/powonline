@@ -27,3 +27,21 @@ def make_dummy_team_dict(**overlay):
     }
     output.update(**overlay)
     return output
+
+
+def make_dummy_station_dict(**overlay):
+    '''
+    Creates a new dict as it might be returned by the backend. This should only
+    contain JSON serialisable values!
+
+    Using the "overlay" kwargs, you can change default values.
+    '''
+    output = {
+        'name': 'Example Station',
+        'contact': 'Example Contact',
+        'phone': '12345',
+        'is_start': False,
+        'is_end': False,
+    }
+    output.update(**overlay)
+    return output
