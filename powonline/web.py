@@ -32,6 +32,8 @@ class Team(Resource):
         output.update(request.get_json())
         return output
 
+    def delete(self, name):
+        return '', 204
 
 class StationList(Resource):
 
@@ -57,6 +59,8 @@ class Station(Resource):
         output.update(request.get_json())
         return output
 
+    def delete(self, name):
+        return '', 204
 
 class RouteList(Resource):
 
@@ -75,12 +79,16 @@ class RouteList(Resource):
         new_route = request.get_json()
         return new_route, 201
 
+
 class Route(Resource):
 
     def put(self, name):
         output = make_dummy_route_dict(name=name)
         output.update(request.get_json())
         return output
+
+    def delete(self, name):
+        return '', 204
 
 
 def make_app():

@@ -237,13 +237,16 @@ class TestPublicAPIAsManager(unittest.TestCase):
         self.assertEqual(data, expected)
 
     def test_delete_team(self):
-        self.skipTest('TODO')
+        response = self.app.delete('/team/example-team')
+        self.assertEqual(response.status_code, 204, response.data)
 
     def test_delete_station(self):
-        self.skipTest('TODO')
+        response = self.app.delete('/station/example-station')
+        self.assertEqual(response.status_code, 204, response.data)
 
     def test_delete_route(self):
-        self.skipTest('TODO')
+        response = self.app.delete('/route/example-route')
+        self.assertEqual(response.status_code, 204, response.data)
 
     def assign_user_to_station(self):
         self.skipTest('TODO')
