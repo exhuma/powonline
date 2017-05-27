@@ -75,6 +75,10 @@ class TestPublicAPIAsManager(unittest.TestCase):
         self.app = self.app_object.test_client()
         self.maxDiff = None
 
+    def tearDown(self):
+        from powonline import core
+        core.USER_STATION_MAP.clear()
+
     def test_fetch_list_of_teams(self):
         response = self.app.get('/team')
         self.assertEqual(response.status_code, 200, response.data)
@@ -249,14 +253,27 @@ class TestPublicAPIAsManager(unittest.TestCase):
         self.assertEqual(response.status_code, 204, response.data)
 
     def test_assign_user_to_station(self):
-        self.skipTest('TODO')
+        simplestation = {'name': 'example-station'}
+        response = self.app.post('/user/johndoe/stations',
+                                 headers={'Content-Type': 'application/json'},
+                                 data=json.dumps(simplestation))
+        self.assertEqual(response.status_code, 204, response.data)
 
     def test_assign_user_to_two_stations(self):
-        # should fail: integrity error
-        self.skipTest('TODO')
+        simplestation_1 = {'name': 'example-station-1'}
+        simplestation_2 = {'name': 'example-station-2'}
+        response = self.app.post('/user/johndoe/stations',
+                                 headers={'Content-Type': 'application/json'},
+                                 data=json.dumps(simplestation_1))
+        self.assertEqual(response.status_code, 204, response.data)
+        response = self.app.post('/user/johndoe/stations',
+                                 headers={'Content-Type': 'application/json'},
+                                 data=json.dumps(simplestation_2))
+        self.assertEqual(response.status_code, 400, response.data)
 
     def test_unassign_user_from_station(self):
-        self.skipTest('TODO')
+        response = self.app.delete('/user/johndoe/stations/somestation')
+        self.assertEqual(response.status_code, 204, response.data)
 
     def test_assign_team_to_route(self):
         self.skipTest('TODO')

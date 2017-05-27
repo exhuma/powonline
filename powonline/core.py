@@ -59,3 +59,6 @@ def make_dummy_route_dict(**overlay):
     }
     output.update(**overlay)
     return output
+
+
+USER_STATION_MAP = {}
