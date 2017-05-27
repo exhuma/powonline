@@ -331,8 +331,36 @@ class TestPublicAPIAsManager(unittest.TestCase):
         response = self.app.delete('/route/example-route/stations/somestation')
         self.assertEqual(response.status_code, 204, response.data)
 
+    def test_show_team_station_state(self):
+        response = self.app.get('/team/example-team/stations/somestation')
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.content_type, 'application/json')
+        response_text = response.data.decode(response.charset)
+        data = json.loads(response_text)
+        self.assertEqual(data['state'], 'unknown')
+
+    def test_show_team_station_state_inverse(self):
+        '''
+        Team and Station should be interchangeable in the URL
+        '''
+        response = self.app.get('/station/example-station/teams/someteam')
+        self.assertEqual(response.status_code, 200, response.data)
+
     def test_advance_team_state(self):
-        self.skipTest('TODO')
+        simplejob = {
+            'action': 'advance',
+            'args': {
+                'station_name': 'somestation',
+                'team_name': 'someteam',
+            }
+        }
+        response = self.app.post('/job',
+                                 headers={'Content-Type': 'application/json'},
+                                 data=json.dumps(simplejob))
+        response_text = response.data.decode(response.charset)
+        data = json.loads(response_text)
+        result = data['result']
+        self.assertEqual(result, {'state': 'arrived'})
 
 
 class TestPublicAPIAsStationManager(unittest.TestCase):

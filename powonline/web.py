@@ -4,8 +4,10 @@ from flask_restful import Resource, Api
 from powonline.core import (
     ROUTE_STATION_MAP,
     TEAM_ROUTE_MAP,
+    TEAM_STATION_MAP,
     USER_ROLES,
     USER_STATION_MAP,
+    advance,
     make_dummy_route_dict,
     make_dummy_station_dict,
     make_dummy_team_dict,
@@ -175,6 +177,39 @@ class RouteStation(Resource):
         return '', 204
 
 
+class TeamStation(Resource):
+
+    def get(self, team_name, station_name):
+        state = TEAM_STATION_MAP.get(team_name, {}).get(station_name, {})
+        if 'state' not in state:
+            state['state'] = 'unknown'
+        return state, 200
+
+
+class Job(Resource):
+
+    def post(self):
+        allowed_actions = ['advance']
+        data = request.get_json()
+        args = data['args']
+        action = data['action']
+        station_name = args['station_name']
+        team_name = args['team_name']
+        if action not in allowed_actions:
+            return '%r is an unknown job' % action
+
+        if action == 'advance':
+            new_state = advance(team_name, station_name)
+            output = {
+                'result': {
+                    'state': new_state
+                }
+            }
+            return output, 200
+        else:
+            return 'Unknown error', 500
+
+
 def make_app():
     '''
     Application factory
@@ -196,4 +231,9 @@ def make_app():
     api.add_resource(RouteStationList, '/route/<route_name>/stations')
     api.add_resource(RouteStation,
                      '/route/<route_name>/stations/<station_name>')
+    api.add_resource(TeamStation,
+                     '/team/<team_name>/stations/<station_name>',
+                     '/station/<station_name>/teams/<team_name>',
+                     )
+    api.add_resource(Job, '/job')
     return app

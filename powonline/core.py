@@ -61,7 +61,12 @@ def make_dummy_route_dict(**overlay):
     return output
 
 
+def advance(team_name, station_name):
+    return 'arrived'
+
+
 USER_STATION_MAP = {}
 TEAM_ROUTE_MAP = {}
 USER_ROLES = {}
 ROUTE_STATION_MAP = {}
+TEAM_STATION_MAP = {}
