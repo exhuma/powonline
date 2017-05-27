@@ -25,7 +25,7 @@ class Team(Resource):
 
     def put(self, name):
         output = make_dummy_team_dict(name=name)
-        output.update(request.json)
+        output.update(request.get_json())
         return output
 
 
@@ -46,7 +46,7 @@ class Station(Resource):
 
     def put(self, name):
         output = make_dummy_station_dict(name=name)
-        output.update(request.json)
+        output.update(request.get_json())
         return output
 
 
@@ -67,7 +67,7 @@ class Route(Resource):
 
     def put(self, name):
         output = make_dummy_route_dict(name=name)
-        output.update(request.json)
+        output.update(request.get_json())
         return output
 
 
