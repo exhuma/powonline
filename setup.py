@@ -7,6 +7,7 @@ setup(
     install_requires=[
         'config-resolver >= 4.2, <5.0',
         'flask',
+        'flask-restful',
         'flask-sqlalchemy',
         'gouge >= 1.1, <2.0',
         'psycopg2',

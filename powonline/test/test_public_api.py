@@ -1,9 +1,61 @@
+import json
 import unittest
+
+from powonline.web import make_app
+
+
+def make_dummy_team_dict(**overlay):
+    '''
+    Creates a new dict as it might be returned by the backend. This should only
+    contain JSON serialisable values!
+
+    Using the "overlay" kwargs, you can change default values.
+    '''
+    output = {
+        'name': 'Example Team',
+        'email': 'example@example.com',
+        'order': None,
+        'cancelled': False,
+        'contact': 'John Doe',
+        'phone': '1234',
+        'comments': '',
+        'is_confirmed': True,
+        'confirmation_key': 'abc',
+        'accepted': True,
+        'completed': False,
+        'inserted': '2017-01-01',
+        'updated': '2017-01-02',
+        'num_vegetarians': 3,
+        'num_participants': 10,
+        'planned_start_time': '2017-02-01 12:00',
+        'effective_start_time': '2017-02-01 12:10',
+        'finish_time': '2017-02-01 14:00',
+    }
+    output.update(**overlay)
+    return output
 
 
 class TestPublicAPIAsManager(unittest.TestCase):
 
+    def setUp(self):
+        self.app_object = make_app()
+        self.app_object.config['TESTING'] = True
+        self.app = self.app_object.test_client()
+        self.maxDiff = None
+
     def test_fetch_list_of_teams(self):
+        response = self.app.get('/team')
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.content_type, 'application/json')
+        response_text = response.data.decode(response.charset)
+        data = json.loads(response_text)
+        items = data['items']
+        expected = [
+            make_dummy_team_dict(name='team1'),
+            make_dummy_team_dict(name='team2'),
+            make_dummy_team_dict(name='team3'),
+        ]
+        self.assertCountEqual(items, expected)
         self.skipTest('TODO')
 
     def test_fetch_list_of_stations(self):
