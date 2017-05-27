@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
-VERSION = open('pow/version.txt').read()
+VERSION = open('powonline/version.txt').read()
 setup(
-    name="pow",
+    name="powonline",
     version=VERSION.strip(),
     packages=find_packages(),
     install_requires=[
@@ -27,5 +27,5 @@ setup(
     author_email="michel@albert.lu",
     description="Tracker for PowWow 2017",
     license="BSD",
-    url="http://exhuma.github.com/pow",
+    url="http://exhuma.github.com/powonline",
 )
