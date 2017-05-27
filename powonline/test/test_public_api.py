@@ -298,10 +298,15 @@ class TestPublicAPIAsManager(unittest.TestCase):
         self.assertEqual(response.status_code, 204, response.data)
 
     def test_assign_role_to_user(self):
-        self.skipTest('TODO')
+        simplerole = {'name': 'example-role'}
+        response = self.app.post('/user/example-user/roles',
+                                 headers={'Content-Type': 'application/json'},
+                                 data=json.dumps(simplerole))
+        self.assertEqual(response.status_code, 204, response.data)
 
     def test_unassign_role_from_user(self):
-        self.skipTest('TODO')
+        response = self.app.delete('/user/example-user/roles/somerole')
+        self.assertEqual(response.status_code, 204, response.data)
 
     def test_assign_station_to_route(self):
         self.skipTest('TODO')

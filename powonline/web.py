@@ -3,6 +3,7 @@ from flask_restful import Resource, Api
 
 from powonline.core import (
     TEAM_ROUTE_MAP,
+    USER_ROLES,
     USER_STATION_MAP,
     make_dummy_route_dict,
     make_dummy_station_dict,
@@ -135,6 +136,25 @@ class RouteTeam(Resource):
         return '', 204
 
 
+class UserRoleList(Resource):
+
+    def post(self, user_name):
+        new_assignment = request.get_json()
+        role_name = new_assignment['name']
+        assigned_roles = USER_ROLES.get(user_name, set())
+        assigned_roles.add(role_name)
+        return '', 204
+
+
+class UserRole(Resource):
+
+    def delete(self, user_name, role_name):
+        roles = USER_ROLES.get(user_name, set())
+        if role_name in roles:
+            roles.remove(role_name)
+        return '', 204
+
+
 def make_app():
     '''
     Application factory
@@ -151,4 +171,6 @@ def make_app():
     api.add_resource(StationUser, '/station/<station_name>/users/<user_name>')
     api.add_resource(RouteTeamList, '/route/<route_name>/teams')
     api.add_resource(RouteTeam, '/route/<route_name>/teams/<team_name>')
+    api.add_resource(UserRoleList, '/user/<user_name>/roles')
+    api.add_resource(UserRole, '/user/<user_name>/roles/<role_name>')
     return app
