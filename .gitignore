@@ -1,7 +1,9 @@
 *.pyc
 /*.egg-info
 /.cache
+/.coverage*
 /PKG-INFO
 /build
 /dist
 /env
+/htmlcov

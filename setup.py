@@ -19,8 +19,9 @@ setup(
         ],
         'test': [
             'pytest',
-            'pytest-cache',
             'pytest-catchlog',
+            'pytest-coverage',
+            'pytest-xdist',
         ]
     },
     include_package_data=True,
