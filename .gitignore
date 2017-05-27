@@ -1,6 +1,7 @@
 *.pyc
+/*.egg-info
+/.cache
 /PKG-INFO
 /build
 /dist
 /env
-/*.egg-info
