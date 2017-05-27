@@ -5,6 +5,7 @@ from powonline.core import (
     ROUTE_STATION_MAP,
     TEAM_ROUTE_MAP,
     TEAM_STATION_MAP,
+    TeamState,
     USER_ROLES,
     USER_STATION_MAP,
     advance,
@@ -182,7 +183,7 @@ class TeamStation(Resource):
     def get(self, team_name, station_name):
         state = TEAM_STATION_MAP.get(team_name, {}).get(station_name, {})
         if 'state' not in state:
-            state['state'] = 'unknown'
+            state['state'] = TeamState.UNKNOWN.value
         return state, 200
 
 
@@ -202,7 +203,7 @@ class Job(Resource):
             new_state = advance(team_name, station_name)
             output = {
                 'result': {
-                    'state': new_state
+                    'state': new_state.value
                 }
             }
             return output, 200

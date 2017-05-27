@@ -1,3 +1,11 @@
+from enum import Enum
+
+class TeamState(Enum):
+    UNKNOWN = 'unknown'
+    ARRIVED = 'arrived'
+    FINISHED = 'finished'
+
+
 def make_dummy_team_dict(**overlay):
     '''
     Creates a new dict as it might be returned by the backend. This should only
@@ -62,7 +70,7 @@ def make_dummy_route_dict(**overlay):
 
 
 def advance(team_name, station_name):
-    return 'arrived'
+    return TeamState.ARRIVED
 
 
 USER_STATION_MAP = {}
