@@ -248,43 +248,43 @@ class TestPublicAPIAsManager(unittest.TestCase):
         response = self.app.delete('/route/example-route')
         self.assertEqual(response.status_code, 204, response.data)
 
-    def assign_user_to_station(self):
+    def test_assign_user_to_station(self):
         self.skipTest('TODO')
 
-    def assign_user_to_two_stations(self):
+    def test_assign_user_to_two_stations(self):
         # should fail: integrity error
         self.skipTest('TODO')
 
-    def unassign_user_from_station(self):
+    def test_unassign_user_from_station(self):
         self.skipTest('TODO')
 
-    def assign_team_to_route(self):
+    def test_assign_team_to_route(self):
         self.skipTest('TODO')
 
-    def assign_team_to_two_routes(self):
+    def test_assign_team_to_two_routes(self):
         # should fail
         self.skipTest('TODO')
 
-    def unassign_team_from_route(self):
+    def test_unassign_team_from_route(self):
         self.skipTest('TODO')
 
-    def assign_role_to_user(self):
+    def test_assign_role_to_user(self):
         self.skipTest('TODO')
 
-    def unassign_role_from_user(self):
+    def test_unassign_role_from_user(self):
         self.skipTest('TODO')
 
-    def assign_station_to_route(self):
+    def test_assign_station_to_route(self):
         self.skipTest('TODO')
 
-    def assign_station_to_two_routes(self):
+    def test_assign_station_to_two_routes(self):
         # should *pass*. A station can be on multiple routes!
         self.skipTest('TODO')
 
-    def unassign_station_from_route(self):
+    def test_unassign_station_from_route(self):
         self.skipTest('TODO')
 
-    def advance_team_state(self):
+    def test_advance_team_state(self):
         self.skipTest('TODO')
 
 
@@ -338,54 +338,54 @@ class TestPublicAPIAsStationManager(unittest.TestCase):
         # should fail: access denied
         self.skipTest('TODO')
 
-    def assign_user_to_station(self):
+    def test_assign_user_to_station(self):
         # should fail: access denied
         self.skipTest('TODO')
 
-    def assign_user_to_two_stations(self):
+    def test_assign_user_to_two_stations(self):
         # should fail: access denied
         self.skipTest('TODO')
 
-    def unassign_user_from_station(self):
+    def test_unassign_user_from_station(self):
         # should fail: access denied
         self.skipTest('TODO')
 
-    def assign_team_to_route(self):
+    def test_assign_team_to_route(self):
         # should fail: access denied
         self.skipTest('TODO')
 
-    def assign_team_to_two_routes(self):
+    def test_assign_team_to_two_routes(self):
         # should fail: access denied
         self.skipTest('TODO')
 
-    def unassign_team_from_route(self):
+    def test_unassign_team_from_route(self):
         # should fail: access denied
         self.skipTest('TODO')
 
-    def assign_role_to_user(self):
+    def test_assign_role_to_user(self):
         # should fail: access denied
         self.skipTest('TODO')
 
-    def unassign_role_from_user(self):
+    def test_unassign_role_from_user(self):
         # should fail: access denied
         self.skipTest('TODO')
 
-    def assign_station_to_route(self):
+    def test_assign_station_to_route(self):
         # should fail: access denied
         self.skipTest('TODO')
 
-    def assign_station_to_two_routes(self):
+    def test_assign_station_to_two_routes(self):
         # should fail: access denied
         self.skipTest('TODO')
 
-    def unassign_station_from_route(self):
+    def test_unassign_station_from_route(self):
         # should fail: access denied
         self.skipTest('TODO')
 
-    def advance_team_state(self):
+    def test_advance_team_state(self):
         self.skipTest('TODO')
 
-    def advance_team_state_on_other_stations(self):
+    def test_advance_team_state_on_other_stations(self):
         # should fail: access denied
         self.skipTest('TODO')
 
@@ -441,54 +441,54 @@ class TestPublicAPIAsAnonymous(unittest.TestCase):
         # should fail: access denied
         self.skipTest('TODO')
 
-    def assign_user_to_station(self):
+    def test_assign_user_to_station(self):
         # should fail: access denied
         self.skipTest('TODO')
 
-    def assign_user_to_two_stations(self):
+    def test_assign_user_to_two_stations(self):
         # should fail: access denied
         self.skipTest('TODO')
 
-    def unassign_user_from_station(self):
+    def test_unassign_user_from_station(self):
         # should fail: access denied
         self.skipTest('TODO')
 
-    def assign_team_to_route(self):
+    def test_assign_team_to_route(self):
         # should fail: access denied
         self.skipTest('TODO')
 
-    def assign_team_to_two_routes(self):
+    def test_assign_team_to_two_routes(self):
         # should fail: access denied
         self.skipTest('TODO')
 
-    def unassign_team_from_route(self):
+    def test_unassign_team_from_route(self):
         # should fail: access denied
         self.skipTest('TODO')
 
-    def assign_role_to_user(self):
+    def test_assign_role_to_user(self):
         # should fail: access denied
         self.skipTest('TODO')
 
-    def unassign_role_from_user(self):
+    def test_unassign_role_from_user(self):
         # should fail: access denied
         self.skipTest('TODO')
 
-    def assign_station_to_route(self):
+    def test_assign_station_to_route(self):
         # should fail: access denied
         self.skipTest('TODO')
 
-    def assign_station_to_two_routes(self):
+    def test_assign_station_to_two_routes(self):
         # should fail: access denied
         self.skipTest('TODO')
 
-    def unassign_station_from_route(self):
+    def test_unassign_station_from_route(self):
         # should fail: access denied
         self.skipTest('TODO')
 
-    def advance_team_state(self):
+    def test_advance_team_state(self):
         # should fail: access denied
         self.skipTest('TODO')
 
-    def advance_team_state_on_other_stations(self):
+    def test_advance_team_state_on_other_stations(self):
         # should fail: access denied
         self.skipTest('TODO')
