@@ -118,7 +118,21 @@ class TestPublicAPIAsManager(unittest.TestCase):
         self.assertCountEqual(items, expected)
 
     def test_update_team(self):
-        self.skipTest('TODO')
+        replacement_team = make_dummy_team_dict(
+            name='foo',
+            contact='new-contact')
+
+        response = self.app.put('/team/old-team',
+                                headers={'Content-Type': 'application/json'},
+                                data=json.dumps(replacement_team))
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.content_type, 'application/json')
+        response_text = response.data.decode(response.charset)
+        data = json.loads(response_text)
+        expected = make_dummy_team_dict(
+            name='foo',
+            contact='new-contact')
+        self.assertEqual(data, expected)
 
     def test_update_own_station(self):
         self.skipTest('TODO')

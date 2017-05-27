@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, request
 from flask_restful import Resource, Api
 
 from powonline.core import (
@@ -8,7 +8,7 @@ from powonline.core import (
 )
 
 
-class Team(Resource):
+class TeamList(Resource):
 
     def get(self):
         output = {
@@ -20,6 +20,13 @@ class Team(Resource):
         }
         return output
 
+
+class Team(Resource):
+
+    def put(self, name):
+        output = make_dummy_team_dict(name=name)
+        output.update(request.json)
+        return output
 
 class Station(Resource):
 
@@ -53,7 +60,8 @@ def make_app():
     '''
     app = Flask(__name__)
     api = Api(app)
-    api.add_resource(Team, '/team')
+    api.add_resource(TeamList, '/team')
+    api.add_resource(Team, '/team/<name>')
     api.add_resource(Station, '/station')
     api.add_resource(Route, '/route')
     return app
