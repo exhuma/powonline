@@ -20,6 +20,10 @@ class TeamList(Resource):
         }
         return output
 
+    def post(self):
+        new_team = request.get_json()
+        return new_team, 201
+
 
 class Team(Resource):
 
@@ -40,6 +44,10 @@ class StationList(Resource):
             ]
         }
         return output
+
+    def post(self):
+        new_station = request.get_json()
+        return new_station, 201
 
 
 class Station(Resource):
@@ -62,6 +70,10 @@ class RouteList(Resource):
         }
         return output
 
+
+    def post(self):
+        new_route = request.get_json()
+        return new_route, 201
 
 class Route(Resource):
 
