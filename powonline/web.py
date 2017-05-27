@@ -28,7 +28,8 @@ class Team(Resource):
         output.update(request.json)
         return output
 
-class Station(Resource):
+
+class StationList(Resource):
 
     def get(self):
         output = {
@@ -38,6 +39,14 @@ class Station(Resource):
                 make_dummy_station_dict(name='station3'),
             ]
         }
+        return output
+
+
+class Station(Resource):
+
+    def put(self, name):
+        output = make_dummy_station_dict(name=name)
+        output.update(request.json)
         return output
 
 
@@ -62,6 +71,7 @@ def make_app():
     api = Api(app)
     api.add_resource(TeamList, '/team')
     api.add_resource(Team, '/team/<name>')
-    api.add_resource(Station, '/station')
+    api.add_resource(StationList, '/station')
+    api.add_resource(Station, '/station/<name>')
     api.add_resource(Route, '/route')
     return app
