@@ -169,7 +169,22 @@ class TestPublicAPIAsManager(unittest.TestCase):
         self.assertEqual(data, expected)
 
     def test_update_route(self):
-        self.skipTest('TODO')
+        replacement_route = make_dummy_route_dict(
+            name='foo',
+            contact='new-contact')
+
+        response = self.app.put('/route/old-route',
+                                headers={'Content-Type': 'application/json'},
+                                data=json.dumps(replacement_route))
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.content_type, 'application/json')
+        response_text = response.data.decode(response.charset)
+        data = json.loads(response_text)
+        expected = make_dummy_route_dict(
+            name='foo',
+            contact='new-contact')
+        self.assertEqual(data, expected)
+
 
     def test_create_team(self):
         self.skipTest('TODO')
