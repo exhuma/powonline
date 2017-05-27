@@ -1,3 +1,10 @@
+.. >>> Shields >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+.. image:: https://travis-ci.org/exhuma/powonline.svg?branch=develop
+    :target: https://travis-ci.org/exhuma/powonline
+
+.. <<< Shields <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
 Pow
 ===
 
