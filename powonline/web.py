@@ -2,6 +2,7 @@ from flask import Flask, request
 from flask_restful import Resource, Api
 
 from powonline.core import (
+    ROUTE_STATION_MAP,
     TEAM_ROUTE_MAP,
     USER_ROLES,
     USER_STATION_MAP,
@@ -155,6 +156,25 @@ class UserRole(Resource):
         return '', 204
 
 
+class RouteStationList(Resource):
+
+    def post(self, route_name):
+        new_assignment = request.get_json()
+        station_name = new_assignment['name']
+        assigned_routes = ROUTE_STATION_MAP.get(station_name, set())
+        assigned_routes.add(route_name)
+        return '', 204
+
+
+class RouteStation(Resource):
+
+    def delete(self, route_name, station_name):
+        assigned_routes = ROUTE_STATION_MAP.get(station_name, set())
+        if route_name in assigned_routes:
+            assigned_routes.remove(route_name)
+        return '', 204
+
+
 def make_app():
     '''
     Application factory
@@ -173,4 +193,7 @@ def make_app():
     api.add_resource(RouteTeam, '/route/<route_name>/teams/<team_name>')
     api.add_resource(UserRoleList, '/user/<user_name>/roles')
     api.add_resource(UserRole, '/user/<user_name>/roles/<role_name>')
+    api.add_resource(RouteStationList, '/route/<route_name>/stations')
+    api.add_resource(RouteStation,
+                     '/route/<route_name>/stations/<station_name>')
     return app

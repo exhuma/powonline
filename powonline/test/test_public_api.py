@@ -309,14 +309,27 @@ class TestPublicAPIAsManager(unittest.TestCase):
         self.assertEqual(response.status_code, 204, response.data)
 
     def test_assign_station_to_route(self):
-        self.skipTest('TODO')
+        simplestation = {'name': 'example-station'}
+        response = self.app.post('/route/example-route/stations',
+                                 headers={'Content-Type': 'application/json'},
+                                 data=json.dumps(simplestation))
+        self.assertEqual(response.status_code, 204, response.data)
 
     def test_assign_station_to_two_routes(self):
         # should *pass*. A station can be on multiple routes!
-        self.skipTest('TODO')
+        simplestation = {'name': 'example-station'}
+        response = self.app.post('/route/example-route-1/stations',
+                                 headers={'Content-Type': 'application/json'},
+                                 data=json.dumps(simplestation))
+        self.assertEqual(response.status_code, 204, response.data)
+        response = self.app.post('/route/example-route-2/stations',
+                                 headers={'Content-Type': 'application/json'},
+                                 data=json.dumps(simplestation))
+        self.assertEqual(response.status_code, 204, response.data)
 
     def test_unassign_station_from_route(self):
-        self.skipTest('TODO')
+        response = self.app.delete('/route/example-route/stations/somestation')
+        self.assertEqual(response.status_code, 204, response.data)
 
     def test_advance_team_state(self):
         self.skipTest('TODO')

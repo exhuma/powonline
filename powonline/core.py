@@ -64,3 +64,4 @@ def make_dummy_route_dict(**overlay):
 USER_STATION_MAP = {}
 TEAM_ROUTE_MAP = {}
 USER_ROLES = {}
+ROUTE_STATION_MAP = {}
