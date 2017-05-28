@@ -1,210 +1,228 @@
 from flask import request
-from flask_restful import Resource
+from flask_restful import Resource, marshal_with, fields
 
-from .core import (
-    ROUTE_STATION_MAP,
-    TEAM_ROUTE_MAP,
-    TEAM_STATION_MAP,
-    TeamState,
-    USER_ROLES,
-    USER_STATION_MAP,
-    advance,
-    make_dummy_route_dict,
-    make_dummy_station_dict,
-    make_dummy_team_dict,
-)
+from . import core
+
+
+STATE_FIELDS = {
+    'state': fields.String(attribute=lambda x: x['state'].value)
+}
 
 
 class TeamList(Resource):
 
     def get(self):
+        teams = list(core.Team.all())
         output = {
-            'items': [
-                make_dummy_team_dict(name='team2'),
-                make_dummy_team_dict(name='team1'),
-                make_dummy_team_dict(name='team3'),
-            ]
+            'items': teams
         }
         return output
 
     def post(self):
-        new_team = request.get_json()
+        data = request.get_json()
+        # TODO: sanitize data
+        new_team = core.Team.create_new(data)
         return new_team, 201
 
 
 class Team(Resource):
 
     def put(self, name):
-        output = make_dummy_team_dict(name=name)
-        output.update(request.get_json())
+        data = request.get_json()
+        # TODO: sanitize data
+        output = core.Team.upsert(name, data)
         return output
 
     def delete(self, name):
+        # TODO: sanitize data
+        core.Team.delete(name)
         return '', 204
 
 
 class StationList(Resource):
 
     def get(self):
+        items = list(core.Station.all())
         output = {
-            'items': [
-                make_dummy_station_dict(name='station2'),
-                make_dummy_station_dict(name='station1'),
-                make_dummy_station_dict(name='station3'),
-            ]
+            'items': items
         }
         return output
 
     def post(self):
-        new_station = request.get_json()
+        data = request.get_json()
+        # TODO: sanitize data
+        new_station = core.Station.create_new(data)
         return new_station, 201
 
 
 class Station(Resource):
 
     def put(self, name):
-        output = make_dummy_station_dict(name=name)
-        output.update(request.get_json())
+        data = request.get_json()
+        # TODO: sanitize data
+        output = core.Station.upsert(name, data)
         return output
 
     def delete(self, name):
+        # TODO: sanitize data
+        core.Station.delete(name)
         return '', 204
 
 
 class RouteList(Resource):
 
     def get(self):
+        items = list(core.Route.all())
         output = {
-            'items': [
-                make_dummy_route_dict(name='route2'),
-                make_dummy_route_dict(name='route1'),
-                make_dummy_route_dict(name='route3'),
-            ]
+            'items': items
         }
         return output
 
     def post(self):
-        new_route = request.get_json()
+        data = request.get_json()
+        # TODO: sanitize data
+        new_route = core.Route.create_new(data)
         return new_route, 201
 
 
 class Route(Resource):
 
     def put(self, name):
-        output = make_dummy_route_dict(name=name)
-        output.update(request.get_json())
+        data = request.get_json()
+        # TODO: sanitize data
+        output = core.Route.upsert(name, data)
         return output
 
     def delete(self, name):
+        # TODO: sanitize data
+        core.Route.delete(name)
         return '', 204
 
 
 class StationUserList(Resource):
 
     def post(self, station_name):
+        '''
+        Assigns a user to a station
+        '''
         new_assignment = request.get_json()
         user_name = new_assignment['name']
-        assigned_station = USER_STATION_MAP.get(user_name)
-        if assigned_station:
+        success = core.Station.assign_user(station_name, user_name)
+        if success:
+            return '', 204
+        else:
             return 'User is already assigned to a station', 400
-        USER_STATION_MAP[user_name] = station_name
-        return '', 204
 
 
 class StationUser(Resource):
 
     def delete(self, station_name, user_name):
-        if station_name in USER_STATION_MAP:
-            del(USER_STATION_MAP[station_name])
-        return '', 204
+        success = core.Station.unassign_user(station_name, user_name)
+        if success:
+            return '', 204
+        else:
+            return 'Unexpected error!', 500
 
 
 class RouteTeamList(Resource):
 
     def post(self, route_name):
+        '''
+        Assign a team to a route
+        '''
         new_assignment = request.get_json()
         team_name = new_assignment['name']
-        assigned_route = TEAM_ROUTE_MAP.get(team_name)
-        if assigned_route:
+
+        success = core.Route.assign_team(route_name, team_name)
+        if success:
+            return '', 204
+        else:
             return 'Team is already assigned to a route', 400
-        TEAM_ROUTE_MAP[team_name] = route_name
-        return '', 204
 
 
 class RouteTeam(Resource):
 
     def delete(self, route_name, team_name):
-        if team_name in TEAM_ROUTE_MAP:
-            del(TEAM_ROUTE_MAP[team_name])
-        return '', 204
+        success = core.Route.unassign_team(route_name, team_name)
+        if success:
+            return '', 204
+        else:
+            return 'Unexpected error!', 500
 
 
 class UserRoleList(Resource):
 
     def post(self, user_name):
+        '''
+        Assign a role to a user
+        '''
         new_assignment = request.get_json()
         role_name = new_assignment['name']
-        assigned_roles = USER_ROLES.get(user_name, set())
-        assigned_roles.add(role_name)
-        return '', 204
+        success = core.User.assign_role(user_name, role_name)
+        if success:
+            return '', 204
+        else:
+            return 'Unexpected error!', 500
 
 
 class UserRole(Resource):
 
     def delete(self, user_name, role_name):
-        roles = USER_ROLES.get(user_name, set())
-        if role_name in roles:
-            roles.remove(role_name)
-        return '', 204
+        success = core.User.unassign_role(user_name, role_name)
+        if success:
+            return '', 204
+        else:
+            return 'Unexpected error!', 500
 
 
 class RouteStationList(Resource):
 
     def post(self, route_name):
+        '''
+        Assign a station to a route
+        '''
         new_assignment = request.get_json()
         station_name = new_assignment['name']
-        assigned_routes = ROUTE_STATION_MAP.get(station_name, set())
-        assigned_routes.add(route_name)
-        return '', 204
+        success = core.Route.assign_station(route_name, station_name)
+        if success:
+            return '', 204
+        else:
+            return 'Unexpected error!', 500
 
 
 class RouteStation(Resource):
 
     def delete(self, route_name, station_name):
-        assigned_routes = ROUTE_STATION_MAP.get(station_name, set())
-        if route_name in assigned_routes:
-            assigned_routes.remove(route_name)
-        return '', 204
+        success = core.Route.unassign_station(route_name, station_name)
+        if success:
+            return '', 204
+        else:
+            return 'Unexpected error!', 500
 
 
 class TeamStation(Resource):
 
+    @marshal_with(STATE_FIELDS)
     def get(self, team_name, station_name):
-        state = TEAM_STATION_MAP.get(team_name, {}).get(station_name, {})
-        if 'state' not in state:
-            state['state'] = TeamState.UNKNOWN.value
+        state = core.Team.get_station_data(team_name, station_name)
         return state, 200
 
 
 class Job(Resource):
 
-    def post(self):
-        allowed_actions = ['advance']
-        data = request.get_json()
-        args = data['args']
-        action = data['action']
-        station_name = args['station_name']
-        team_name = args['team_name']
-        if action not in allowed_actions:
-            return '%r is an unknown job' % action
-
-        if action == 'advance':
-            new_state = advance(team_name, station_name)
-            output = {
-                'result': {
-                    'state': new_state.value
-                }
+    def _action_advance(self, station_name, team_name):
+        new_state = core.Team.advance_on_station(team_name, station_name)
+        output = {
+            'result': {
+                'state': new_state.value
             }
-            return output, 200
-        else:
-            return 'Unknown error', 500
+        }
+        return output, 200
+
+    def post(self):
+        data = request.get_json()
+        action = data['action']
+        func = getattr(self, '_action_%s' % action, None)
+        if not func:
+            return '%r is an unknown job action' % action, 400
+        return func(**data['args'])

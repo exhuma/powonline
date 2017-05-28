@@ -357,6 +357,7 @@ class TestPublicAPIAsManager(unittest.TestCase):
         response = self.app.post('/job',
                                  headers={'Content-Type': 'application/json'},
                                  data=json.dumps(simplejob))
+        self.assertEqual(response.status_code, 200, response.data)
         response_text = response.data.decode(response.charset)
         data = json.loads(response_text)
         result = data['result']
