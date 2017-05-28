@@ -10,6 +10,7 @@ setup(
         'flask-restful',
         'flask-sqlalchemy',
         'gouge >= 1.1, <2.0',
+        'marshmallow'
         'psycopg2',
         'sqlalchemy',
     ],
