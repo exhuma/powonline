@@ -1,5 +1,20 @@
 from enum import Enum
 
+from . import model
+
+# fake in-memory storage
+ROLES = {}
+ROUTES = {}
+STATIONS = {}
+TEAMS = {}
+USERS = {}
+
+USER_STATION_MAP = {}
+TEAM_ROUTE_MAP = {}
+USER_ROLES = {}
+ROUTE_STATION_MAP = {}
+TEAM_STATION_MAP = {}
+
 
 class TeamState(Enum):
     UNKNOWN = 'unknown'
@@ -23,7 +38,7 @@ def make_dummy_team_dict(**overlay):
     output = {
         'name': 'Example Team',
         'email': 'example@example.com',
-        'order': None,
+        'order': 0,
         'cancelled': False,
         'contact': 'John Doe',
         'phone': '1234',
@@ -32,13 +47,13 @@ def make_dummy_team_dict(**overlay):
         'confirmation_key': 'abc',
         'accepted': True,
         'completed': False,
-        'inserted': '2017-01-01',
-        'updated': '2017-01-02',
+        'inserted': '2017-01-01T10:00:00+00:00',
+        'updated': '2017-01-02T10:01:00+00:00',
         'num_vegetarians': 3,
         'num_participants': 10,
-        'planned_start_time': '2017-02-01 12:00',
-        'effective_start_time': '2017-02-01 12:10',
-        'finish_time': '2017-02-01 14:00',
+        'planned_start_time': '2017-02-01T12:00:00+00:00',
+        'effective_start_time': '2017-02-01T12:10:00+00:00',
+        'finish_time': '2017-02-01T14:00:00+00:00',
     }
     output.update(**overlay)
     return output
@@ -80,20 +95,26 @@ class Team:
 
     @staticmethod
     def all():
-        yield make_dummy_team_dict(name='team2')
-        yield make_dummy_team_dict(name='team1')
-        yield make_dummy_team_dict(name='team3')
+        for team in TEAMS.values():
+            yield team
 
     @staticmethod
     def create_new(data):
-        return data
+        team = model.Team()
+        team.update(**data)
+        TEAMS[data['name']] = team
+        return team
 
     @staticmethod
     def upsert(name, data):
-        return data
+        team = TEAMS.get(name, model.Team())
+        team.update(**data)
+        return team
 
     @staticmethod
     def delete(name):
+        if name in TEAMS:
+            del(TEAMS[name])
         return None
 
     @staticmethod
@@ -103,7 +124,14 @@ class Team:
         return state
 
     def advance_on_station(team_name, station_name):
-        new_state = TeamState.ARRIVED
+        state = TEAM_STATION_MAP.get(team_name, {}).get(station_name, {})
+        state = state or make_default_team_state()
+        if state['state'] == TeamState.UNKNOWN:
+            new_state = TeamState.ARRIVED
+        elif state['state'] == TeamState.ARRIVED:
+            new_state = TeamState.FINISHED
+        else:
+            new_state = TeamState.UNKNOWN
         return new_state
 
 
@@ -111,20 +139,26 @@ class Station:
 
     @staticmethod
     def all():
-        yield make_dummy_station_dict(name='station2')
-        yield make_dummy_station_dict(name='station1')
-        yield make_dummy_station_dict(name='station3')
+        for station in STATIONS.values():
+            yield station
 
     @staticmethod
     def create_new(data):
-        return data
+        station = model.Station()
+        station.update(**data)
+        STATIONS[data['name']] = station
+        return station
 
     @staticmethod
     def upsert(name, data):
-        return data
+        station = STATIONS.get(name, model.Station())
+        station.update(**data)
+        return station
 
     @staticmethod
     def delete(name):
+        if name in STATIONS:
+            del(STATIONS[name])
         return None
 
     @staticmethod
@@ -150,20 +184,26 @@ class Route:
 
     @staticmethod
     def all():
-        yield make_dummy_route_dict(name='route2')
-        yield make_dummy_route_dict(name='route1')
-        yield make_dummy_route_dict(name='route3')
+        for station in ROUTES.values():
+            yield station
 
     @staticmethod
     def create_new(data):
-        return data
+        route = model.Route()
+        route.update(**data)
+        ROUTES[data['name']] = route
+        return route
 
     @staticmethod
     def upsert(name, data):
-        return data
+        route = ROUTE.get(name, model.Route())
+        route.update(**data)
+        return route
 
     @staticmethod
     def delete(name):
+        if name in ROUTES:
+            del(ROUTES[name])
         return None
 
     @staticmethod
@@ -209,9 +249,3 @@ class User:
             roles.remove(role_name)
         return True
 
-
-USER_STATION_MAP = {}
-TEAM_ROUTE_MAP = {}
-USER_ROLES = {}
-ROUTE_STATION_MAP = {}
-TEAM_STATION_MAP = {}

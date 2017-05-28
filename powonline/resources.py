@@ -1,9 +1,23 @@
-from flask import request
+import logging
+
+from flask import request, make_response
 from flask_restful import Resource, marshal_with, fields
 
 from . import core
+from .schema import (
+    JOB_SCHEMA,
+    ROLE_SCHEMA,
+    ROUTE_SCHEMA,
+    STATION_SCHEMA,
+    TEAM_SCHEMA,
+    USER_SCHEMA,
+    TEAM_LIST_SCHEMA,
+    STATION_LIST_SCHEMA,
+    ROUTE_LIST_SCHEMA,
+)
 
 
+LOG = logging.getLogger(__name__)
 STATE_FIELDS = {
     'state': fields.String(attribute=lambda x: x['state'].value)
 }
@@ -16,25 +30,52 @@ class TeamList(Resource):
         output = {
             'items': teams
         }
+
+        parsed_output, errors = TEAM_LIST_SCHEMA.dumps(output)
+        if errors:
+            LOG.critical('Unable to process return value: %r', errors)
+            return 'Server was unable to process the response', 500
+
+        output = make_response(parsed_output, 200)
+        output.content_type = 'application/json'
         return output
 
     def post(self):
         data = request.get_json()
-        # TODO: sanitize data
-        new_team = core.Team.create_new(data)
-        return new_team, 201
+
+        parsed_data, errors = TEAM_SCHEMA.load(data)
+        if errors:
+            return errors, 400
+
+        output = core.Team.create_new(parsed_data)
+        return Team._single_response(output, 201)
 
 
 class Team(Resource):
 
+    @staticmethod
+    def _single_response(output, status_code=200):
+        parsed_output, errors = TEAM_SCHEMA.dumps(output)
+        if errors:
+            LOG.critical('Unable to process return value: %r', errors)
+            return 'Server was unable to process the response', 500
+
+        response = make_response(parsed_output)
+        response.status_code = status_code
+        response.content_type = 'application/json'
+        return response
+
     def put(self, name):
         data = request.get_json()
-        # TODO: sanitize data
-        output = core.Team.upsert(name, data)
-        return output
+
+        parsed_data, errors = TEAM_SCHEMA.load(data)
+        if errors:
+            return errors, 400
+
+        output = core.Team.upsert(name, parsed_data)
+        return Team._single_response(output, 200)
 
     def delete(self, name):
-        # TODO: sanitize data
         core.Team.delete(name)
         return '', 204
 
@@ -46,25 +87,52 @@ class StationList(Resource):
         output = {
             'items': items
         }
+
+        parsed_output, errors = STATION_LIST_SCHEMA.dumps(output)
+        if errors:
+            LOG.critical('Unable to process return value: %r', errors)
+            return 'Server was unable to process the response', 500
+
+        output = make_response(parsed_output, 200)
+        output.content_type = 'application/json'
         return output
 
     def post(self):
         data = request.get_json()
-        # TODO: sanitize data
-        new_station = core.Station.create_new(data)
-        return new_station, 201
+
+        parsed_data, errors = STATION_SCHEMA.load(data)
+        if errors:
+            return errors, 400
+
+        output = core.Station.create_new(parsed_data)
+        return Station._single_response(output, 201)
 
 
 class Station(Resource):
 
+    @staticmethod
+    def _single_response(output, status_code=200):
+        parsed_output, errors = STATION_SCHEMA.dumps(output)
+        if errors:
+            LOG.critical('Unable to process return value: %r', errors)
+            return 'Server was unable to process the response', 500
+
+        response = make_response(parsed_output)
+        response.status_code = status_code
+        response.content_type = 'application/json'
+        return response
+
     def put(self, name):
         data = request.get_json()
-        # TODO: sanitize data
-        output = core.Station.upsert(name, data)
-        return output
+
+        parsed_data, errors = STATION_SCHEMA.load(data)
+        if errors:
+            return errors, 400
+
+        output = core.Station.upsert(name, parsed_data)
+        return Station._single_response(output, 200)
 
     def delete(self, name):
-        # TODO: sanitize data
         core.Station.delete(name)
         return '', 204
 
@@ -76,25 +144,51 @@ class RouteList(Resource):
         output = {
             'items': items
         }
+
+        parsed_output, errors = ROUTE_LIST_SCHEMA.dumps(output)
+        if errors:
+            LOG.critical('Unable to process return value: %r', errors)
+            return 'Server was unable to process the response', 500
+
+        output = make_response(parsed_output, 200)
+        output.content_type = 'application/json'
         return output
 
     def post(self):
         data = request.get_json()
-        # TODO: sanitize data
-        new_route = core.Route.create_new(data)
-        return new_route, 201
+
+        parsed_data, errors = ROUTE_SCHEMA.load(data)
+        if errors:
+            return errors, 400
+
+        output = core.Route.create_new(parsed_data)
+        return Route._single_response(output, 201)
 
 
 class Route(Resource):
 
+    @staticmethod
+    def _single_response(output, status_code=200):
+        parsed_output, errors = ROUTE_SCHEMA.dumps(output)
+        if errors:
+            LOG.critical('Unable to process return value: %r', errors)
+            return 'Server was unable to process the response', 500
+
+        response = make_response(parsed_output)
+        response.status_code = status_code
+        response.content_type = 'application/json'
+        return response
+
     def put(self, name):
         data = request.get_json()
-        # TODO: sanitize data
-        output = core.Route.upsert(name, data)
-        return output
+        parsed_data, errors = ROUTE_SCHEMA.load(data)
+        if errors:
+            return errors, 400
+
+        output = core.Route.upsert(name, parsed_data)
+        return Route._single_response(output, 200)
 
     def delete(self, name):
-        # TODO: sanitize data
         core.Route.delete(name)
         return '', 204
 
@@ -105,9 +199,12 @@ class StationUserList(Resource):
         '''
         Assigns a user to a station
         '''
-        new_assignment = request.get_json()
-        user_name = new_assignment['name']
-        success = core.Station.assign_user(station_name, user_name)
+        data = request.get_json()
+        parsed_data, errors = USER_SCHEMA.load(data)
+        if errors:
+            return errors, 400
+
+        success = core.Station.assign_user(station_name, parsed_data['name'])
         if success:
             return '', 204
         else:
@@ -130,8 +227,11 @@ class RouteTeamList(Resource):
         '''
         Assign a team to a route
         '''
-        new_assignment = request.get_json()
-        team_name = new_assignment['name']
+        data = request.get_json()
+        parsed_data, errors = TEAM_SCHEMA.load(data)
+        if errors:
+            return errors, 400
+        team_name = data['name']
 
         success = core.Route.assign_team(route_name, team_name)
         if success:
@@ -156,8 +256,12 @@ class UserRoleList(Resource):
         '''
         Assign a role to a user
         '''
-        new_assignment = request.get_json()
-        role_name = new_assignment['name']
+        data = request.get_json()
+        parsed_data, errors = ROLE_SCHEMA.load(data)
+        if errors:
+            return errors, 400
+        role_name = data['name']
+
         success = core.User.assign_role(user_name, role_name)
         if success:
             return '', 204
@@ -181,8 +285,12 @@ class RouteStationList(Resource):
         '''
         Assign a station to a route
         '''
-        new_assignment = request.get_json()
-        station_name = new_assignment['name']
+        data = request.get_json()
+        parsed_data, errors = STATION_SCHEMA.load(data)
+        if errors:
+            return errors, 400
+        station_name = data['name']
+
         success = core.Route.assign_station(route_name, station_name)
         if success:
             return '', 204
@@ -221,8 +329,12 @@ class Job(Resource):
 
     def post(self):
         data = request.get_json()
-        action = data['action']
+        parsed_data, errors = JOB_SCHEMA.load(data)
+        if errors:
+            return errors, 400
+
+        action = parsed_data['action']
         func = getattr(self, '_action_%s' % action, None)
         if not func:
             return '%r is an unknown job action' % action, 400
-        return func(**data['args'])
+        return func(**parsed_data['args'])

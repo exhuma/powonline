@@ -1,20 +1,25 @@
+from datetime import datetime
+from unittest.mock import create_autospec, patch
 import json
 import unittest
 
 from powonline.web import make_app
+import powonline.model as mdl
 
 
-def make_dummy_team_dict(**overlay):
+def make_dummy_team_dict(as_mock=False, **overlay):
     '''
     Creates a new dict as it might be returned by the backend. This should only
     contain JSON serialisable values!
 
     Using the "overlay" kwargs, you can change default values.
     '''
+    tstamp = (datetime(2017, 1, 1, 10, 0) if as_mock
+              else '2017-01-01T10:00:00+00:00')
     output = {
         'name': 'Example Team',
         'email': 'example@example.com',
-        'order': None,
+        'order': 0,
         'cancelled': False,
         'contact': 'John Doe',
         'phone': '1234',
@@ -23,19 +28,25 @@ def make_dummy_team_dict(**overlay):
         'confirmation_key': 'abc',
         'accepted': True,
         'completed': False,
-        'inserted': '2017-01-01',
-        'updated': '2017-01-02',
+        'inserted': tstamp,
+        'updated': None,
         'num_vegetarians': 3,
         'num_participants': 10,
-        'planned_start_time': '2017-02-01 12:00',
-        'effective_start_time': '2017-02-01 12:10',
-        'finish_time': '2017-02-01 14:00',
+        'planned_start_time': None,
+        'effective_start_time': None,
+        'finish_time': None,
     }
     output.update(**overlay)
-    return output
+    if as_mock:
+        mock = create_autospec(mdl.Team)
+        for k, v in output.items():
+            setattr(mock, k, v)
+        return mock
+    else:
+        return output
 
 
-def make_dummy_station_dict(**overlay):
+def make_dummy_station_dict(as_mock=False, **overlay):
     '''
     Creates a new dict as it might be returned by the backend. This should only
     contain JSON serialisable values!
@@ -50,10 +61,16 @@ def make_dummy_station_dict(**overlay):
         'is_end': False,
     }
     output.update(**overlay)
-    return output
+    if as_mock:
+        mock = create_autospec(mdl.Station)
+        for k, v in output.items():
+            setattr(mock, k, v)
+        return mock
+    else:
+        return output
 
 
-def make_dummy_route_dict(**overlay):
+def make_dummy_route_dict(as_mock=False, **overlay):
     '''
     Creates a new dict as it might be returned by the backend. This should only
     contain JSON serialisable values!
@@ -64,7 +81,13 @@ def make_dummy_route_dict(**overlay):
         'name': 'Example Route',
     }
     output.update(**overlay)
-    return output
+    if as_mock:
+        mock = create_autospec(mdl.Route)
+        for k, v in output.items():
+            setattr(mock, k, v)
+        return mock
+    else:
+        return output
 
 
 class TestPublicAPIAsManager(unittest.TestCase):
@@ -81,7 +104,14 @@ class TestPublicAPIAsManager(unittest.TestCase):
         core.TEAM_ROUTE_MAP.clear()
 
     def test_fetch_list_of_teams(self):
-        response = self.app.get('/team')
+        with patch('powonline.resources.core') as _core:
+            _core.Team.all.return_value = [
+                make_dummy_team_dict(as_mock=True, name='team1'),
+                make_dummy_team_dict(as_mock=True, name='team2'),
+                make_dummy_team_dict(as_mock=True, name='team3'),
+            ]
+            response = self.app.get('/team')
+
         self.assertEqual(response.status_code, 200, response.data)
         self.assertEqual(response.content_type, 'application/json')
         response_text = response.data.decode(response.charset)
@@ -95,7 +125,13 @@ class TestPublicAPIAsManager(unittest.TestCase):
         self.assertCountEqual(items, expected)
 
     def test_fetch_list_of_stations(self):
-        response = self.app.get('/station')
+        with patch('powonline.resources.core') as _core:
+            _core.Station.all.return_value = [
+                make_dummy_station_dict(as_mock=True, name='station1'),
+                make_dummy_station_dict(as_mock=True, name='station2'),
+                make_dummy_station_dict(as_mock=True, name='station3'),
+            ]
+            response = self.app.get('/station')
         self.assertEqual(response.status_code, 200, response.data)
         self.assertEqual(response.content_type, 'application/json')
         response_text = response.data.decode(response.charset)
@@ -109,7 +145,13 @@ class TestPublicAPIAsManager(unittest.TestCase):
         self.assertCountEqual(items, expected)
 
     def test_fetch_list_of_routes(self):
-        response = self.app.get('/route')
+        with patch('powonline.resources.core') as _core:
+            _core.Route.all.return_value = [
+                make_dummy_route_dict(as_mock=True, name='route1'),
+                make_dummy_route_dict(as_mock=True, name='route2'),
+                make_dummy_route_dict(as_mock=True, name='route3'),
+            ]
+            response = self.app.get('/route')
         self.assertEqual(response.status_code, 200, response.data)
         self.assertEqual(response.content_type, 'application/json')
         response_text = response.data.decode(response.charset)
@@ -178,16 +220,20 @@ class TestPublicAPIAsManager(unittest.TestCase):
             name='foo',
             contact='new-contact')
 
-        response = self.app.put('/route/old-route',
-                                headers={'Content-Type': 'application/json'},
-                                data=json.dumps(replacement_route))
+        with patch('powonline.resources.core') as _core:
+            mocked_route = make_dummy_route_dict(
+                as_mock=True,
+                name='foo',
+                contact='new-contact')
+            _core.Route.upsert.return_value = mocked_route
+            response = self.app.put('/route/old-route',
+                                    headers={'Content-Type': 'application/json'},
+                                    data=json.dumps(replacement_route))
         self.assertEqual(response.status_code, 200, response.data)
         self.assertEqual(response.content_type, 'application/json')
         response_text = response.data.decode(response.charset)
         data = json.loads(response_text)
-        expected = make_dummy_route_dict(
-            name='foo',
-            contact='new-contact')
+        expected = make_dummy_route_dict(name='foo')
         self.assertEqual(data, expected)
 
     def test_create_team(self):
@@ -236,9 +282,7 @@ class TestPublicAPIAsManager(unittest.TestCase):
         self.assertEqual(response.content_type, 'application/json')
         response_text = response.data.decode(response.charset)
         data = json.loads(response_text)
-        expected = make_dummy_route_dict(
-            name='foo',
-            contact='new-contact')
+        expected = make_dummy_route_dict(name='foo')
         self.assertEqual(data, expected)
 
     def test_delete_team(self):
