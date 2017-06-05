@@ -19,10 +19,6 @@ import axios from 'axios'
 export default {
   name: 'station_list',
   methods: {
-    removeStation: function (event) {
-      // this.stations.splice(event.target.getAttribute('data-stationname'), 1)
-      this.errors.push({message: 'Removing stations is not yet implemented!'})
-    },
     addStation: function (event) {
       axios.post('http://192.168.1.92:5000/station', {
         name: this.stationname
