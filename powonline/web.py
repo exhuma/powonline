@@ -20,6 +20,7 @@ from .resources import (
     UserRole,
     UserRoleList,
 )
+from .rootbp import rootbp
 
 
 def make_app():
@@ -28,6 +29,8 @@ def make_app():
     '''
     app = Flask(__name__)
     api = Api(app)
+
+    app.register_blueprint(rootbp)
 
     api.add_resource(TeamList, '/team')
     api.add_resource(Team, '/team/<name>')

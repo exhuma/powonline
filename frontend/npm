@@ -1,0 +1,7 @@
+#!/bin/bash
+docker run \
+    -v /home/exhuma/work/pow/frontend/powonline:/data \
+    --rm \
+    -ti \
+    -p 8080:8080 \
+    exhuma/npm $@

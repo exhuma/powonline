@@ -17,6 +17,8 @@ setup(
     extras_require={
         'dev': [
             'alembic',
+            'blessings',
+            'gouge',
         ],
         'test': [
             'pytest',
