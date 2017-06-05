@@ -1,16 +1,34 @@
 <template>
   <div class="station-block">
-    <h1>{{ name }}</h1>
+    {{ name }}
+    <button @click="deleteStation">Delete</button>
   </div>
 </template>
 
 <script>
+import axios from 'axios'
 export default {
   name: 'station-block',
-  props: ['name'],
-  data () {
-    return {
-      name: 'Unknown Station'
+  props: {
+    'name': {
+      type: String,
+      default: 'Unknown Station'
+    }
+  },
+  methods: {
+    deleteStation: function (event) {
+      axios.delete('http://192.168.1.92:5000/station/' + this.name)
+      .then(response => {
+        console.log(response)
+        this.$emit('listChanged')
+      })
+      .catch(e => {
+        if (e.response.status === 400) {
+          for (var key in e.response.data) {
+            this.errors.push({message: e.response.data[key] + ': ' + key})
+          }
+        }
+      })
     }
   }
 }
