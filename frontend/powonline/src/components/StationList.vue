@@ -2,8 +2,7 @@
   <div id="StationList">
     <h1>Station List</h1>
     <input @keyup.enter="addStation" type='text' v-model:stationname='stationname' placeholder='Enter a new stationname' />
-    <br />
-    <button @click="refresh">Refresh</button>
+    <button @click="addStation">Add</button>
     <hr />
     <station-block v-on:listChanged="refresh" v-for="station in stations" :name="station.name" :key="station.name"></station-block>
     <hr />
@@ -26,7 +25,7 @@ export default {
     },
     addStation: function (event) {
       axios.post('http://192.168.1.92:5000/station', {
-        name: event.target.value
+        name: this.stationname
       })
       .then(response => {
         this.stations = response.data.items
