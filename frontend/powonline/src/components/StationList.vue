@@ -4,20 +4,9 @@
     <input @keyup.enter="addStation" type='text' v-model:stationname='stationname' placeholder='Enter a new stationname' />
     <br />
     <button @click="refresh">Refresh</button>
-    <table width="100%" border="1">
-      <thead>
-        <tr>
-          <th>Station Name</th>
-          <th>Ops</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="station, idx in stations">
-          <td>{{ station.name }}</td>
-          <td><button :data-stationid="idx" @click="removeStation">X</button></td>
-        </tr>
-      </tbody>
-    </table>
+    <hr />
+    <station-block v-for="station in stations" :name="station.name"></station-block>
+    <hr />
     <ul v-if="errors && errors.length">
       <li v-for="error of errors">
         {{error.message}}

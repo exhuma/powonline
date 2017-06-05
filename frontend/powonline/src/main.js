@@ -3,6 +3,7 @@
 import Vue from 'vue'
 import App from './App'
 import router from './router'
+import StationBlock from './components/StationBlock'
 
 Vue.config.productionTip = false
 
@@ -13,3 +14,5 @@ new Vue({
   template: '<App/>',
   components: { App }
 })
+
+Vue.component('station-block', StationBlock)
