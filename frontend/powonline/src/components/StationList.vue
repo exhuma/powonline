@@ -1,7 +1,12 @@
 <template>
   <div id="StationList">
     <h1>Station List</h1>
-    <input @keyup.enter="addStation" type='text' v-model:stationname='stationname' placeholder='Enter a new stationname' />
+    <input 
+      id="StationNameImput"
+      @keyup.enter="addStation"
+      type='text'
+      v-model:stationname='stationname'
+      placeholder='Enter a new stationname' />
     <button @click="addStation">Add</button>
     <hr />
     <station-block v-on:listChanged="refresh" v-for="station in stations" :name="station.name" :key="station.name"></station-block>
@@ -27,6 +32,9 @@ export default {
         this.stations = response.data.items
         console.log(response)
         this.refresh()
+        const input = document.getElementById('StationNameImput')
+        input.focus()
+        input.select()
       })
       .catch(e => {
         if (e.response.status === 400) {
