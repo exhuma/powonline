@@ -3,6 +3,7 @@
     <router-link class="navlink" to="/">Index</router-link>
     <router-link class="navlink" to="/user">Home</router-link>
     <router-link class="navlink" to="/station">Stations</router-link>
+    <router-link class="navlink" to="/team">Teams</router-link>
     <router-view></router-view>
   </div>
 </template>

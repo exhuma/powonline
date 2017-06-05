@@ -4,6 +4,7 @@ import Vue from 'vue'
 import App from './App'
 import router from './router'
 import StationBlock from './components/StationBlock'
+import TeamBlock from './components/TeamBlock'
 
 Vue.config.productionTip = false
 
@@ -16,3 +17,4 @@ new Vue({
 })
 
 Vue.component('station-block', StationBlock)
+Vue.component('team-block', TeamBlock)

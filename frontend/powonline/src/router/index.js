@@ -1,6 +1,6 @@
 import Vue from 'vue'
 import Router from 'vue-router'
-import UserList from '@/components/UserList'
+import TeamList from '@/components/TeamList'
 import StationList from '@/components/StationList'
 
 Vue.use(Router)
@@ -12,8 +12,8 @@ export default new Router({
       component: StationList
     },
     {
-      path: '/user',
-      component: UserList
+      path: '/team',
+      component: TeamList
     }
   ]
 })
