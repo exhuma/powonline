@@ -38,6 +38,7 @@ export default {
 <style scoped>
 .station-block {
   border: 1px solid black;
+  padding: 1em;
 }
 
 </style>
