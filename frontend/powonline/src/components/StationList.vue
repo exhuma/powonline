@@ -37,10 +37,12 @@ export default {
         input.select()
       })
       .catch(e => {
-        if (e.response.status === 400) {
+        if (e.response && e.response.status === 400) {
           for (var key in e.response.data) {
             this.errors.push({message: e.response.data[key] + ': ' + key})
           }
+        } else {
+          console.log(e)
         }
       })
     },
