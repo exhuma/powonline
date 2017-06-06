@@ -152,7 +152,7 @@ class Route:
 
     @staticmethod
     def upsert(name, data):
-        route = ROUTE.get(name, model.Route())
+        route = ROUTES.get(name, model.Route())
         route.update(**data)
         return route
 
