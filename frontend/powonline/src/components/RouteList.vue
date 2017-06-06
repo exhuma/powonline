@@ -10,12 +10,6 @@
     <button @click="addRoute">Add</button>
     <hr />
     <route-block v-on:listChanged="refresh" v-for="route in routes" :name="route.name" :key="route.name"></route-block>
-    <hr />
-    <ul v-if="errors && errors.length">
-      <li v-for="error of errors">
-        {{error.message}}
-      </li>
-    </ul>
   </div>
 </template>
 
@@ -38,7 +32,6 @@ export default {
   },
   data () {
     return {
-      errors: [],
       routename: 'default'
     }
   },

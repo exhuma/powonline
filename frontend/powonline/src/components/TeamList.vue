@@ -10,12 +10,6 @@
     <button @click="addTeam">Add</button>
     <hr />
     <team-block v-on:listChanged="refresh" v-for="team in teams" :name="team.name" :key="team.name"></team-block>
-    <hr />
-    <ul v-if="errors && errors.length">
-      <li v-for="error of errors">
-        {{error.message}}
-      </li>
-    </ul>
   </div>
 </template>
 
@@ -38,7 +32,6 @@ export default {
   },
   data () {
     return {
-      errors: [],
       teamname: 'default'
     }
   },

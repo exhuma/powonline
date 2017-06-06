@@ -10,12 +10,6 @@
     <button @click="addStation">Add</button>
     <hr />
     <station-block v-on:listChanged="refresh" v-for="station in stations" :name="station.name" :key="station.name"></station-block>
-    <hr />
-    <ul v-if="errors && errors.length">
-      <li v-for="error of errors">
-        {{error.message}}
-      </li>
-    </ul>
   </div>
 </template>
 
@@ -38,7 +32,6 @@ export default {
   },
   data () {
     return {
-      errors: [],
       stationname: 'default'
     }
   },

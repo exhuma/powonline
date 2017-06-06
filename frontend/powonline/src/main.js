@@ -33,13 +33,7 @@ const store = new Vuex.Store({
         state.teams.push(team)
       })
       .catch(e => {
-        if (e.response && e.response.status === 400) {
-          for (var key in e.response.data) {
-            this.errors.push({message: e.response.data[key] + ': ' + key})
-          }
-        } else {
-          console.log(e) // TODO better error-handling
-        }
+        console.log(e) // TODO better error-handling
       })
     },
 
@@ -54,13 +48,7 @@ const store = new Vuex.Store({
         state.routes.push(route)
       })
       .catch(e => {
-        if (e.response && e.response.status === 400) {
-          for (var key in e.response.data) {
-            this.errors.push({message: e.response.data[key] + ': ' + key})
-          }
-        } else {
-          console.log(e) // TODO better error-handling
-        }
+        console.log(e) // TODO better error-handling
       })
     },
 

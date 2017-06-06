@@ -23,11 +23,7 @@ export default {
         this.$emit('listChanged')
       })
       .catch(e => {
-        if (e.response.status === 400) {
-          for (var key in e.response.data) {
-            this.errors.push({message: e.response.data[key] + ': ' + key})
-          }
-        }
+        console.log(e)  // TODO Better error-handling
       })
     }
   }
