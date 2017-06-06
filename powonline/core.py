@@ -204,4 +204,3 @@ class User:
         if role_name in roles:
             roles.remove(role_name)
         return True
-

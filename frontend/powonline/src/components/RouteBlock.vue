@@ -43,6 +43,7 @@ export default {
         this.refresh_unassigned() // TODO use an event for this
       })
       .catch(e => {
+        // TODO use an event for this
         if (e.response.status === 400) {
           for (var key in e.response.data) {
             this.errors.push({message: e.response.data[key] + ': ' + key})
@@ -59,6 +60,7 @@ export default {
         this.refresh_unassigned() // TODO use an event for this
       })
       .catch(e => {
+        // TODO use an event for this
         if (e.response.status === 400) {
           for (var key in e.response.data) {
             this.errors.push({message: e.response.data[key] + ': ' + key})
@@ -69,10 +71,10 @@ export default {
     deleteRoute: function (event) {
       axios.delete('http://192.168.1.92:5000/route/' + this.name)
       .then(response => {
-        console.log(response)
         this.$emit('listChanged')
       })
       .catch(e => {
+        // TODO use an event for this
         if (e.response.status === 400) {
           for (var key in e.response.data) {
             this.errors.push({message: e.response.data[key] + ': ' + key})
@@ -86,6 +88,7 @@ export default {
         this.assignedTeams = response.data.items
       })
       .catch(e => {
+        // TODO use an event for this
         if (e.response.status === 400) {
           for (var key in e.response.data) {
             this.errors.push({message: e.response.data[key] + ': ' + key})
@@ -99,6 +102,7 @@ export default {
         this.unassignedTeams = response.data.items
       })
       .catch(e => {
+        // TODO use an event for this
         if (e.response.status === 400) {
           for (var key in e.response.data) {
             this.errors.push({message: e.response.data[key] + ': ' + key})
