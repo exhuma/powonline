@@ -26,7 +26,19 @@ STATE_FIELDS = {
 class TeamList(Resource):
 
     def get(self):
-        teams = list(core.Team.all())
+        quickfilter = request.args.get('quickfilter', '')
+        assigned_to_station = request.args.get('assigned_station', '')
+        if quickfilter:
+            func_name = 'quickfilter_%s' % quickfilter
+            filter_func = getattr(core.Team, func_name, None)
+            if not filter_func:
+                return '%r is not a known quickfilter!' % quickfilter, 400
+            teams = filter_func()
+        elif assigned_to_station:
+            teams = core.Team.assigned_to_station(assigned_to_station)
+        else:
+            teams = list(core.Team.all())
+
         output = {
             'items': teams
         }

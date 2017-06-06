@@ -36,6 +36,25 @@ class Team:
             yield team
 
     @staticmethod
+    def by_route(route_name):
+        for team_name, team_route_name in TEAM_ROUTE_MAP.items():
+            if team_route_name == route_name:
+                yield team_name
+
+    @staticmethod
+    def quickfilter_unassigned():
+        assigned = set(TEAM_ROUTE_MAP.keys())
+        for team in Team.all():
+            if team.name not in assigned:
+                yield team
+
+    @staticmethod
+    def assigned_to_station(station_name):
+        for team_name, _station_name in TEAM_ROUTE_MAP.items():
+            if station_name == _station_name:
+                yield TEAMS[team_name]
+
+    @staticmethod
     def create_new(data):
         team = model.Team()
         team.update(**data)
