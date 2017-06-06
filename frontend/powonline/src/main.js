@@ -13,6 +13,7 @@ import RouteBlock from './components/RouteBlock'
 Vue.config.productionTip = false
 Vue.use(Vuex)
 
+const BASE_URL = 'http://192.168.1.92:5000'
 const store = new Vuex.Store({
   state: {
     stations: [],
@@ -21,8 +22,13 @@ const store = new Vuex.Store({
     station_team_map: {}
   },
   mutations: {
+    /**
+     * Add a team to the store
+     *
+     * :param team: The team object to add
+     */
     addTeam (state, team) {
-      axios.post('http://192.168.1.92:5000/team', team)
+      axios.post(BASE_URL + '/team', team)
       .then(response => {
         state.teams.push(team)
       })
@@ -32,12 +38,18 @@ const store = new Vuex.Store({
             this.errors.push({message: e.response.data[key] + ': ' + key})
           }
         } else {
-          console.log(e)
+          console.log(e) // TODO better error-handling
         }
       })
     },
+
+    /**
+     * Add a team to the store
+     *
+     * :param route: The route object to add
+     */
     addRoute (state, route) {
-      axios.post('http://192.168.1.92:5000/route', route)
+      axios.post(BASE_URL + '/route', route)
       .then(response => {
         state.routes.push(route)
       })
@@ -47,23 +59,33 @@ const store = new Vuex.Store({
             this.errors.push({message: e.response.data[key] + ': ' + key})
           }
         } else {
-          console.log(e)
+          console.log(e) // TODO better error-handling
         }
       })
     },
+
+    /**
+     * Add a station to the store
+     *
+     * :param route: The station object to add
+     */
     addStation (state, station) {
-      axios.post('http://192.168.1.92:5000/station', station)
+      axios.post(BASE_URL + '/station', station)
       .then(response => {
         state.stations.push(station)
       })
       .catch(e => {
-        console.log(e)  // TODO better error-handling
+        console.log(e) // TODO better error-handling
       })
     },
+
+    /**
+     * Refresh everything from the server
+     */
     refresh (state) {
       console.log('Refreshing State in vuex')
       // --- Fetch Teams from server
-      axios.get('http://192.168.1.92:5000/team')
+      axios.get(BASE_URL + '/team')
       .then(response => {
         state.teams = response.data.items
       })
@@ -73,7 +95,7 @@ const store = new Vuex.Store({
       })
 
       // --- Fetch Routes from server
-      axios.get('http://192.168.1.92:5000/route')
+      axios.get(BASE_URL + '/route')
       .then(response => {
         state.routes = response.data.items
       })
@@ -83,7 +105,7 @@ const store = new Vuex.Store({
       })
 
       // --- Fetch Stations from server
-      axios.get('http://192.168.1.92:5000/station')
+      axios.get(BASE_URL + '/station')
       .then(response => {
         state.stations = response.data.items
       })
