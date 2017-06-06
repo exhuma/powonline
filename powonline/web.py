@@ -1,6 +1,5 @@
 from flask import Flask
 from flask_restful import Api
-from marshmallow import Schema
 
 from .resources import (
     Job,

@@ -28,69 +28,6 @@ def make_default_team_state():
     }
 
 
-def make_dummy_team_dict(**overlay):
-    '''
-    Creates a new dict as it might be returned by the backend. This should only
-    contain JSON serialisable values!
-
-    Using the "overlay" kwargs, you can change default values.
-    '''
-    output = {
-        'name': 'Example Team',
-        'email': 'example@example.com',
-        'order': 0,
-        'cancelled': False,
-        'contact': 'John Doe',
-        'phone': '1234',
-        'comments': '',
-        'is_confirmed': True,
-        'confirmation_key': 'abc',
-        'accepted': True,
-        'completed': False,
-        'inserted': '2017-01-01T10:00:00+00:00',
-        'updated': '2017-01-02T10:01:00+00:00',
-        'num_vegetarians': 3,
-        'num_participants': 10,
-        'planned_start_time': '2017-02-01T12:00:00+00:00',
-        'effective_start_time': '2017-02-01T12:10:00+00:00',
-        'finish_time': '2017-02-01T14:00:00+00:00',
-    }
-    output.update(**overlay)
-    return output
-
-
-def make_dummy_station_dict(**overlay):
-    '''
-    Creates a new dict as it might be returned by the backend. This should only
-    contain JSON serialisable values!
-
-    Using the "overlay" kwargs, you can change default values.
-    '''
-    output = {
-        'name': 'Example Station',
-        'contact': 'Example Contact',
-        'phone': '12345',
-        'is_start': False,
-        'is_end': False,
-    }
-    output.update(**overlay)
-    return output
-
-
-def make_dummy_route_dict(**overlay):
-    '''
-    Creates a new dict as it might be returned by the backend. This should only
-    contain JSON serialisable values!
-
-    Using the "overlay" kwargs, you can change default values.
-    '''
-    output = {
-        'name': 'Example Route',
-    }
-    output.update(**overlay)
-    return output
-
-
 class Team:
 
     @staticmethod
