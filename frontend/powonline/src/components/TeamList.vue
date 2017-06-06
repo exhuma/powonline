@@ -20,51 +20,31 @@
 </template>
 
 <script>
-import axios from 'axios'
 export default {
   name: 'team_list',
   methods: {
     addTeam: function (event) {
-      axios.post('http://192.168.1.92:5000/team', {
-        name: this.teamname
-      })
-      .then(response => {
-        this.teams = response.data.items
-        console.log(response)
-        this.refresh()
-        const input = document.getElementById('TeamNameImput')
-        input.focus()
-        input.select()
-      })
-      .catch(e => {
-        if (e.response && e.response.status === 400) {
-          for (var key in e.response.data) {
-            this.errors.push({message: e.response.data[key] + ': ' + key})
-          }
-        } else {
-          console.log(e)
-        }
-      })
+      this.$store.commit('addTeam', {name: this.teamname})
+      const input = document.getElementById('TeamNameImput')
+      input.focus()
+      input.select()
     },
     refresh: function (event) {
-      axios.get('http://192.168.1.92:5000/team')
-      .then(response => {
-        this.teams = response.data.items
-        console.log(response)
-      })
-      .catch(e => {
-        this.errors.push(e)
-      })
+      this.$store.commit('refresh')
     }
   },
   created () {
-    this.refresh()
+    this.$store.commit('refresh')
   },
   data () {
     return {
       errors: [],
-      teamname: 'default',
-      teams: []
+      teamname: 'default'
+    }
+  },
+  computed: {
+    teams () {
+      return this.$store.state.teams
     }
   }
 }

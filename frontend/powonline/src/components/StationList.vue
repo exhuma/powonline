@@ -20,51 +20,31 @@
 </template>
 
 <script>
-import axios from 'axios'
 export default {
   name: 'station_list',
   methods: {
     addStation: function (event) {
-      axios.post('http://192.168.1.92:5000/station', {
-        name: this.stationname
-      })
-      .then(response => {
-        this.stations = response.data.items
-        console.log(response)
-        this.refresh()
-        const input = document.getElementById('StationNameImput')
-        input.focus()
-        input.select()
-      })
-      .catch(e => {
-        if (e.response && e.response.status === 400) {
-          for (var key in e.response.data) {
-            this.errors.push({message: e.response.data[key] + ': ' + key})
-          }
-        } else {
-          console.log(e)
-        }
-      })
+      this.$store.commit('addStation', {name: this.stationname})
+      const input = document.getElementById('StationNameImput')
+      input.focus()
+      input.select()
     },
     refresh: function (event) {
-      axios.get('http://192.168.1.92:5000/station')
-      .then(response => {
-        this.stations = response.data.items
-        console.log(response)
-      })
-      .catch(e => {
-        this.errors.push(e)
-      })
+      this.$store.commit('refresh')
     }
   },
   created () {
-    this.refresh()
+    this.$store.commit('refresh')
   },
   data () {
     return {
       errors: [],
-      stationname: 'default',
-      stations: []
+      stationname: 'default'
+    }
+  },
+  computed: {
+    stations () {
+      return this.$store.state.stations
     }
   }
 }

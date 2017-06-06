@@ -20,51 +20,31 @@
 </template>
 
 <script>
-import axios from 'axios'
 export default {
   name: 'route_list',
   methods: {
     addRoute: function (event) {
-      axios.post('http://192.168.1.92:5000/route', {
-        name: this.routename
-      })
-      .then(response => {
-        this.routes = response.data.items
-        console.log(response)
-        this.refresh()
-        const input = document.getElementById('RouteNameImput')
-        input.focus()
-        input.select()
-      })
-      .catch(e => {
-        if (e.response && e.response.status === 400) {
-          for (var key in e.response.data) {
-            this.errors.push({message: e.response.data[key] + ': ' + key})
-          }
-        } else {
-          console.log(e)
-        }
-      })
+      this.$store.commit('addRoute', {name: this.routename})
+      const input = document.getElementById('RouteNameImput')
+      input.focus()
+      input.select()
     },
     refresh: function (event) {
-      axios.get('http://192.168.1.92:5000/route')
-      .then(response => {
-        this.routes = response.data.items
-        console.log(response)
-      })
-      .catch(e => {
-        this.errors.push(e)
-      })
+      this.$store.commit('refresh')
     }
   },
   created () {
-    this.refresh()
+    this.$store.commit('refresh')
   },
   data () {
     return {
       errors: [],
-      routename: 'default',
-      routes: []
+      routename: 'default'
+    }
+  },
+  computed: {
+    routes () {
+      return this.$store.state.routes
     }
   }
 }
