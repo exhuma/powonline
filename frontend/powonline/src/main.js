@@ -22,15 +22,35 @@ const store = new Vuex.Store({
     station_team_map: {}
   },
   mutations: {
+    addTeam (state, team) {
+      state.teams.push(team)
+    },
+    addRoute (state, route) {
+      state.routes.push(route)
+    },
+    addStation (state, station) {
+      state.stations.push(station)
+    },
+    replaceTeams (state, teams) {
+      state.teams = teams
+    },
+    replaceRoutes (state, routes) {
+      state.routes = routes
+    },
+    replaceStations (state, stations) {
+      state.stations = stations
+    }
+  },
+  actions: {
     /**
-     * Add a team to the store
+     * Add a team to the backend store
      *
      * :param team: The team object to add
      */
-    addTeam (state, team) {
+    addTeamRemote (context, team) {
       axios.post(BASE_URL + '/team', team)
       .then(response => {
-        state.teams.push(team)
+        context.commit('addTeam', team)
       })
       .catch(e => {
         console.log(e) // TODO better error-handling
@@ -38,14 +58,14 @@ const store = new Vuex.Store({
     },
 
     /**
-     * Add a team to the store
+     * Add a team to the backend store
      *
      * :param route: The route object to add
      */
-    addRoute (state, route) {
+    addRouteRemote (context, route) {
       axios.post(BASE_URL + '/route', route)
       .then(response => {
-        state.routes.push(route)
+        context.commit('addRoute')
       })
       .catch(e => {
         console.log(e) // TODO better error-handling
@@ -53,14 +73,14 @@ const store = new Vuex.Store({
     },
 
     /**
-     * Add a station to the store
+     * Add a station to the remote store
      *
      * :param route: The station object to add
      */
-    addStation (state, station) {
+    addStationRemote (context, station) {
       axios.post(BASE_URL + '/station', station)
       .then(response => {
-        state.stations.push(station)
+        context.commit('addStation', station)
       })
       .catch(e => {
         console.log(e) // TODO better error-handling
@@ -70,12 +90,12 @@ const store = new Vuex.Store({
     /**
      * Refresh everything from the server
      */
-    refresh (state) {
+    refreshRemote (context) {
       console.log('Refreshing State in vuex')
       // --- Fetch Teams from server
       axios.get(BASE_URL + '/team')
       .then(response => {
-        state.teams = response.data.items
+        context.commit('replaceTeams', response.data.items)
       })
       .catch(e => {
         // TODO use an event for this
@@ -85,7 +105,7 @@ const store = new Vuex.Store({
       // --- Fetch Routes from server
       axios.get(BASE_URL + '/route')
       .then(response => {
-        state.routes = response.data.items
+        context.commit('replaceRoutes', response.data.items)
       })
       .catch(e => {
         // TODO use an event for this
@@ -95,7 +115,7 @@ const store = new Vuex.Store({
       // --- Fetch Stations from server
       axios.get(BASE_URL + '/station')
       .then(response => {
-        state.stations = response.data.items
+        context.commit('replaceStations', response.data.items)
       })
       .catch(e => {
         // TODO use an event for this

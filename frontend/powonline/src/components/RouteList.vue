@@ -24,11 +24,11 @@ export default {
       input.select()
     },
     refresh: function (event) {
-      this.$store.commit('refresh')
+      this.$store.dispatch('refreshRemote')
     }
   },
   created () {
-    this.$store.commit('refresh')
+    this.$store.dispatch('refreshRemote')
   },
   data () {
     return {
