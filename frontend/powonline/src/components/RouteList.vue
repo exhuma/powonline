@@ -9,7 +9,7 @@
       placeholder='Enter a new routename' />
     <button @click="addRoute">Add</button>
     <hr />
-    <route-block v-on:listChanged="refresh" v-for="route in routes" :name="route.name" :key="route.name"></route-block>
+    <route-block v-for="route in routes" :name="route.name" :key="route.name"></route-block>
   </div>
 </template>
 
@@ -18,17 +18,11 @@ export default {
   name: 'route_list',
   methods: {
     addRoute: function (event) {
-      this.$store.commit('addRoute', {name: this.routename})
+      this.$store.dispatch('addRouteRemote', {name: this.routename})
       const input = document.getElementById('RouteNameImput')
       input.focus()
       input.select()
-    },
-    refresh: function (event) {
-      this.$store.dispatch('refreshRemote')
     }
-  },
-  created () {
-    this.$store.dispatch('refreshRemote')
   },
   data () {
     return {

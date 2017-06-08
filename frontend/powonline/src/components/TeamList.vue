@@ -9,7 +9,7 @@
       placeholder='Enter a new teamname' />
     <button @click="addTeam">Add</button>
     <hr />
-    <team-block v-on:listChanged="refresh" v-for="team in teams" :name="team.name" :key="team.name"></team-block>
+    <team-block v-for="team in teams" :name="team.name" :key="team.name"></team-block>
   </div>
 </template>
 
@@ -18,17 +18,11 @@ export default {
   name: 'team_list',
   methods: {
     addTeam: function (event) {
-      this.$store.commit('addTeam', {name: this.teamname})
+      this.$store.dispatch('addTeamRemote', {name: this.teamname})
       const input = document.getElementById('TeamNameImput')
       input.focus()
       input.select()
-    },
-    refresh: function (event) {
-      this.$store.dispatch('refreshRemote')
     }
-  },
-  created () {
-    this.$store.dispatch('refreshRemote')
   },
   data () {
     return {

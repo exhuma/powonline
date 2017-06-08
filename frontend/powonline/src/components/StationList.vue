@@ -9,7 +9,7 @@
       placeholder='Enter a new stationname' />
     <button @click="addStation">Add</button>
     <hr />
-    <station-block v-on:listChanged="refresh" v-for="station in stations" :name="station.name" :key="station.name"></station-block>
+    <station-block v-for="station in stations" :name="station.name" :key="station.name"></station-block>
   </div>
 </template>
 
@@ -18,17 +18,11 @@ export default {
   name: 'station_list',
   methods: {
     addStation: function (event) {
-      this.$store.commit('addStation', {name: this.stationname})
+      this.$store.dispatch('addStationRemote', {name: this.stationname})
       const input = document.getElementById('StationNameImput')
       input.focus()
       input.select()
-    },
-    refresh: function (event) {
-      this.$store.dispatch('refreshRemote')
     }
-  },
-  created () {
-    this.$store.dispatch('refreshRemote')
   },
   data () {
     return {

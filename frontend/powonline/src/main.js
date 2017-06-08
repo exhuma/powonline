@@ -19,7 +19,8 @@ const store = new Vuex.Store({
     stations: [],
     teams: [],
     routes: [],
-    station_team_map: {}
+    station_team_map: {},  // map teams to stations (key=teamName, value=stationName)
+    route_team_map: {}  // map teams to routes (key=teamName, value=routeName)
   },
   mutations: {
     addTeam (state, team) {
@@ -39,6 +40,40 @@ const store = new Vuex.Store({
     },
     replaceStations (state, stations) {
       state.stations = stations
+    },
+    replaceAssignments (state, assignments) {
+      // Replace team-to-route mapping
+      state.route_team_map = {}
+      for (const routeName in assignments.teams) {
+        if (assignments.teams.hasOwnProperty(routeName)) {
+          const teams = assignments.teams[routeName]
+          teams.forEach(team => {
+            state.route_team_map[team.name] = routeName
+          })
+        }
+      }
+
+      // Replace teams-to-stations mapping
+      // TODO
+
+      // Replace stations-to-routes mapping
+      // TODO
+    },
+    assignTeamToRoute (state, payload) {
+      const current = state.route_team_map[payload.routeName]
+      if (current === undefined) {
+        state.route_team_map[payload.routeName] = [payload.team.name]
+      } else {
+        state.route_team_map[payload.routeName].push(payload.team.name)
+      }
+    },
+    unassignTeamFromRoute (state, payload) {
+      const current = state.route_team_map[payload.routeName]
+      if (current === undefined) {
+        state.route_team_map[payload.routeName] = []
+      } else {
+        // XXX TODO implement
+      }
     }
   },
   actions: {
@@ -53,6 +88,7 @@ const store = new Vuex.Store({
         context.commit('addTeam', team)
       })
       .catch(e => {
+        console.log('!!! Error!')
         console.log(e) // TODO better error-handling
       })
     },
@@ -65,9 +101,10 @@ const store = new Vuex.Store({
     addRouteRemote (context, route) {
       axios.post(BASE_URL + '/route', route)
       .then(response => {
-        context.commit('addRoute')
+        context.commit('addRoute', route)
       })
       .catch(e => {
+        console.log('!!! Error!')
         console.log(e) // TODO better error-handling
       })
     },
@@ -83,6 +120,7 @@ const store = new Vuex.Store({
         context.commit('addStation', station)
       })
       .catch(e => {
+        console.log('!!! Error!')
         console.log(e) // TODO better error-handling
       })
     },
@@ -91,7 +129,6 @@ const store = new Vuex.Store({
      * Refresh everything from the server
      */
     refreshRemote (context) {
-      console.log('Refreshing State in vuex')
       // --- Fetch Teams from server
       axios.get(BASE_URL + '/team')
       .then(response => {
@@ -99,6 +136,7 @@ const store = new Vuex.Store({
       })
       .catch(e => {
         // TODO use an event for this
+        console.log('!!! Error!')
         console.log(e)  // TODO better error-handling
       })
 
@@ -109,6 +147,18 @@ const store = new Vuex.Store({
       })
       .catch(e => {
         // TODO use an event for this
+        console.log('!!! Error!')
+        console.log(e)  // TODO better error-handling
+      })
+
+      // --- Fetch team/route assignments from server
+      axios.get(BASE_URL + '/assignments')
+      .then(response => {
+        context.commit('replaceAssignments', response.data)
+      })
+      .catch(e => {
+        // TODO use an event for this
+        console.log('!!! Error!')
         console.log(e)  // TODO better error-handling
       })
 
@@ -119,10 +169,88 @@ const store = new Vuex.Store({
       })
       .catch(e => {
         // TODO use an event for this
+        console.log('!!! Error!')
+        console.log(e)  // TODO better error-handling
+      })
+    },
+
+    /**
+     * Assign a team to a route
+     *
+     * :param team: The team object to add to the route
+     * :param routeName: The name of the route the team should be assigned to
+     */
+    assignTeamToRouteRemote (context, data) {
+      // first, let's find the team object corresponding to this name (yes, I
+      // know, a map would be better...)
+      let team = null
+      context.state.teams.forEach(item => {
+        if (item.name === data.teamName) {
+          team = item
+        }
+      })
+      axios.post(BASE_URL + '/route/' + data.routeName + '/teams', team)
+      .then(response => {
+        context.commit('assignTeamToRoute', {routeName: data.routeName, team: team})
+        context.dispatch('refreshRemote') // TODO Why is this not happening automatically?
+      })
+      .catch(e => {
+        // TODO use an event for this
+        console.log('!!! Error!')
+        console.log(e)  // TODO better error-handling
+      })
+    },
+
+    /**
+     * Unassign a team from a route
+     *
+     * :param teamName: The name of the team
+     * :param routeName: The name of the route the team should be unassigned from
+     */
+    unassignTeamFromRouteRemote (context, data) {
+      axios.delete(BASE_URL + '/route/' + data.routeName + '/teams/' + data.teamName)
+      .then(response => {
+        context.commit('unassignTeamFromRoute', data)
+        context.dispatch('refreshRemote') // TODO Why is this not happening automatically?
+      })
+      .catch(e => {
+        // TODO use an event for this
+        console.log('!!! Error!')
         console.log(e)  // TODO better error-handling
       })
     }
+
+  },
+  getters: {
+    unassignedTeams (state, getters) {
+      // fetch *all* assignments of teams
+      const assignedTeams = []
+      const map = state.route_team_map
+      for (const teamName in map) {
+        assignedTeams.push(teamName)
+      }
+
+      // now create a list of teams which are *not* in the assigned list
+      const output = []
+      state.teams.forEach(team => {
+        if (assignedTeams.indexOf(team.name) === -1) {
+          output.push(team.name)
+        }
+      })
+      return output
+    },
+    assignedTeams: (state, getters) => (routeName) => {
+      const assignedTeams = []
+      const map = state.route_team_map
+      for (const teamName in map) {
+        if (map[teamName] === routeName) {
+          assignedTeams.push(teamName)
+        }
+      }
+      return assignedTeams
+    }
   }
+
 })
 
 /* eslint-disable no-new */
@@ -131,7 +259,10 @@ new Vue({
   router,
   store,
   template: '<App/>',
-  components: { App }
+  components: { App },
+  created () {
+    this.$store.dispatch('refreshRemote')
+  }
 })
 
 Vue.component('station-block', StationBlock)

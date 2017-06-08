@@ -2,6 +2,7 @@ from flask import Flask
 from flask_restful import Api
 
 from .resources import (
+    Assignments,
     Job,
     Route,
     RouteList,
@@ -31,6 +32,7 @@ def make_app():
 
     app.register_blueprint(rootbp)
 
+    api.add_resource(Assignments, '/assignments')
     api.add_resource(TeamList, '/team')
     api.add_resource(Team, '/team/<name>')
     api.add_resource(StationList, '/station')

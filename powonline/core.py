@@ -16,6 +16,22 @@ ROUTE_STATION_MAP = {}
 TEAM_STATION_MAP = {}
 
 
+def get_assignments():
+    route_teams = {route.name: set() for route in ROUTES.values()}
+    for team_name, route_name in TEAM_ROUTE_MAP.items():
+        container = route_teams[route_name].add(TEAMS[team_name])
+
+    route_stations = {route.name: set() for route in ROUTES.values()}
+    for station_name, route_names in ROUTE_STATION_MAP.items():
+        for route_name in route_names:
+            container = route_stations[route_name].add(STATIONS[station_name])
+
+    return {
+        'teams': route_teams,
+        'stations': route_stations
+    }
+
+
 class TeamState(Enum):
     UNKNOWN = 'unknown'
     ARRIVED = 'arrived'
@@ -42,16 +58,16 @@ class Team:
                 yield team_name
 
     @staticmethod
-    def quickfilter_unassigned():
+    def quickfilter_without_route():
         assigned = set(TEAM_ROUTE_MAP.keys())
         for team in Team.all():
             if team.name not in assigned:
                 yield team
 
     @staticmethod
-    def assigned_to_station(station_name):
-        for team_name, _station_name in TEAM_ROUTE_MAP.items():
-            if station_name == _station_name:
+    def assigned_to_route(route_name):
+        for team_name, _route_name in TEAM_ROUTE_MAP.items():
+            if route_name == _route_name:
                 yield TEAMS[team_name]
 
     @staticmethod
@@ -178,7 +194,7 @@ class Route:
 
     @staticmethod
     def assign_station(route_name, station_name):
-        assigned_routes = ROUTE_STATION_MAP.get(station_name, set())
+        assigned_routes = ROUTE_STATION_MAP.setdefault(station_name, set())
         assigned_routes.add(route_name)
         return True
 

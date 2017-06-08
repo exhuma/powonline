@@ -1,3 +1,4 @@
+from json import dumps
 import logging
 
 from flask import request, make_response
@@ -7,13 +8,13 @@ from . import core
 from .schema import (
     JOB_SCHEMA,
     ROLE_SCHEMA,
+    ROUTE_LIST_SCHEMA,
     ROUTE_SCHEMA,
+    STATION_LIST_SCHEMA,
     STATION_SCHEMA,
+    TEAM_LIST_SCHEMA,
     TEAM_SCHEMA,
     USER_SCHEMA,
-    TEAM_LIST_SCHEMA,
-    STATION_LIST_SCHEMA,
-    ROUTE_LIST_SCHEMA,
 )
 
 
@@ -27,15 +28,15 @@ class TeamList(Resource):
 
     def get(self):
         quickfilter = request.args.get('quickfilter', '')
-        assigned_to_station = request.args.get('assigned_station', '')
+        assigned_to_route = request.args.get('assigned_route', '')
         if quickfilter:
             func_name = 'quickfilter_%s' % quickfilter
             filter_func = getattr(core.Team, func_name, None)
             if not filter_func:
                 return '%r is not a known quickfilter!' % quickfilter, 400
             teams = filter_func()
-        elif assigned_to_station:
-            teams = core.Team.assigned_to_station(assigned_to_station)
+        elif assigned_to_route:
+            teams = core.Team.assigned_to_route(assigned_to_route)
         else:
             teams = list(core.Team.all())
 
@@ -326,6 +327,31 @@ class TeamStation(Resource):
     def get(self, team_name, station_name):
         state = core.Team.get_station_data(team_name, station_name)
         return state, 200
+
+
+class Assignments(Resource):
+
+    def get(self):
+        output = {}
+        assignments = core.get_assignments()
+
+        route_teams = {}
+        for route_name, teams in assignments['teams'].items():
+            teams = [TEAM_SCHEMA.dump(team).data for team in teams]
+            route_teams[route_name] = teams
+
+        route_stations = {}
+        for route_name, stations in assignments['stations'].items():
+            stations = [STATION_SCHEMA.dump(station).data
+                        for station in stations]
+            route_stations[route_name] = stations
+
+        output['stations'] = route_stations
+        output['teams'] = route_teams
+
+        output = make_response(dumps(output), 200)
+        output.content_type = 'application/json'
+        return output
 
 
 class Job(Resource):
