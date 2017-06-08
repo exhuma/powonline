@@ -19,7 +19,6 @@ export default {
     deleteStation: function (event) {
       axios.delete('http://192.168.1.92:5000/station/' + this.name)
       .then(response => {
-        console.log(response)
         this.$emit('listChanged')
       })
       .catch(e => {

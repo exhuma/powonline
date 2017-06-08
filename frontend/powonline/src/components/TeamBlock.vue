@@ -19,7 +19,6 @@ export default {
     deleteTeam: function (event) {
       axios.delete('http://192.168.1.92:5000/team/' + this.name)
       .then(response => {
-        console.log(response)
         this.$emit('listChanged')
       })
       .catch(e => {
