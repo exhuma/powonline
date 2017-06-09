@@ -19,6 +19,7 @@ const store = new Vuex.Store({
     stations: [],
     teams: [],
     routes: [],
+    errors: [],
     station_team_map: {},  // map teams to stations (key=teamName, value=stationName)
     route_team_map: {}  // map teams to routes (key=teamName, value=routeName)
   },
@@ -40,6 +41,9 @@ const store = new Vuex.Store({
     },
     replaceStations (state, stations) {
       state.stations = stations
+    },
+    logError (state, error) {
+      state.errors.push(error)
     },
     replaceAssignments (state, assignments) {
       // Replace team-to-route mapping
@@ -88,8 +92,7 @@ const store = new Vuex.Store({
         context.commit('addTeam', team)
       })
       .catch(e => {
-        console.log('!!! Error!')
-        console.log(e) // TODO better error-handling
+        context.commit('logError', e)
       })
     },
 
@@ -104,8 +107,7 @@ const store = new Vuex.Store({
         context.commit('addRoute', route)
       })
       .catch(e => {
-        console.log('!!! Error!')
-        console.log(e) // TODO better error-handling
+        context.commit('logError', e)
       })
     },
 
@@ -120,8 +122,7 @@ const store = new Vuex.Store({
         context.commit('addStation', station)
       })
       .catch(e => {
-        console.log('!!! Error!')
-        console.log(e) // TODO better error-handling
+        context.commit('logError', e)
       })
     },
 
@@ -135,9 +136,7 @@ const store = new Vuex.Store({
         context.commit('replaceTeams', response.data.items)
       })
       .catch(e => {
-        // TODO use an event for this
-        console.log('!!! Error!')
-        console.log(e)  // TODO better error-handling
+        context.commit('logError', e)
       })
 
       // --- Fetch Routes from server
@@ -146,9 +145,7 @@ const store = new Vuex.Store({
         context.commit('replaceRoutes', response.data.items)
       })
       .catch(e => {
-        // TODO use an event for this
-        console.log('!!! Error!')
-        console.log(e)  // TODO better error-handling
+        context.commit('logError', e)
       })
 
       // --- Fetch team/route assignments from server
@@ -157,9 +154,7 @@ const store = new Vuex.Store({
         context.commit('replaceAssignments', response.data)
       })
       .catch(e => {
-        // TODO use an event for this
-        console.log('!!! Error!')
-        console.log(e)  // TODO better error-handling
+        context.commit('logError', e)
       })
 
       // --- Fetch Stations from server
@@ -168,9 +163,7 @@ const store = new Vuex.Store({
         context.commit('replaceStations', response.data.items)
       })
       .catch(e => {
-        // TODO use an event for this
-        console.log('!!! Error!')
-        console.log(e)  // TODO better error-handling
+        context.commit('logError', e)
       })
     },
 
@@ -195,9 +188,7 @@ const store = new Vuex.Store({
         context.dispatch('refreshRemote') // TODO Why is this not happening automatically?
       })
       .catch(e => {
-        // TODO use an event for this
-        console.log('!!! Error!')
-        console.log(e)  // TODO better error-handling
+        context.commit('logError', e)
       })
     },
 
@@ -214,9 +205,7 @@ const store = new Vuex.Store({
         context.dispatch('refreshRemote') // TODO Why is this not happening automatically?
       })
       .catch(e => {
-        // TODO use an event for this
-        console.log('!!! Error!')
-        console.log(e)  // TODO better error-handling
+        context.commit('logError', e)
       })
     }
 
