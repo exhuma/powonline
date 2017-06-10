@@ -20,7 +20,7 @@ const store = new Vuex.Store({
     teams: [],
     routes: [],
     errors: [],
-    station_team_map: {},  // map teams to stations (key=teamName, value=stationName)
+    route_station_map: {},  // map stations to routes (key=stationName, value=routeName)
     route_team_map: {}  // map teams to routes (key=teamName, value=routeName)
   },
   mutations: {
@@ -57,11 +57,18 @@ const store = new Vuex.Store({
         }
       }
 
-      // Replace teams-to-stations mapping
-      // TODO
-
       // Replace stations-to-routes mapping
-      // TODO
+      state.route_station_map = {}
+      for (const routeName in assignments.stations) {
+        if (assignments.stations.hasOwnProperty(routeName)) {
+          const stations = assignments.stations[routeName]
+          stations.forEach(station => {
+            const container = state.route_station_map[routeName] || []
+            container.push(station)
+            state.route_station_map[routeName] = container
+          })
+        }
+      }
     },
     assignTeamToRoute (state, payload) {
       const current = state.route_team_map[payload.routeName]
@@ -75,6 +82,22 @@ const store = new Vuex.Store({
       const current = state.route_team_map[payload.routeName]
       if (current === undefined) {
         state.route_team_map[payload.routeName] = []
+      } else {
+        // XXX TODO implement
+      }
+    },
+    assignStationToRoute (state, payload) {
+      const current = state.route_station_map[payload.routeName]
+      if (current === undefined) {
+        state.route_station_map[payload.routeName] = [payload.station.name]
+      } else {
+        state.route_station_map[payload.routeName].push(payload.station.name)
+      }
+    },
+    unassignStationFromRoute (state, payload) {
+      const current = state.route_station_map[payload.routeName]
+      if (current === undefined) {
+        state.route_station_map[payload.routeName] = []
       } else {
         // XXX TODO implement
       }
@@ -207,6 +230,42 @@ const store = new Vuex.Store({
       .catch(e => {
         context.commit('logError', e)
       })
+    },
+
+    /**
+     * Assign a station to a route
+     */
+    assignStationToRouteRemote (context, data) {
+      // first, let's find the station object corresponding to this name (yes, I
+      // know, a map would be better...)
+      let station = null
+      context.state.stations.forEach(item => {
+        if (item.name === data.stationName) {
+          station = item
+        }
+      })
+      axios.post(BASE_URL + '/route/' + data.routeName + '/stations', station)
+      .then(response => {
+        context.commit('assignStationToRoute', {routeName: data.routeName, station: station})
+        context.dispatch('refreshRemote') // TODO Why is this not happening automatically?
+      })
+      .catch(e => {
+        context.commit('logError', e)
+      })
+    },
+
+    /**
+     * Unassign a station from a route
+     */
+    unassignStationFromRouteRemote (context, data) {
+      axios.delete(BASE_URL + '/route/' + data.routeName + '/stations/' + data.stationName)
+      .then(response => {
+        context.commit('unassignStationFromRoute', data)
+        context.dispatch('refreshRemote') // TODO Why is this not happening automatically?
+      })
+      .catch(e => {
+        context.commit('logError', e)
+      })
     }
 
   },
@@ -237,6 +296,25 @@ const store = new Vuex.Store({
         }
       }
       return assignedTeams
+    },
+    unassignedStations: (state, getters) => (routeName) => {
+      const unassignedStations = []
+      const tmp = state.route_station_map[routeName] || []
+      const assignedStations = []
+      tmp.forEach(item => { assignedStations.push(item.name) })
+
+      state.stations.forEach(item => {
+        if (assignedStations.indexOf(item.name) === -1) {
+          unassignedStations.push(item.name)
+        }
+      })
+      return unassignedStations
+    },
+    assignedStations: (state, getters) => (routeName) => {
+      const tmp = state.route_station_map[routeName] || []
+      const assignedStations = []
+      tmp.forEach(item => { assignedStations.push(item.name) })
+      return assignedStations
     }
   }
 
