@@ -21,6 +21,8 @@ const store = new Vuex.Store({
     routes: [],
     route_station_map: {},  // map stations to routes (key=stationName, value=routeName)
     route_team_map: {},  // map teams to routes (key=teamName, value=routeName)
+    dashboard: {}, // maps team names to station-states
+    dashboardStation: ''
   },
   mutations: {
     addTeam (state, team) {
@@ -77,6 +79,23 @@ const store = new Vuex.Store({
     }
   },
   actions: {
+    /**
+     * Advance the state of a team on a station
+     */
+    advanceState (context, payload) {
+      axios.post(BASE_URL + '/job', {
+        'action': 'advance',
+        'args': {
+          'station_name': payload.stationName,
+          'team_name': payload.teamName
+        }
+      })
+      .then(response => {
+        const newState = response.data.result.state
+        console.log(newState)  // XXX
+      }) // TODO better error handling
+    },
+
     /**
      * Add a team to the backend store
      *

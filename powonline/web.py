@@ -3,6 +3,7 @@ from flask_restful import Api
 
 from .resources import (
     Assignments,
+    Dashboard,
     Job,
     Route,
     RouteList,
@@ -52,5 +53,6 @@ def make_app():
                      '/team/<team_name>/stations/<station_name>',
                      '/station/<station_name>/teams/<team_name>',
                      )
+    api.add_resource(Dashboard, '/station/<station_name>/dashboard')
     api.add_resource(Job, '/job')
     return app
