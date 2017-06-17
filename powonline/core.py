@@ -10,9 +10,9 @@ TEAMS = {}
 USERS = {}
 
 USER_STATION_MAP = {}
-TEAM_ROUTE_MAP = {}
+TEAM_ROUTE_MAP = {}  # key: team, value: route
 USER_ROLES = {}
-ROUTE_STATION_MAP = {}
+ROUTE_STATION_MAP = {}  # key: station, value: route
 TEAM_STATION_MAP = {}
 
 
