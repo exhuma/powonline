@@ -19,8 +19,8 @@ const store = new Vuex.Store({
     stations: [],
     teams: [],
     routes: [],
-    station_team_map: {},  // map teams to stations (key=teamName, value=stationName)
-    route_team_map: {}  // map teams to routes (key=teamName, value=routeName)
+    route_station_map: {},  // map stations to routes (key=stationName, value=routeName)
+    route_team_map: {},  // map teams to routes (key=teamName, value=routeName)
   },
   mutations: {
     addTeam (state, team) {
@@ -248,6 +248,31 @@ const store = new Vuex.Store({
         }
       }
       return assignedTeams
+    },
+    unassignedStations: (state, getters) => (routeName) => {
+      const unassignedStations = []
+      const tmp = state.route_station_map[routeName] || []
+      const assignedStations = []
+      tmp.forEach(item => { assignedStations.push(item.name) })
+
+      state.stations.forEach(item => {
+        if (assignedStations.indexOf(item.name) === -1) {
+          unassignedStations.push(item.name)
+        }
+      })
+      return unassignedStations
+    },
+    assignedStations: (state, getters) => (routeName) => {
+      const tmp = state.route_station_map[routeName] || []
+      const assignedStations = []
+      tmp.forEach(item => { assignedStations.push(item.name) })
+      return assignedStations
+    },
+    stationTeams: (state, getters) => (routeName) => {
+      return [
+        {name: routeName},
+        {name: routeName}
+      ]
     }
   }
 
