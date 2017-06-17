@@ -23,7 +23,9 @@ const store = new Vuex.Store({
     route_station_map: {},  // map stations to routes (key=stationName, value=routeName)
     route_team_map: {},  // map teams to routes (key=teamName, value=routeName)
     dashboard: {}, // maps team names to station-states
-    dashboardStation: ''
+    dashboardStation: '',
+    teamStates: [],
+    baseUrl: BASE_URL
   },
   mutations: {
     addTeam (state, team) {
@@ -102,6 +104,24 @@ const store = new Vuex.Store({
         state.route_station_map[payload.routeName] = []
       } else {
         // XXX TODO implement
+      }
+    },
+    deleteRoute (state, routeName) {
+      const idx = state.routes.indexOf(routeName)
+      if (idx > -1) {
+        state.routes.splice(idx, -1)
+      }
+    },
+    deleteStation (state, stationName) {
+      const idx = state.routes.indexOf(stationName)
+      if (idx > -1) {
+        state.stations.splice(idx, -1)
+      }
+    },
+    deleteTeam (state, teamName) {
+      const idx = state.teams.indexOf(teamName)
+      if (idx > -1) {
+        state.teams.splice(idx, -1)
       }
     }
   },
@@ -285,9 +305,48 @@ const store = new Vuex.Store({
       .catch(e => {
         context.commit('logError', e)
       })
-    }
+    },
 
+    /**
+     * Delete a route
+     */
+    deleteRouteRemote (context, routeName) {
+      axios.delete(BASE_URL + '/route/' + routeName)
+      .then(response => {
+        context.commit('deleteRoute', routeName)
+      })
+      .catch(e => {
+        console.log(e)
+      })
+    },
+
+    /**
+     * Delete a station
+     */
+    deleteStationRemote (context, stationName) {
+      axios.delete(BASE_URL + '/station/' + stationName)
+      .then(response => {
+        context.commit('deleteStation', stationName)
+      })
+      .catch(e => {
+        console.log(e)  // TODO Better error handling
+      })
+    },
+
+    /**
+     * Delete a team
+     */
+    deleteTeamRemote (context, teamName) {
+      axios.delete(BASE_URL + '/team/' + teamName)
+      .then(response => {
+        context.commit('deleteTeam', teamName)
+      })
+      .catch(e => {
+        console.log(e)  // TODO Better error-handling
+      })
+    }
   },
+
   getters: {
     unassignedTeams (state, getters) {
       // fetch *all* assignments of teams

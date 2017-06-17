@@ -6,7 +6,6 @@
 </template>
 
 <script>
-import axios from 'axios'
 export default {
   name: 'team-block',
   props: {
@@ -17,13 +16,7 @@ export default {
   },
   methods: {
     deleteTeam: function (event) {
-      axios.delete('http://192.168.1.92:5000/team/' + this.name)
-      .then(response => {
-        this.$emit('listChanged')
-      })
-      .catch(e => {
-        console.log(e)  // TODO Better error-handling
-      })
+      this.$store.dispatch('deleteTeamRemote', this.name)
     }
   }
 }

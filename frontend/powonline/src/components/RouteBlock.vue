@@ -28,7 +28,6 @@
 </template>
 
 <script>
-import axios from 'axios'
 export default {
   name: 'route-block',
   props: {
@@ -73,18 +72,7 @@ export default {
       this.$store.dispatch('assignStationToRouteRemote', {stationName: station, routeName: this.name})
     },
     deleteRoute: function (event) {
-      axios.delete('http://192.168.1.92:5000/route/' + this.name)
-      .then(response => {
-        this.$emit('listChanged')
-      })
-      .catch(e => {
-        // TODO use an event for this
-        if (e.response.status === 400) {
-          for (var key in e.response.data) {
-            this.errors.push({message: e.response.data[key] + ': ' + key})
-          }
-        }
-      })
+      this.$store.dispatch('deleteRouteRemote', this.name)
     }
   }
 }

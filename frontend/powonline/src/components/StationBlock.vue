@@ -6,7 +6,6 @@
 </template>
 
 <script>
-import axios from 'axios'
 export default {
   name: 'station-block',
   props: {
@@ -17,13 +16,7 @@ export default {
   },
   methods: {
     deleteStation: function (event) {
-      axios.delete('http://192.168.1.92:5000/station/' + this.name)
-      .then(response => {
-        this.$emit('listChanged')
-      })
-      .catch(e => {
-        console.log(e)  // TODO Better error handling
-      })
+      this.$store.dispatch('deleteStationRemote', this.name)
     }
   }
 }

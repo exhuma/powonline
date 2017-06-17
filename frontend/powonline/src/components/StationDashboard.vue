@@ -26,7 +26,8 @@ export default {
   methods: {
     update: function (event) {
       this.states = []
-      axios.get('http://192.168.1.2:5000/station/' + this.$route.params.stationName + '/dashboard')
+      const baseUrl = this.$store.state.baseUrl
+      axios.get(baseUrl + '/station/' + this.$route.params.stationName + '/dashboard')
       .then(response => {
         response.data.forEach(state => {
           this.states.push(state)
