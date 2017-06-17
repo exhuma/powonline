@@ -360,20 +360,13 @@ class Dashboard(Resource):
     '''
 
     def get(self, station_name):
-        output = [
-            {
-                'team': 'Team 1',
-                'state': 'arrived',
-                'score': 15
-            },
-            {
-                'team': 'Team 2',
-                'state': 'unknown',
+        output = []
+        for team_name, state in core.Station.team_states(station_name):
+            output.append({
+                'team': team_name,
+                'state': state.value,
                 'score': 0
-            },
-        ]
-
-        # TODO
+            })
 
         output = make_response(dumps(output), 200)
         output.content_type = 'application/json'

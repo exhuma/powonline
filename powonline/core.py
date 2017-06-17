@@ -19,12 +19,12 @@ TEAM_STATION_MAP = {}
 def get_assignments():
     route_teams = {route.name: set() for route in ROUTES.values()}
     for team_name, route_name in TEAM_ROUTE_MAP.items():
-        container = route_teams[route_name].add(TEAMS[team_name])
+        route_teams[route_name].add(TEAMS[team_name])
 
     route_stations = {route.name: set() for route in ROUTES.values()}
     for station_name, route_names in ROUTE_STATION_MAP.items():
         for route_name in route_names:
-            container = route_stations[route_name].add(STATIONS[station_name])
+            route_stations[route_name].add(STATIONS[station_name])
 
     return {
         'teams': route_teams,
@@ -96,15 +96,15 @@ class Team:
         return state
 
     def advance_on_station(team_name, station_name):
-        state = TEAM_STATION_MAP.get(team_name, {}).get(station_name, {})
-        state = state or make_default_team_state()
+        state = TEAM_STATION_MAP.get(team_name, {}).setdefault(
+            station_name, make_default_team_state())
         if state['state'] == TeamState.UNKNOWN:
-            new_state = TeamState.ARRIVED
+            state['state'] = TeamState.ARRIVED
         elif state['state'] == TeamState.ARRIVED:
-            new_state = TeamState.FINISHED
+            state['state'] = TeamState.FINISHED
         else:
-            new_state = TeamState.UNKNOWN
-        return new_state
+            state['state'] = TeamState.UNKNOWN
+        return state['state']
 
 
 class Station:
@@ -150,6 +150,27 @@ class Station:
         if station_name in USER_STATION_MAP:
             del(USER_STATION_MAP[station_name])
         return True
+
+    @staticmethod
+    def team_states(station_name):
+        output = []
+        teams = []
+
+        # First look which routes this station is assigned to
+        routes = ROUTE_STATION_MAP.setdefault(station_name, [])
+
+        # ... now find all the teams assigned to those routes
+        for team_name, team_route in TEAM_ROUTE_MAP.items():
+            if team_route in routes:
+                teams.append(team_name)
+
+        for team_name in teams:
+            team_station = TEAM_STATION_MAP.setdefault(team_name, {})
+            state = team_station.setdefault(station_name,
+                                            make_default_team_state())
+            output.append((team_name, state['state']))
+
+        return output
 
 
 class Route:
