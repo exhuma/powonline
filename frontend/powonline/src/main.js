@@ -44,6 +44,9 @@ const store = new Vuex.Store({
     replaceStations (state, stations) {
       state.stations = stations
     },
+    logError (state, error) {
+      state.errors.push(error)
+    },
     replaceAssignments (state, assignments) {
       // Replace team-to-route mapping
       state.route_team_map = {}
@@ -56,11 +59,18 @@ const store = new Vuex.Store({
         }
       }
 
-      // Replace teams-to-stations mapping
-      // TODO
-
       // Replace stations-to-routes mapping
-      // TODO
+      state.route_station_map = {}
+      for (const routeName in assignments.stations) {
+        if (assignments.stations.hasOwnProperty(routeName)) {
+          const stations = assignments.stations[routeName]
+          stations.forEach(station => {
+            const container = state.route_station_map[routeName] || []
+            container.push(station)
+            state.route_station_map[routeName] = container
+          })
+        }
+      }
     },
     assignTeamToRoute (state, payload) {
       const current = state.route_team_map[payload.routeName]
@@ -74,6 +84,22 @@ const store = new Vuex.Store({
       const current = state.route_team_map[payload.routeName]
       if (current === undefined) {
         state.route_team_map[payload.routeName] = []
+      } else {
+        // XXX TODO implement
+      }
+    },
+    assignStationToRoute (state, payload) {
+      const current = state.route_station_map[payload.routeName]
+      if (current === undefined) {
+        state.route_station_map[payload.routeName] = [payload.station.name]
+      } else {
+        state.route_station_map[payload.routeName].push(payload.station.name)
+      }
+    },
+    unassignStationFromRoute (state, payload) {
+      const current = state.route_station_map[payload.routeName]
+      if (current === undefined) {
+        state.route_station_map[payload.routeName] = []
       } else {
         // XXX TODO implement
       }
@@ -108,8 +134,7 @@ const store = new Vuex.Store({
         context.commit('addTeam', team)
       })
       .catch(e => {
-        console.log('!!! Error!')
-        console.log(e) // TODO better error-handling
+        context.commit('logError', e)
       })
     },
 
@@ -124,8 +149,7 @@ const store = new Vuex.Store({
         context.commit('addRoute', route)
       })
       .catch(e => {
-        console.log('!!! Error!')
-        console.log(e) // TODO better error-handling
+        context.commit('logError', e)
       })
     },
 
@@ -140,8 +164,7 @@ const store = new Vuex.Store({
         context.commit('addStation', station)
       })
       .catch(e => {
-        console.log('!!! Error!')
-        console.log(e) // TODO better error-handling
+        context.commit('logError', e)
       })
     },
 
@@ -155,9 +178,7 @@ const store = new Vuex.Store({
         context.commit('replaceTeams', response.data.items)
       })
       .catch(e => {
-        // TODO use an event for this
-        console.log('!!! Error!')
-        console.log(e)  // TODO better error-handling
+        context.commit('logError', e)
       })
 
       // --- Fetch Routes from server
@@ -166,9 +187,7 @@ const store = new Vuex.Store({
         context.commit('replaceRoutes', response.data.items)
       })
       .catch(e => {
-        // TODO use an event for this
-        console.log('!!! Error!')
-        console.log(e)  // TODO better error-handling
+        context.commit('logError', e)
       })
 
       // --- Fetch team/route assignments from server
@@ -177,9 +196,7 @@ const store = new Vuex.Store({
         context.commit('replaceAssignments', response.data)
       })
       .catch(e => {
-        // TODO use an event for this
-        console.log('!!! Error!')
-        console.log(e)  // TODO better error-handling
+        context.commit('logError', e)
       })
 
       // --- Fetch Stations from server
@@ -188,9 +205,7 @@ const store = new Vuex.Store({
         context.commit('replaceStations', response.data.items)
       })
       .catch(e => {
-        // TODO use an event for this
-        console.log('!!! Error!')
-        console.log(e)  // TODO better error-handling
+        context.commit('logError', e)
       })
     },
 
@@ -215,9 +230,7 @@ const store = new Vuex.Store({
         context.dispatch('refreshRemote') // TODO Why is this not happening automatically?
       })
       .catch(e => {
-        // TODO use an event for this
-        console.log('!!! Error!')
-        console.log(e)  // TODO better error-handling
+        context.commit('logError', e)
       })
     },
 
@@ -234,9 +247,43 @@ const store = new Vuex.Store({
         context.dispatch('refreshRemote') // TODO Why is this not happening automatically?
       })
       .catch(e => {
-        // TODO use an event for this
-        console.log('!!! Error!')
-        console.log(e)  // TODO better error-handling
+        context.commit('logError', e)
+      })
+    },
+
+    /**
+     * Assign a station to a route
+     */
+    assignStationToRouteRemote (context, data) {
+      // first, let's find the station object corresponding to this name (yes, I
+      // know, a map would be better...)
+      let station = null
+      context.state.stations.forEach(item => {
+        if (item.name === data.stationName) {
+          station = item
+        }
+      })
+      axios.post(BASE_URL + '/route/' + data.routeName + '/stations', station)
+      .then(response => {
+        context.commit('assignStationToRoute', {routeName: data.routeName, station: station})
+        context.dispatch('refreshRemote') // TODO Why is this not happening automatically?
+      })
+      .catch(e => {
+        context.commit('logError', e)
+      })
+    },
+
+    /**
+     * Unassign a station from a route
+     */
+    unassignStationFromRouteRemote (context, data) {
+      axios.delete(BASE_URL + '/route/' + data.routeName + '/stations/' + data.stationName)
+      .then(response => {
+        context.commit('unassignStationFromRoute', data)
+        context.dispatch('refreshRemote') // TODO Why is this not happening automatically?
+      })
+      .catch(e => {
+        context.commit('logError', e)
       })
     }
 

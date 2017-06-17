@@ -1,5 +1,8 @@
 <template>
   <div id="app">
+    <div id="errors">
+      <pre class="error" v-for="error in errors">{{ error }}</pre>
+    </div>
     <router-link class="navlink" to="/">Index</router-link>
     <router-link class="navlink" to="/station">Stations</router-link>
     <router-link class="navlink" to="/team">Teams</router-link>
@@ -10,7 +13,12 @@
 
 <script>
 export default {
-  name: 'app'
+  name: 'app',
+  computed: {
+    errors () {
+      return this.$store.state.errors
+    }
+  }
 }
 </script>
 
@@ -22,5 +30,11 @@ export default {
   text-align: center;
   color: #2c3e50;
   margin-top: 60px;
+}
+.error {
+  border: 1px solid #a00;
+  background: #fee;
+  text-align: left;
+  padding: 1em;
 }
 </style>
