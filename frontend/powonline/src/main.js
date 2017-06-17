@@ -19,6 +19,7 @@ const store = new Vuex.Store({
     stations: [],
     teams: [],
     routes: [],
+    errors: [],
     route_station_map: {},  // map stations to routes (key=stationName, value=routeName)
     route_team_map: {},  // map teams to routes (key=teamName, value=routeName)
     dashboard: {}, // maps team names to station-states
