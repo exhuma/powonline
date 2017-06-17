@@ -12,4 +12,4 @@ def develop():
     with cd('frontend'):
         l('./npm install')
     l('[ -d env ] || pyvenv env')
-    l('./env/bin/pip install -e .')
+    l('./env/bin/pip install -e .[dev,test]')
