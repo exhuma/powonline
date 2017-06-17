@@ -21,7 +21,9 @@ const store = new Vuex.Store({
     routes: [],
     errors: [],
     route_station_map: {},  // map stations to routes (key=stationName, value=routeName)
-    route_team_map: {}  // map teams to routes (key=teamName, value=routeName)
+    route_team_map: {},  // map teams to routes (key=teamName, value=routeName)
+    dashboard: {}, // maps team names to station-states
+    dashboardStation: ''
   },
   mutations: {
     addTeam (state, team) {
@@ -315,6 +317,12 @@ const store = new Vuex.Store({
       const assignedStations = []
       tmp.forEach(item => { assignedStations.push(item.name) })
       return assignedStations
+    },
+    stationTeams: (state, getters) => (routeName) => {
+      return [
+        {name: routeName},
+        {name: routeName}
+      ]
     }
   }
 

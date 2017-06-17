@@ -1,6 +1,6 @@
 <template>
   <div class="station-block">
-    {{ name }}
+    <a :href="'#/station/' + name">{{ name }}</a>
     <button @click="deleteStation">Delete</button>
   </div>
 </template>

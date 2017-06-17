@@ -354,6 +354,32 @@ class Assignments(Resource):
         return output
 
 
+class Dashboard(Resource):
+    '''
+    Helper resource for the frontend
+    '''
+
+    def get(self, station_name):
+        output = [
+            {
+                'team': 'Team 1',
+                'state': 'arrived',
+                'score': 15
+            },
+            {
+                'team': 'Team 2',
+                'state': 'unknown',
+                'score': 0
+            },
+        ]
+
+        # TODO
+
+        output = make_response(dumps(output), 200)
+        output.content_type = 'application/json'
+        return output
+
+
 class Job(Resource):
 
     def _action_advance(self, station_name, team_name):
