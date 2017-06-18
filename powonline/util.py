@@ -7,7 +7,7 @@ P_REQUEST_LOG = re.compile(r'^(.*?) - - \[(.*?)\] "(.*?)" (\d+) (\d+|-)$')
 LOG = logging.getLogger('werkzeug')
 
 
-def colorize_werkzeug():
+def colorize_werkzeug():  # pragma: no cover
     """
     Fetches the werkzeug logger and adds a color filter.
 
@@ -27,7 +27,7 @@ def colorize_werkzeug():
         'DELETE': term.bold_red,
     }
 
-    class WerkzeugColorFilter:
+    class WerkzeugColorFilter:  # pragma: no cover
 
         def filter(self, record):
             match = P_REQUEST_LOG.match(record.msg)
