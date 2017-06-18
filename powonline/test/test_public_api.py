@@ -3,6 +3,7 @@ import json
 import unittest
 
 from powonline.web import make_app
+import powonline.core as core
 
 from util import (
     make_dummy_route_dict,
@@ -24,11 +25,23 @@ class TestPublicAPIAsManager(unittest.TestCase):
         core.USER_STATION_MAP.clear()
         core.TEAM_ROUTE_MAP.clear()
 
+    def test_fetch_list_of_teams_all(self):
+        with patch('powonline.resources.core') as _core:
+            _core.Team.all.return_value = []
+            self.app.get('/team')
+            _core.Team.all.assert_called_with()
+
     def test_fetch_list_of_teams_by_route(self):
         with patch('powonline.resources.core') as _core:
             _core.Team.assigned_to_route.return_value = []
             self.app.get('/team?assigned_route=foo')
             _core.Team.assigned_to_route.assert_called_with('foo')
+
+    def test_fetch_list_of_teams_quickfilter_without_route(self):
+        with patch('powonline.resources.core') as _core:
+            _core.Team.quickfilter_without_route.return_value = []
+            self.app.get('/team?quickfilter=without_route')
+            _core.Team.quickfilter_without_route.assert_called_with()
 
     def test_fetch_list_of_stations(self):
         with patch('powonline.resources.core') as _core:
@@ -313,6 +326,27 @@ class TestPublicAPIAsManager(unittest.TestCase):
         data = json.loads(response_text)
         result = data['result']
         self.assertEqual(result, {'state': 'arrived'})
+
+    def test_dashboard(self):
+        with patch('powonline.resources.core') as _core:
+            _core.Station.team_states.return_value = [
+                ('team1', core.TeamState.ARRIVED),
+                ('team2', core.TeamState.UNKNOWN),
+            ]
+            result = self.app.get('/station/station-1/dashboard')
+            data = json.loads(result.data.decode(result.charset))
+            testable = {
+                (row['score'], row['team'], row['state'])
+                for row in data
+            }
+            expected = {
+                (0, 'team1', 'arrived'),
+                (0, 'team2', 'unknown'),
+            }
+            self.assertEqual(testable, expected)
+
+
+
 
 
 class TestPublicAPIAsStationManager(unittest.TestCase):
