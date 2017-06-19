@@ -1,6 +1,5 @@
-from enum import Enum
-
 from . import model
+from .model import TeamState
 
 # fake in-memory storage
 ROLES = {}  # set of role names
@@ -30,12 +29,6 @@ def get_assignments():
         'teams': route_teams,
         'stations': route_stations
     }
-
-
-class TeamState(Enum):
-    UNKNOWN = 'unknown'
-    ARRIVED = 'arrived'
-    FINISHED = 'finished'
 
 
 def make_default_team_state():
