@@ -7,6 +7,7 @@ import unittest
 
 from powonline import core
 from powonline.web import make_app
+import powonline.model as model
 
 
 class TestPublicAPIAsManager(unittest.TestCase):
@@ -17,8 +18,9 @@ class TestPublicAPIAsManager(unittest.TestCase):
         self.app = self.app_object.test_client()
 
         # create entities
-        self.route1 = core.Route.create_new({'name': 'route1'})
-        self.route2 = core.Route.create_new({'name': 'route2'})
+        model.DB.create_all()
+        self.route1 = core.Route.create_new(self.session, {'name': 'route1'})
+        self.route2 = core.Route.create_new(self.session, {'name': 'route2'})
         self.team1 = core.Team.create_new({'name': 'team1'})
         self.team2 = core.Team.create_new({'name': 'team2'})
         self.station1 = core.Station.create_new({'name': 'station1'})
@@ -31,10 +33,11 @@ class TestPublicAPIAsManager(unittest.TestCase):
         core.Route.assign_station('route2', 'station2')
 
         self.maxDiff = None
+        self.session.commit()
 
     def tearDown(self):
         core.ROLES.clear()
-        core.ROUTES.clear()
+        self.session.query(model.Route).delete()
         core.STATIONS.clear()
         core.TEAMS.clear()
         core.USERS.clear()
@@ -43,10 +46,13 @@ class TestPublicAPIAsManager(unittest.TestCase):
         core.USER_ROLES.clear()
         core.ROUTE_STATION_MAP.clear()
         core.TEAM_STATION_MAP.clear()
+        self.session.commit()
+        self.session.remove()
+        model.DB.drop_all()
 
     def test_fetch_assignments_core(self):
 
-        result = core.get_assignments()
+        result = core.get_assignments(self.session)
         assignments_route_team1 = result['teams']['route1']
         assignments_route_team2 = result['teams']['route2']
         assignments_route_station1 = result['stations']['route1']

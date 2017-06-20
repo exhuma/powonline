@@ -1,7 +1,7 @@
 from json import dumps
 import logging
 
-from flask import request, make_response
+from flask import request, make_response, g
 from flask_restful import Resource, marshal_with, fields
 
 from . import core
@@ -153,7 +153,7 @@ class Station(Resource):
 class RouteList(Resource):
 
     def get(self):
-        items = list(core.Route.all())
+        items = list(core.Route.all(g.session))
         output = {
             'items': items
         }
@@ -174,7 +174,7 @@ class RouteList(Resource):
         if errors:
             return errors, 400
 
-        output = core.Route.create_new(parsed_data)
+        output = core.Route.create_new(g.session, parsed_data)
         return Route._single_response(output, 201)
 
 
@@ -202,7 +202,7 @@ class Route(Resource):
         return Route._single_response(output, 200)
 
     def delete(self, name):
-        core.Route.delete(name)
+        core.Route.delete(g.session, name)
         return '', 204
 
 
@@ -333,7 +333,7 @@ class Assignments(Resource):
 
     def get(self):
         output = {}
-        assignments = core.get_assignments()
+        assignments = core.get_assignments(g.session)
 
         route_teams = {}
         for route_name, teams in assignments['teams'].items():

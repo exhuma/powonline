@@ -4,8 +4,6 @@ from .model import TeamState
 # fake in-memory storage
 ROLES = {}  # set of role names
 USERS = {}  # set of user names
-ROUTES = {}  # key: route-name, value: Route object
-STATIONS = {}  # key: station-name, value: Station object
 TEAMS = {}  # key: team-name, value: Team object
 
 USER_STATION_MAP = {}  # key: user-name, value: station-name
@@ -15,12 +13,12 @@ ROUTE_STATION_MAP = {}  # key: station-name, value: set of route-names
 TEAM_STATION_MAP = {}  # key: team-name, value: object(key: station-name, value: state-object)
 
 
-def get_assignments():
-    route_teams = {route.name: set() for route in ROUTES.values()}
+def get_assignments(session):
+    route_teams = {route.name: set() for route in Route.all(session)}
     for team_name, route_name in TEAM_ROUTE_MAP.items():
         route_teams[route_name].add(TEAMS[team_name])
 
-    route_stations = {route.name: set() for route in ROUTES.values()}
+    route_stations = {route.name: set() for route in Route.all(session)}
     for station_name, route_names in ROUTE_STATION_MAP.items():
         for route_name in route_names:
             route_stations[route_name].add(STATIONS[station_name])
@@ -52,16 +50,15 @@ class Team:
                 yield team
 
     @staticmethod
-    def assigned_to_route(route_name):
-        for team_name, _route_name in TEAM_ROUTE_MAP.items():
-            if route_name == _route_name:
-                yield TEAMS[team_name]
+    def assigned_to_route(session, route_name):
+        route = session.query(model.Route).filter_by(
+            name=route_name).one()
+        return route.teams
 
     @staticmethod
-    def create_new(data):
-        team = model.Team()
-        team.update(**data)
-        TEAMS[data['name']] = team
+    def create_new(session, data):
+        team = model.Team(**data)
+        team = session.merge(team)
         return team
 
     @staticmethod
@@ -97,15 +94,13 @@ class Team:
 class Station:
 
     @staticmethod
-    def all():
-        for station in STATIONS.values():
-            yield station
+    def all(session):
+        return session.query(model.Station)
 
     @staticmethod
-    def create_new(data):
-        station = model.Station()
-        station.update(**data)
-        STATIONS[data['name']] = station
+    def create_new(session, data):
+        station = model.Station(**data)
+        station = session.merge(station)
         return station
 
     @staticmethod
@@ -121,10 +116,10 @@ class Station:
         return None
 
     @staticmethod
-    def assigned_to_route(route_name):
-        for station_name, _route_names in ROUTE_STATION_MAP.items():
-            if route_name in _route_names:
-                yield STATIONS[station_name]
+    def assigned_to_route(session, route_name):
+        route = session.query(model.Route).filter_by(
+            name=route_name).one_or_none()
+        return route.stations
 
     @staticmethod
     def assign_user(station_name, user_name):
@@ -174,54 +169,63 @@ class Station:
 class Route:
 
     @staticmethod
-    def all():
-        for station in ROUTES.values():
-            yield station
+    def all(session):
+        return session.query(model.Route)
 
     @staticmethod
-    def create_new(data):
-        route = model.Route()
-        route.update(**data)
-        ROUTES[data['name']] = route
+    def create_new(session, data):
+        route = model.Route(**data)
+        route = session.merge(route)
         return route
 
     @staticmethod
-    def upsert(name, data):
-        route = ROUTES.get(name, model.Route())
-        route.update(**data)
-        return route
+    def upsert(session, name, data):
+        old = session.query(model.Route).filter_by(name=name).first()
+        if not old:
+            old = Route.create_new(session, data)
+        for k, v in data.items():
+            setattr(old, k, v)
+        return old
 
     @staticmethod
-    def delete(name):
-        if name in ROUTES:
-            del(ROUTES[name])
+    def delete(session, name):
+        session.query(model.Route).filter_by(name=name).delete()
         return None
 
     @staticmethod
-    def assign_team(route_name, team_name):
-        assigned_route = TEAM_ROUTE_MAP.get(team_name)
-        if assigned_route:
-            return False
-        TEAM_ROUTE_MAP[team_name] = route_name
+    def assign_team(session, route_name, team_name):
+        route = session.query(model.Route).filter_by(
+            name=route_name).one()
+        team = session.query(model.Team).filter_by(
+            name=team_name).one()
+        route.teams.add(team)
         return True
 
     @staticmethod
-    def unassign_team(route_name, team_name):
-        if team_name in TEAM_ROUTE_MAP:
-            del(TEAM_ROUTE_MAP[team_name])
+    def unassign_team(session, route_name, team_name):
+        route = session.query(model.Route).filter_by(
+            name=route_name).one()
+        team = session.query(model.Team).filter_by(
+            name=team_name).one()
+        route.teams.remove(team)
         return True
 
     @staticmethod
-    def assign_station(route_name, station_name):
-        assigned_routes = ROUTE_STATION_MAP.setdefault(station_name, set())
-        assigned_routes.add(route_name)
+    def assign_station(session, route_name, station_name):
+        route = session.query(model.Route).filter_by(
+            name=route_name).one()
+        station = session.query(model.Station).filter_by(
+            name=station_name).one()
+        route.stations.add(station)
         return True
 
     @staticmethod
-    def unassign_station(route_name, station_name):
-        assigned_routes = ROUTE_STATION_MAP.get(station_name, set())
-        if route_name in assigned_routes:
-            assigned_routes.remove(route_name)
+    def unassign_station(session, route_name, station_name):
+        route = session.query(model.Route).filter_by(
+            name=route_name).one()
+        station = session.query(model.Station).filter_by(
+            name=station_name).one()
+        route.stations.remove(station)
         return True
 
 

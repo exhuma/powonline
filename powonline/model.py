@@ -2,6 +2,7 @@ from datetime import datetime
 from enum import Enum
 import logging
 
+from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import (
     Boolean,
     Column,
@@ -13,14 +14,13 @@ from sqlalchemy import (
     func,
     Table,
 )
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 import sqlalchemy.types as types
 
 
-ENGINE = create_engine('postgresql://exhuma@/powonline', echo=True)
+ENGINE = create_engine('postgresql://exhuma@/powonline')
 LOG = logging.getLogger(__name__)
-Base = declarative_base()
+DB = SQLAlchemy()
 
 
 class TeamState(Enum):
@@ -40,7 +40,7 @@ class TeamStateType(types.TypeDecorator):
         return TeamState(value)
 
 
-class Team(Base):
+class Team(DB.Model):
     __tablename__ = 'team'
 
     name = Column(Unicode, primary_key=True, nullable=False)
@@ -66,27 +66,6 @@ class Team(Base):
         ForeignKey('route.name', onupdate='CASCADE', ondelete='SET NULL'))
 
     route = relationship('Route', backref='teams')
-
-    def __init__(self, name='Example Team'):
-        self.name = name
-        self.email = 'example@example.com'
-        self.order = 0
-        self.cancelled = False
-        self.contact = 'John Doe'
-        self.phone = '1234'
-        self.comments = ''
-        self.is_confirmed = True
-        self.confirmation_key = 'abc'
-        self.accepted = True
-        self.completed = False
-        self.inserted = datetime.now()
-        self.updated = None
-        self.num_vegetarians = 3
-        self.num_participants = 10
-        self.planned_start_time = None
-        self.effective_start_time = None
-        self.finish_time = None
-
     stations = relationship('Station', secondary='team_station_state',
                             viewonly=True)  # uses an AssociationObject
 
@@ -98,7 +77,7 @@ class Team(Base):
         return "Team(name=%r)" % self.name
 
 
-class Station(Base):
+class Station(DB.Model):
     __tablename__ = 'station'
     name = Column(Unicode, primary_key=True, nullable=False)
     contact = Column(Unicode)
@@ -106,12 +85,10 @@ class Station(Base):
     is_start = Column(Boolean, nullable=False, server_default='false')
     is_end = Column(Boolean, nullable=False, server_default='false')
 
-    def __init__(self):
-        self.name = 'Example Station'
-        self.contact = 'Example Contact'
-        self.phone = '12345'
-        self.is_start = False
-        self.is_end = False
+    routes = relationship('Route',
+                          secondary='route_station',
+                          back_populates='stations',
+                          collection_class=set)
 
     users = relationship('User',
                          secondary='user_station',
@@ -129,20 +106,26 @@ class Station(Base):
         return "Station(name=%r)" % self.name
 
 
-class Route(Base):
+class Route(DB.Model):
     __tablename__ = 'route'
 
     name = Column(Unicode, primary_key=True)
 
-    def __init__(self):
-        self.name = 'Example Station'
+    teams = relationship('Team', backref='route', collection_class=set)
+    stations = relationship('Station',
+                            secondary='route_station',
+                            back_populates='routes',
+                            collection_class=set)
+
+    def __repr__(self):
+        return "Route(name=%r)" % self.name
 
     def update(self, **kwargs):
         for k, v in kwargs.items():
             setattr(self, k, v)
 
 
-class User(Base):
+class User(DB.Model):
     __tablename__ = 'user'
     name = Column(Unicode, primary_key=True)  # TODO: Should the name be the PK? Email or ID would be better.
 
@@ -152,7 +135,7 @@ class User(Base):
                             collection_class=set)
 
 
-class Role(Base):
+class Role(DB.Model):
     __tablename__ = 'role'
     name = Column(Unicode, primary_key=True)
 
@@ -160,7 +143,7 @@ class Role(Base):
         self.name = 'Example Station'
 
 
-class TeamStation(Base):
+class TeamStation(DB.Model):
     __tablename__ = 'team_station_state'
 
     team_name = Column(Unicode, ForeignKey(
@@ -183,25 +166,18 @@ class TeamStation(Base):
         self.state = state
 
 
-class RouteStation(Base):
-    __tablename__ = 'route_station'
-
-    route_name = Column(Unicode, ForeignKey(
+route_station_table = Table(
+    'route_station',
+    DB.metadata,
+    Column('route_name', Unicode, ForeignKey(
         'route.name', onupdate='CASCADE', ondelete='CASCADE'),
-        primary_key=True)
-    station_name = Column(Unicode, ForeignKey(
+        primary_key=True),
+    Column('station_name', Unicode, ForeignKey(
         'station.name', onupdate='CASCADE', ondelete='CASCADE'),
-        primary_key=True)
-    score = Column(Integer, nullable=True, default=None)
-    updated = Column(DateTime(timezone=True), nullable=False,
-                     default=datetime.now(), server_default=func.now())
-
-    route = relationship("Route")
-    station = relationship("Station", backref='stations')
-
-    def __init__(self, route_name, station_name):
-        self.route_name = route_name
-        self.station_name = station_name
+        primary_key=True),
+    Column('updated', DateTime(timezone=True), nullable=False,
+           default=datetime.now(), server_default=func.now()),
+)
 
 user_station_table = Table(
     'user_station',

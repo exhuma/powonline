@@ -22,7 +22,7 @@ from .resources import (
     UserRoleList,
 )
 from .rootbp import rootbp
-
+from .model import DB
 
 def make_app():
     '''
@@ -55,4 +55,9 @@ def make_app():
                      )
     api.add_resource(Dashboard, '/station/<station_name>/dashboard')
     api.add_resource(Job, '/job')
+
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://exhuma@/powonline'
+    app.config['SQLALCHEMY_TRACK_MODIFICATION'] = False
+    DB.init_app(app)
+
     return app
