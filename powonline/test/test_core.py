@@ -1,63 +1,39 @@
 import unittest
 
+from flask_testing import TestCase
+
+from powonline.web import make_app
 from powonline import core
 from powonline import model
 
 
-class CommonTest(unittest.TestCase):
+def here(localname):
+    from os.path import join, dirname
+    return join(dirname(__file__), localname)
+
+
+class CommonTest(TestCase):
+
+    SQLALCHEMY_DATABASE_URI = 'postgresql://exhuma@/powonline_testing'
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    TESTING = True
+
+    def create_app(self):
+        return make_app(CommonTest.SQLALCHEMY_DATABASE_URI)
 
     def setUp(self):
-        from sqlalchemy.orm import sessionmaker, scoped_session
-        Session = scoped_session(sessionmaker(bind=model.ENGINE))
-        self.session = Session()
+        model.DB.create_all()
 
-        self._route_blue = core.Route.create_new(
-            self.session, {'name': 'route-blue'})
-        self._route_red = core.Route.create_new(
-            self.session, {'name': 'route-red'})
-        self._station_start = core.Station.create_new(
-            self.session, {'name': 'station-start'})
-        self._station_blue = core.Station.create_new(
-            self.session, {'name': 'station-blue'})
-        self._station_red = core.Station.create_new(
-            self.session, {'name': 'station-red'})
-        self._station_end = core.Station.create_new(
-            self.session, {'name': 'station-end'})
-        self._team_blue = core.Team.create_new(
-            self.session, {'name': 'team-blue', 'route': self._route_blue})
-        self._team_red = core.Team.create_new(
-            self.session, {'name': 'team-red', 'route': self._route_red})
-        self._team_without_route = core.Team.create_new(
-            self.session, {'name': 'team-without-route'})
-        self._route_blue.stations.add(self._station_start)
-        self._route_blue.stations.add(self._station_blue)
-        self._route_blue.stations.add(self._station_end)
-        self._route_red.stations.add(self._station_start)
-        self._route_red.stations.add(self._station_red)
-        self._route_red.stations.add(self._station_end)
-        # TODO core.ROUTE_STATION_MAP.update({
-        # TODO     'station-red': {'route-red'},
-        # TODO     'station-start': {'route-blue', 'route-red'},
-        # TODO     'station-end': {'route-blue', 'route-red'},
-        # TODO })
-        # TODO core.TEAM_STATION_MAP.update({
-        # TODO     'team-blue': {'station-start': {'state': core.TeamState.ARRIVED}},
-        # TODO     'team-red': {'station-start': {'state': core.TeamState.FINISHED},
-        # TODO                  'station-red': {'state': core.TeamState.ARRIVED}},
-        # TODO })
-        # TODO core.USER_ROLES.update({
-        # TODO     'user1': {'role1'}
-        # TODO })
+        with open(here('seed.sql')) as seed:
+            model.DB.session.execute(seed.read())
+            model.DB.session.commit()
+
+        self.maxDiff = None
+        self.session = model.DB.session  # avoids unrelated diffs for this commit
 
     def tearDown(self):
-        core.USER_ROLES.clear()
-        self.session.query(model.Station).delete()
-        self.session.query(model.Team).delete()
-        self.session.query(model.Route).delete()
-        core.TEAM_ROUTE_MAP.clear()
-        core.ROUTE_STATION_MAP.clear()
-        core.TEAM_STATION_MAP.clear()
-        self.session.rollback()
+        model.DB.session.remove()
+        model.DB.drop_all()
 
 
 class TestCore(CommonTest):
@@ -193,10 +169,10 @@ class TestStation(CommonTest):
 class TestRoute(CommonTest):
 
     def test_all(self):
-        result = set(core.Route.all(self.session))
+        result = {_.name for _ in core.Route.all(self.session)}
         expected = {
-            self._route_blue,
-            self._route_red,
+            'route-blue',
+            'route-red'
         }
         self.assertEqual(result, expected)
 
@@ -226,29 +202,31 @@ class TestRoute(CommonTest):
         result = core.Route.assign_team(
             self.session, 'route-red', 'team-without-route')
         self.assertTrue(result)
-        result = set(core.Team.assigned_to_route(self.session, 'route-red'))
-        self.assertIn(self._team_without_route, result)
+        result = {_.name for _ in core.Team.assigned_to_route(
+            self.session, 'route-red')}
+        self.assertEqual({'team-red', 'team-without-route'}, result)
 
     def test_unassign_team(self):
         result = core.Route.unassign_team(
             self.session, 'route-red', 'team-red')
         self.assertTrue(result)
         result = set(core.Team.assigned_to_route(self.session, 'route-red'))
-        self.assertNotIn(self._team_red, result)
+        self.assertEqual(set(), result)
 
     def test_assign_station(self):
         result = core.Route.assign_station(self.session,
                                            'route-red', 'station-blue')
         self.assertTrue(result)
-        result = set(core.Station.assigned_to_route(self.session, 'route-red'))
-        self.assertIn(self._station_blue, result)
+        result = {_.name for _ in core.Station.assigned_to_route(
+            self.session, 'route-red')}
+        self.assertEqual({'station-red', 'station-blue'}, result)
 
     def test_unassign_station(self):
         result = core.Route.unassign_station(self.session,
                                              'route-red', 'station-red')
         self.assertTrue(result)
         result = set(core.Station.assigned_to_route(self.session, 'route-red'))
-        self.assertNotIn(self._station_red, result)
+        self.assertNotIn(set(), result)
 
 
 class TestUser(CommonTest):

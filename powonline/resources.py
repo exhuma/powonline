@@ -1,4 +1,4 @@
-from json import dumps
+from json import dumps, JSONEncoder
 import logging
 
 from flask import request, make_response
@@ -23,6 +23,14 @@ LOG = logging.getLogger(__name__)
 STATE_FIELDS = {
     'state': fields.String(attribute=lambda x: x.state.value)
 }
+
+
+class MyJsonEncoder(JSONEncoder):
+
+    def default(self, value):
+        if isinstance(value, set):
+            return list(value)
+        super().default(value)
 
 
 class TeamList(Resource):
@@ -338,24 +346,8 @@ class TeamStation(Resource):
 class Assignments(Resource):
 
     def get(self):
-        output = {}
-        assignments = core.get_assignments(DB.session)
-
-        route_teams = {}
-        for route_name, teams in assignments['teams'].items():
-            teams = [TEAM_SCHEMA.dump(team).data for team in teams]
-            route_teams[route_name] = teams
-
-        route_stations = {}
-        for route_name, stations in assignments['stations'].items():
-            stations = [STATION_SCHEMA.dump(station).data
-                        for station in stations]
-            route_stations[route_name] = stations
-
-        output['stations'] = route_stations
-        output['teams'] = route_teams
-
-        output = make_response(dumps(output), 200)
+        output = core.get_assignments(DB.session)
+        output = make_response(dumps(output, cls=MyJsonEncoder), 200)
         output.content_type = 'application/json'
         return output
 

@@ -3,19 +3,21 @@ from .model import TeamState
 
 
 def get_assignments(session):
-    route_teams = {route.name: set() for route in Route.all(session)}
-    for team_name, route_name in TEAM_ROUTE_MAP.items():
-        route_teams[route_name].add(TEAMS[team_name])
 
-    route_stations = {route.name: set() for route in Route.all(session)}
-    for station_name, route_names in ROUTE_STATION_MAP.items():
-        for route_name in route_names:
-            route_stations[route_name].add(STATIONS[station_name])
+    teams = session.query(model.Team)
+    stations = session.query(model.Station)
+    routes = session.query(model.Route)
 
-    return {
-        'teams': route_teams,
-        'stations': route_stations
+    output = {
+        'teams': {},
+        'stations': {},
     }
+
+    for route in routes:
+        output['teams'][route.name] = {_.name for _ in route.teams}
+        output['stations'][route.name] = {_.name for _ in route.stations}
+
+    return output
 
 
 def make_default_team_state():

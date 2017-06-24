@@ -10,7 +10,6 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     Unicode,
-    create_engine,
     func,
     Table,
 )
@@ -18,7 +17,6 @@ from sqlalchemy.orm import relationship
 import sqlalchemy.types as types
 
 
-ENGINE = create_engine('postgresql://exhuma@/powonline')
 LOG = logging.getLogger(__name__)
 DB = SQLAlchemy()
 
