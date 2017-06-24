@@ -1,6 +1,8 @@
 from . import model
 from .model import TeamState
 
+from sqlalchemy import and_
+
 
 def get_assignments(session):
 
@@ -29,16 +31,12 @@ def make_default_team_state():
 class Team:
 
     @staticmethod
-    def all():
-        for team in TEAMS.values():
-            yield team
+    def all(session):
+        return session.query(model.Team)
 
     @staticmethod
-    def quickfilter_without_route():
-        assigned = set(TEAM_ROUTE_MAP.keys())
-        for team in Team.all():
-            if team.name not in assigned:
-                yield team
+    def quickfilter_without_route(session):
+        return session.query(model.Team).filter(model.Team.route == None)
 
     @staticmethod
     def assigned_to_route(session, route_name):
@@ -153,29 +151,26 @@ class Station:
         return True
 
     @staticmethod
-    def team_states(station_name):
-        output = []
-        teams = []
+    def team_states(session, station_name):
+        # TODO this could be improved by just using one query
+        station = session.query(model.Station).filter_by(
+            name=station_name).one()
 
-        # First look which routes this station is assigned to
-        routes = ROUTE_STATION_MAP.setdefault(station_name, [])
+        states = session.query(model.TeamStation).filter_by(
+            station_name=station_name)
+        mapping = {state.team_name: state for state in states}
 
-        # ... now find all the teams assigned to those routes
-        for team_name, team_route in TEAM_ROUTE_MAP.items():
-            if team_route in routes:
-                teams.append(team_name)
-
-        for team_name in teams:
-            team_station = TEAM_STATION_MAP.setdefault(team_name, {})
-            state = team_station.setdefault(station_name,
-                                            make_default_team_state())
-            output.append((team_name, state['state']))
-
-        return output
+        for team in session.query(model.Team):
+            state = mapping.get(team.name, model.TeamStation(
+                team_name=team.name,
+                station_name=station_name,
+                state=TeamState.UNKNOWN))
+            yield (team.name, state.state)
 
     @staticmethod
-    def accessible_by(username):
-        return USER_STATION_MAP.get(username, set())
+    def accessible_by(session, username):
+        user = session.query(model.User).filter_by(name=username).one()
+        return {station.name for station in user.stations}
 
 
 class Route:
@@ -262,4 +257,5 @@ class User:
 
     @staticmethod
     def roles(session, user_name):
-        raise NotImplementedError('Not yet implemented')
+        user = session.query(model.User).filter_by(name=user_name).one()
+        return user.roles

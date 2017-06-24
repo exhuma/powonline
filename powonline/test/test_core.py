@@ -55,114 +55,117 @@ class TestCore(CommonTest):
 
 class TestTeam(CommonTest):
 
-    @unittest.skip('foo')  # TODO
     def test_all(self):
-        result = set(core.Team.all())
+        result = {_.name for _ in core.Team.all(self.session)}
         expected = {
-            self._team_blue,
-            self._team_red,
-            self._team_without_route,
+            'team-blue',
+            'team-red',
+            'team-without-route',
         }
         self.assertEqual(result, expected)
 
-    @unittest.skip('foo')  # TODO
     def test_quickfilter_without_route(self):
-        result = set(core.Team.quickfilter_without_route())
-        expected = {self._team_without_route}
+        result = list(core.Team.quickfilter_without_route(self.session))
+        self.assertEqual(len(result), 1)
+        result = result[0].name
+        expected = 'team-without-route'
         self.assertEqual(result, expected)
 
-    @unittest.skip('foo')  # TODO
     def test_assigned_to_route(self):
-        result = set(core.Team.assigned_to_route('route-blue'))
-        expected = {self._team_blue}
-        self.assertEqual(result, expected)
+        result = list(core.Team.assigned_to_route(self.session, 'route-blue'))
+        self.assertEqual(len(result), 1)
+        expected = 'team-blue'
+        self.assertEqual(result[0].name, expected)
 
-    @unittest.skip('foo')  # TODO
     def test_create_new(self):
-        result = core.Team.create_new({'name': 'foo'})
+        result = core.Team.create_new(self.session, {
+            'name': 'foo', 'email': 'foo@example.com'})
         self.assertEqual(result.name, 'foo')
-        self.assertEqual(len(set(core.Team.all())), 4)
-        self.assertIn(result, set(core.Team.all()))
+        self.assertEqual(len(set(core.Team.all(self.session))), 4)
+        self.assertIn(result, set(core.Team.all(self.session)))
 
-    @unittest.skip('foo')  # TODO
     def test_upsert(self):
-        result = core.Team.upsert('team-red', {'name': 'foo', 'contact': 'bar'})
-        result.update.assert_called_with(name='foo', contact='bar')
+        core.Team.upsert(
+            self.session, 'team-red', {'name': 'foo', 'contact': 'bar'})
+        new_names = {_.name for _ in core.Team.all(self.session)}
+        self.assertEqual(new_names, {'team-blue', 'team-without-route', 'foo'})
 
-    @unittest.skip('foo')  # TODO
     def test_delete(self):
-        result = core.Team.delete('team-red')
-        self.assertEqual(len(set(core.Team.all())), 2)
+        result = core.Team.delete(self.session, 'team-red')
+        self.assertEqual(len(set(core.Team.all(self.session))), 2)
         self.assertIsNone(result)
 
-    @unittest.skip('foo')  # TODO
     def test_get_station_data(self):
-        result1 = core.Team.get_station_data('team-red', 'station-start')
-        result2 = core.Team.get_station_data('team-blue', 'station-finish')
-        expected1 = {'state': core.TeamState.FINISHED}
-        expected2 = {'state': core.TeamState.UNKNOWN}
-        self.assertEqual(result1, expected1)
-        self.assertEqual(result2, expected2)
+        result1 = core.Team.get_station_data(self.session,
+                                             'team-red', 'station-start')
+        result2 = core.Team.get_station_data(self.session,
+                                             'team-blue', 'station-finish')
+        expected1 = core.TeamState.FINISHED
+        expected2 = core.TeamState.UNKNOWN
+        self.assertEqual(result1.state, expected1)
+        self.assertEqual(result2.state, expected2)
 
-    @unittest.skip('foo')  # TODO
     def test_advance_on_station(self):
-        new_state = core.Team.advance_on_station('team-red', 'station_start')
-        self.assertEqual(new_state, core.TeamState.ARRIVED)
-        new_state = core.Team.advance_on_station('team-red', 'station_start')
-        self.assertEqual(new_state, core.TeamState.FINISHED)
-        new_state = core.Team.advance_on_station('team-red', 'station_start')
+        new_state = core.Team.advance_on_station(
+            self.session, 'team-red', 'station-start')
         self.assertEqual(new_state, core.TeamState.UNKNOWN)
-        new_state = core.Team.advance_on_station('team-red', 'station_start')
+        new_state = core.Team.advance_on_station(
+            self.session, 'team-red', 'station-start')
         self.assertEqual(new_state, core.TeamState.ARRIVED)
+        new_state = core.Team.advance_on_station(
+            self.session, 'team-red', 'station-start')
+        self.assertEqual(new_state, core.TeamState.FINISHED)
+        new_state = core.Team.advance_on_station(
+            self.session, 'team-red', 'station-start')
+        self.assertEqual(new_state, core.TeamState.UNKNOWN)
 
 
 class TestStation(CommonTest):
 
-    @unittest.skip('foo')  # TODO
     def test_all(self):
-        result = set(core.Station.all())
+        result = {_.name for _ in core.Station.all(self.session)}
         expected = {
-            self._station_start,
-            self._station_blue,
-            self._station_red,
-            self._station_end,
+            'station-start',
+            'station-red',
+            'station-blue',
+            'station-end',
         }
         self.assertEqual(result, expected)
 
-    @unittest.skip('foo')  # TODO
     def test_create_new(self):
-        result = core.Station.create_new({'name': 'foo'})
+        result = core.Station.create_new(self.session, {'name': 'foo'})
         self.assertEqual(result.name, 'foo')
-        self.assertEqual(len(set(core.Station.all())), 5)
-        self.assertIn(result, set(core.Station.all()))
+        self.assertEqual(len(set(core.Station.all(self.session))), 5)
+        self.assertIn(result, set(core.Station.all(self.session)))
 
-    @unittest.skip('foo')  # TODO
     def test_upsert(self):
-        result = core.Station.upsert('station-red',
-                                     {'name': 'foo', 'contact': 'bar'})
-        result.update.assert_called_with(name='foo', contact='bar')
+        core.Station.upsert(self.session,
+                            'station-red',
+                            {'name': 'foo', 'contact': 'bar'})
+        result = core.Station.all(self.session)
+        names = {_.name for _ in result}
+        self.assertEqual(names, {
+            'station-end', 'foo', 'station-start', 'station-blue'})
 
-    @unittest.skip('foo')  # TODO
     def test_delete(self):
-        result = core.Station.delete('station-red')
-        self.assertEqual(len(set(core.Station.all())), 3)
+        result = core.Station.delete(self.session, 'station-red')
+        self.assertEqual(len(set(core.Station.all(self.session))), 3)
         self.assertIsNone(result)
 
-    @unittest.skip('foo')  # TODO
     def test_assign_user(self):
-        result = core.Station.accessible_by('user1')
+        result = core.Station.accessible_by(self.session, 'john')
         self.assertEqual(result, set())
-        result = core.Station.assign_user('station-red', 'user1')
+        result = core.Station.assign_user(self.session, 'station-red', 'john')
         self.assertTrue(result)
-        result = core.Station.accessible_by('user1')
-        self.assertEqual(result, {self._station_red.name})
+        result = core.Station.accessible_by(self.session, 'john')
+        self.assertEqual(result, {'station-red'})
 
-    @unittest.skip('foo')  # TODO
     def test_team_states(self):
-        result = core.Station.team_states(self._station_start.name)
-        expected = [('team-blue', core.TeamState.ARRIVED),
-                    ('team-red', core.TeamState.FINISHED)]
-        self.assertCountEqual(result, expected)
+        result = set(core.Station.team_states(self.session, 'station-start'))
+        expected = {('team-blue', core.TeamState.UNKNOWN),
+                    ('team-without-route', core.TeamState.UNKNOWN),
+                    ('team-red', core.TeamState.FINISHED)}
+        self.assertEqual(result, expected)
 
 
 class TestRoute(CommonTest):
@@ -231,14 +234,12 @@ class TestRoute(CommonTest):
 
 class TestUser(CommonTest):
 
-    @unittest.skip('foo')  # TODO
     def test_assign_role(self):
-        core.User.assign_role('user1', 'role2')
-        result = core.User.roles('user1')
-        self.assertIn('role2', result)
+        core.User.assign_role(self.session, 'jane', 'a-role')
+        result = {_.name for _ in core.User.roles(self.session, 'jane')}
+        self.assertIn('a-role', result)
 
-    @unittest.skip('foo')  # TODO
     def test_unassign_role(self):
-        core.User.unassign_role('user1', 'role1')
-        result = core.User.roles('user1')
-        self.assertNotIn('role1', result)
+        core.User.unassign_role(self.session, 'john', 'a-role')
+        result = {_.name for _ in core.User.roles(self.session, 'john')}
+        self.assertNotIn('a-role', result)
