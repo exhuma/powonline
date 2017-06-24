@@ -38,17 +38,16 @@ class CommonTest(TestCase):
 
 class TestCore(CommonTest):
 
-    @unittest.skip('foo')  # TODO
     def test_get_assignments(self):
-        result = core.get_assignments()
+        result = core.get_assignments(self.session)
         expected = {
             'stations': {
-                'route-blue': {self._station_start, self._station_blue, self._station_end},
-                'route-red': {self._station_start, self._station_red, self._station_end},
+                'route-blue': {'station-start', 'station-end', 'station-blue'},
+                'route-red': {'station-start', 'station-end', 'station-red'},
             },
             'teams': {
-                'route-blue': {self._team_blue},
-                'route-red': {self._team_red},
+                'route-blue': {'team-blue'},
+                'route-red': {'team-red'},
             }
         }
         self.assertEqual(result, expected)
@@ -219,7 +218,8 @@ class TestRoute(CommonTest):
         self.assertTrue(result)
         result = {_.name for _ in core.Station.assigned_to_route(
             self.session, 'route-red')}
-        self.assertEqual({'station-red', 'station-blue'}, result)
+        self.assertEqual({'station-start', 'station-end',
+                          'station-red', 'station-blue'}, result)
 
     def test_unassign_station(self):
         result = core.Route.unassign_station(self.session,

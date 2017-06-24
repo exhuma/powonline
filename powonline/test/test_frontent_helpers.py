@@ -50,8 +50,10 @@ class TestFrontendHelpers(TestCase):
 
         expected_assignments_route_team_r = {'team-red'}
         expected_assignments_route_team_b = {'team-blue'}
-        expected_assignments_route_station_r = {'station-red'}
-        expected_assignments_route_station_b = {'station-blue'}
+        expected_assignments_route_station_r = {
+            'station-start', 'station-red', 'station-end'}
+        expected_assignments_route_station_b = {
+            'station-start', 'station-blue', 'station-end'}
 
         self.assertCountEqual(assignments_route_team_r,
                               expected_assignments_route_team_r)
@@ -71,5 +73,7 @@ class TestFrontendHelpers(TestCase):
         self.assertEqual(team_result['route-blue'], ['team-blue'])
 
         station_result = result_data['stations']
-        self.assertEqual(station_result['route-red'], ['station-red'])
-        self.assertEqual(station_result['route-blue'], ['station-blue'])
+        self.assertCountEqual(station_result['route-red'], [
+            'station-start', 'station-end', 'station-red'])
+        self.assertCountEqual(station_result['route-blue'], [
+            'station-start', 'station-end', 'station-blue'])
