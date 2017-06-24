@@ -65,7 +65,7 @@ class Team(DB.Model):
         Unicode,
         ForeignKey('route.name', onupdate='CASCADE', ondelete='SET NULL'))
 
-    route = relationship('Route', backref='teams')
+    route = relationship('Route', back_populates='teams')
     stations = relationship('Station', secondary='team_station_state',
                             viewonly=True)  # uses an AssociationObject
 
@@ -111,7 +111,7 @@ class Route(DB.Model):
 
     name = Column(Unicode, primary_key=True)
 
-    teams = relationship('Team', backref='route', collection_class=set)
+    teams = relationship('Team', back_populates='route', collection_class=set)
     stations = relationship('Station',
                             secondary='route_station',
                             back_populates='routes',
@@ -129,6 +129,10 @@ class User(DB.Model):
     __tablename__ = 'user'
     name = Column(Unicode, primary_key=True)  # TODO: Should the name be the PK? Email or ID would be better.
 
+    roles = relationship('Role',
+                         secondary='user_role',
+                         back_populates='users',
+                         collection_class=set)
     stations = relationship('Station',
                             secondary='user_station',
                             back_populates='users',
@@ -138,6 +142,10 @@ class User(DB.Model):
 class Role(DB.Model):
     __tablename__ = 'role'
     name = Column(Unicode, primary_key=True)
+    users = relationship('User',
+                         secondary='user_role',
+                         back_populates='roles',
+                         collection_class=set)
 
     def __init__(self):
         self.name = 'Example Station'
@@ -187,6 +195,17 @@ user_station_table = Table(
         primary_key=True),
     Column('station_name', Unicode, ForeignKey(
         'station.name', onupdate='CASCADE', ondelete='CASCADE'),
+        primary_key=True),
+)
+
+user_role_table = Table(
+    'user_role',
+    DB.metadata,
+    Column('user_name', Unicode, ForeignKey(
+        'user.name', onupdate='CASCADE', ondelete='CASCADE'),
+        primary_key=True),
+    Column('role_name', Unicode, ForeignKey(
+        'role.name', onupdate='CASCADE', ondelete='CASCADE'),
         primary_key=True),
 )
 

@@ -1,17 +1,6 @@
 from . import model
 from .model import TeamState
 
-# fake in-memory storage
-ROLES = {}  # set of role names
-USERS = {}  # set of user names
-TEAMS = {}  # key: team-name, value: Team object
-
-USER_STATION_MAP = {}  # key: user-name, value: station-name
-TEAM_ROUTE_MAP = {}  # key: team-name, value: route-name
-USER_ROLES = {}  # key: user-name, value: role-name
-ROUTE_STATION_MAP = {}  # key: station-name, value: set of route-names
-TEAM_STATION_MAP = {}  # key: team-name, value: object(key: station-name, value: state-object)
-
 
 def get_assignments(session):
     route_teams = {route.name: set() for route in Route.all(session)}
@@ -62,33 +51,43 @@ class Team:
         return team
 
     @staticmethod
-    def upsert(name, data):
-        team = TEAMS.get(name, model.Team())
-        team.update(**data)
-        return team
+    def upsert(session, name, data):
+        old = session.query(model.Team).filter_by(name=name).first()
+        if not old:
+            old = Team.create_new(session, data)
+        for k, v in data.items():
+            setattr(old, k, v)
+        return old
 
     @staticmethod
-    def delete(name):
-        if name in TEAMS:
-            del(TEAMS[name])
+    def delete(session, name):
+        session.query(model.Team).filter_by(name=name).delete()
         return None
 
     @staticmethod
-    def get_station_data(team_name, station_name):
-        state = TEAM_STATION_MAP.get(team_name, {}).get(station_name, {})
-        state = state or make_default_team_state()
-        return state
-
-    def advance_on_station(team_name, station_name):
-        state = TEAM_STATION_MAP.get(team_name, {}).setdefault(
-            station_name, make_default_team_state())
-        if state['state'] == TeamState.UNKNOWN:
-            state['state'] = TeamState.ARRIVED
-        elif state['state'] == TeamState.ARRIVED:
-            state['state'] = TeamState.FINISHED
+    def get_station_data(session, team_name, station_name):
+        state = session.query(model.TeamStation).filter_by(
+            team_name=team_name, station_name=station_name).one_or_none()
+        if not state:
+            return model.TeamStation(team_name=team_name,
+                                     station_name=station_name)
         else:
-            state['state'] = TeamState.UNKNOWN
-        return state['state']
+            return state
+
+    def advance_on_station(session, team_name, station_name):
+        state = session.query(model.TeamStation).filter_by(
+            team_name=team_name, station_name=station_name).one_or_none()
+        if not state:
+            state = model.TeamStation(team_name=team_name,
+                                      station_name=station_name)
+
+        if state.state == TeamState.UNKNOWN:
+            state.state = TeamState.ARRIVED
+        elif state.state == TeamState.ARRIVED:
+            state.state = TeamState.FINISHED
+        else:
+            state.state = TeamState.UNKNOWN
+        return state.state
 
 
 class Station:
@@ -104,15 +103,17 @@ class Station:
         return station
 
     @staticmethod
-    def upsert(name, data):
-        station = STATIONS.get(name, model.Station())
-        station.update(**data)
-        return station
+    def upsert(session, name, data):
+        old = session.query(model.Station).filter_by(name=name).first()
+        if not old:
+            old = Station.create_new(session, data)
+        for k, v in data.items():
+            setattr(old, k, v)
+        return old
 
     @staticmethod
-    def delete(name):
-        if name in STATIONS:
-            del(STATIONS[name])
+    def delete(session, name):
+        session.query(model.Station).filter_by(name=name).delete()
         return None
 
     @staticmethod
@@ -122,22 +123,31 @@ class Station:
         return route.stations
 
     @staticmethod
-    def assign_user(station_name, user_name):
+    def assign_user(session, station_name, user_name):
         '''
         Returns true if the operation worked, false if the use is already
         assigned to another station.
         '''
-        if user_name in USER_STATION_MAP:
-            return False
-        assigned_stations = USER_STATION_MAP.setdefault(user_name, set())
-        assigned_stations.add(station_name)
+        station = session.query(model.Station).filter_by(
+            name=station_name).one()
+        user = session.query(model.User).filter_by(name=user_name).one()
+        station.users.add(user)
         return True
 
     @staticmethod
-    def unassign_user(station_name, user_name):
-        assigned_stations = USER_STATION_MAP.setdefault(user_name, set())
-        if station_name in assigned_stations:
-            assigned_stations.remove(station_name)
+    def unassign_user(session, station_name, user_name):
+        station = session.query(model.Station).filter_by(
+            name=station_name).one()
+
+        found_user = None
+        for user in station.users:
+            if user.name == user_name:
+                found_user = user
+                break
+
+        if found_user:
+            station.users.remove(found_user)
+
         return True
 
     @staticmethod
@@ -194,10 +204,12 @@ class Route:
 
     @staticmethod
     def assign_team(session, route_name, team_name):
-        route = session.query(model.Route).filter_by(
-            name=route_name).one()
         team = session.query(model.Team).filter_by(
             name=team_name).one()
+        if team.route:
+            return False  # A team can only be assigned to one route
+        route = session.query(model.Route).filter_by(
+            name=route_name).one()
         route.teams.add(team)
         return True
 
@@ -232,18 +244,20 @@ class Route:
 class User:
 
     @staticmethod
-    def assign_role(user_name, role_name):
-        assigned_roles = USER_ROLES.get(user_name, set())
-        assigned_roles.add(role_name)
+    def assign_role(session, user_name, role_name):
+        user = session.query(model.User).filter_by(name=user_name).one()
+        role = session.query(model.Role).filter_by(name=role_name).one()
+        user.roles.add(role)
         return True
 
     @staticmethod
-    def unassign_role(user_name, role_name):
-        roles = USER_ROLES.get(user_name, set())
-        if role_name in roles:
-            roles.remove(role_name)
+    def unassign_role(session, user_name, role_name):
+        user = session.query(model.User).filter_by(name=user_name).one()
+        role = session.query(model.Role).filter_by(name=role_name).one_or_none()
+        if role:
+            user.roles.remove(role)
         return True
 
     @staticmethod
-    def roles(user_name):
-        return USER_ROLES.get(user_name, set())
+    def roles(session, user_name):
+        raise NotImplementedError('Not yet implemented')

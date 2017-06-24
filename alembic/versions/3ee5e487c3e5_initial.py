@@ -125,8 +125,19 @@ def upgrade():
             primary_key=True),
     )
 
+    op.create_table(
+        'user_role',
+        Column('user_name', Unicode, ForeignKey(
+            'user.name', onupdate='CASCADE', ondelete='CASCADE'),
+            primary_key=True),
+        Column('role_name', Unicode, ForeignKey(
+            'role.name', onupdate='CASCADE', ondelete='CASCADE'),
+            primary_key=True),
+    )
+
 
 def downgrade():
+    op.drop_table('user_role')
     op.drop_table('user_station')
     op.drop_table('route_station')
     op.drop_table('team_station_state')
