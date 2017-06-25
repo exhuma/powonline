@@ -1,13 +1,9 @@
 from . import model
 from .model import TeamState
 
-from sqlalchemy import and_
-
 
 def get_assignments(session):
 
-    teams = session.query(model.Team)
-    stations = session.query(model.Station)
     routes = session.query(model.Route)
 
     output = {
@@ -16,8 +12,8 @@ def get_assignments(session):
     }
 
     for route in routes:
-        output['teams'][route.name] = {_.name for _ in route.teams}
-        output['stations'][route.name] = {_.name for _ in route.stations}
+        output['teams'][route.name] = route.teams
+        output['stations'][route.name] = route.stations
 
     return output
 

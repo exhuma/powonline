@@ -6,9 +6,23 @@ import json
 
 from flask_testing import TestCase
 
-from powonline import core
 from powonline.web import make_app
 import powonline.model as model
+
+
+def drop_all_except(dct, *keep):
+    '''
+    Given a dictionary, and a list of keys from that dictionary, this function
+    will drop all keys from the dictionary *except* those given in the list
+    *keep*.
+
+    This is used to make testing larger dictionary structures a bit easier (but
+    less complete).
+    '''
+    dict_keys = list(dct.keys())
+    for key in dict_keys:
+        if key not in keep:
+            del(dct[key])
 
 
 def here(localname):
@@ -44,12 +58,39 @@ class TestFrontendHelpers(TestCase):
         result = self.app.get('/assignments')
         result_data = json.loads(result.data.decode(result.charset))
 
-        team_result = result_data['teams']
-        self.assertEqual(team_result['route-red'], ['team-red'])
-        self.assertEqual(team_result['route-blue'], ['team-blue'])
+        # To be testing a bit easier, we drop all the irrelevant keys
+        for k1, k2 in [('stations', 'route-red'), ('stations', 'route-blue'),
+                       ('teams', 'route-red'), ('teams', 'route-blue')]:
+            for obj in result_data[k1][k2]:
+                drop_all_except(obj, 'name')
 
-        station_result = result_data['stations']
-        self.assertCountEqual(station_result['route-red'], [
-            'station-start', 'station-end', 'station-red'])
-        self.assertCountEqual(station_result['route-blue'], [
-            'station-start', 'station-end', 'station-blue'])
+        expected = {
+            'stations': {
+                'route-red': [
+                    {'name': 'station-red'},
+                    {'name': 'station-start'},
+                    {'name': 'station-end'},
+                ],
+                'route-blue': [
+                    {'name': 'station-blue'},
+                    {'name': 'station-start'},
+                    {'name': 'station-end'},
+                ],
+            },
+            'teams': {
+                'route-red': [
+                    {'name': 'team-red'}
+                ],
+                'route-blue': [
+                    {'name': 'team-blue'}
+                ],
+            }
+        }
+        self.assertCountEqual(result_data['stations']['route-red'],
+                              expected['stations']['route-red'])
+        self.assertCountEqual(result_data['stations']['route-blue'],
+                              expected['stations']['route-blue'])
+        self.assertCountEqual(result_data['teams']['route-red'],
+                              expected['teams']['route-red'])
+        self.assertCountEqual(result_data['teams']['route-blue'],
+                              expected['teams']['route-blue'])

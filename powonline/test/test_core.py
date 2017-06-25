@@ -1,5 +1,3 @@
-import unittest
-
 from flask_testing import TestCase
 
 from powonline.web import make_app
@@ -40,17 +38,20 @@ class TestCore(CommonTest):
 
     def test_get_assignments(self):
         result = core.get_assignments(self.session)
-        expected = {
-            'stations': {
-                'route-blue': {'station-start', 'station-end', 'station-blue'},
-                'route-red': {'station-start', 'station-end', 'station-red'},
-            },
-            'teams': {
-                'route-blue': {'team-blue'},
-                'route-red': {'team-red'},
-            }
-        }
-        self.assertEqual(result, expected)
+        result_stations_a = {_.name for _ in result['stations']['route-blue']}
+        result_stations_b = {_.name for _ in result['stations']['route-red']}
+        result_teams_a = {_.name for _ in result['teams']['route-blue']}
+        result_teams_b = {_.name for _ in result['teams']['route-red']}
+
+        expected_stations_a = {'station-start', 'station-blue', 'station-end'}
+        expected_stations_b = {'station-start', 'station-red', 'station-end'}
+        expected_teams_a = {'team-blue'}
+        expected_teams_b = {'team-red'}
+
+        self.assertEqual(result_teams_a, expected_teams_a)
+        self.assertEqual(result_teams_b, expected_teams_b)
+        self.assertEqual(result_stations_a, expected_stations_a)
+        self.assertEqual(result_stations_b, expected_stations_b)
 
 
 class TestTeam(CommonTest):

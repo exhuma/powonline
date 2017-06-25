@@ -343,7 +343,23 @@ class TeamStation(Resource):
 class Assignments(Resource):
 
     def get(self):
-        output = core.get_assignments(DB.session)
+        data = core.get_assignments(DB.session)
+
+        out_stations = {}
+        for route_name, stations in data['stations'].items():
+            out_stations[route_name] = [STATION_SCHEMA.dump(station)[0]
+                                        for station in stations]
+
+        out_teams = {}
+        for route_name, teams in data['teams'].items():
+            out_teams[route_name] = [TEAM_SCHEMA.dump(team)[0]
+                                     for team in teams]
+
+        output = {
+            'stations': out_stations,
+            'teams': out_teams
+        }
+
         output = make_response(dumps(output, cls=MyJsonEncoder), 200)
         output.content_type = 'application/json'
         return output
