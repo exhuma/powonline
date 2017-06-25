@@ -76,6 +76,7 @@ class Team:
         if not state:
             state = model.TeamStation(team_name=team_name,
                                       station_name=station_name)
+            state = session.merge(state)
 
         if state.state == TeamState.UNKNOWN:
             state.state = TeamState.ARRIVED
