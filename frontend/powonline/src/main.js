@@ -6,9 +6,10 @@ import router from './router'
 import Vuex from 'vuex'
 import axios from 'axios'
 
+import ErrorBlock from './components/ErrorBlock'
+import RouteBlock from './components/RouteBlock'
 import StationBlock from './components/StationBlock'
 import TeamBlock from './components/TeamBlock'
-import RouteBlock from './components/RouteBlock'
 
 Vue.config.productionTip = false
 Vue.use(Vuex)
@@ -419,3 +420,4 @@ new Vue({
 Vue.component('station-block', StationBlock)
 Vue.component('team-block', TeamBlock)
 Vue.component('route-block', RouteBlock)
+Vue.component('error-block', ErrorBlock)
