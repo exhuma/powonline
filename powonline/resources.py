@@ -309,8 +309,6 @@ class RouteStationList(Resource):
         '''
         data = request.get_json()
         parsed_data, errors = STATION_SCHEMA.load(data)
-        if errors:
-            return errors, 400
         station_name = data['name']
 
         success = core.Route.assign_station(
