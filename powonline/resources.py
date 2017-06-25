@@ -253,9 +253,6 @@ class RouteTeamList(Resource):
         Assign a team to a route
         '''
         data = request.get_json()
-        parsed_data, errors = TEAM_SCHEMA.load(data)
-        if errors:
-            return errors, 400
         team_name = data['name']
 
         success = core.Route.assign_team(DB.session, route_name, team_name)

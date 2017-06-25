@@ -7,6 +7,11 @@
       type='text'
       v-model:teamname='teamname'
       placeholder='Enter a new teamname' />
+    <input 
+      id="EmailInput"
+      type='text'
+      v-model:email='email'
+      placeholder='Enter a new email' />
     <button @click="addTeam">Add</button>
     <hr />
     <team-block v-for="team in teams" :name="team.name" :key="team.name"></team-block>
@@ -18,7 +23,17 @@ export default {
   name: 'team_list',
   methods: {
     addTeam: function (event) {
-      this.$store.dispatch('addTeamRemote', {name: this.teamname})
+      this.$store.dispatch('addTeamRemote', {
+        name: this.teamname,
+        email: this.email,
+        order: 500,
+        cancelled: false,
+        is_confirmed: true,  // <- because it's added via the admin interface
+        accepted: true,  // <- because it's added via the admin interface
+        completed: false,
+        inserted: '2000-01-01 10:00:00',
+        confirmation_key: ''
+      })
       const input = document.getElementById('TeamNameImput')
       input.focus()
       input.select()
@@ -26,7 +41,8 @@ export default {
   },
   data () {
     return {
-      teamname: 'default'
+      teamname: 'default',
+      email: 'john.doe@example.com'
     }
   },
   computed: {
