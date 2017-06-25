@@ -1,10 +1,11 @@
-from json import dumps
+from json import dumps, JSONEncoder
 import logging
 
 from flask import request, make_response
 from flask_restful import Resource, marshal_with, fields
 
 from . import core
+from .model import DB
 from .schema import (
     JOB_SCHEMA,
     ROLE_SCHEMA,
@@ -20,8 +21,16 @@ from .schema import (
 
 LOG = logging.getLogger(__name__)
 STATE_FIELDS = {
-    'state': fields.String(attribute=lambda x: x['state'].value)
+    'state': fields.String(attribute=lambda x: x.state.value)
 }
+
+
+class MyJsonEncoder(JSONEncoder):
+
+    def default(self, value):
+        if isinstance(value, set):
+            return list(value)
+        super().default(value)
 
 
 class TeamList(Resource):
@@ -34,11 +43,12 @@ class TeamList(Resource):
             filter_func = getattr(core.Team, func_name, None)
             if not filter_func:
                 return '%r is not a known quickfilter!' % quickfilter, 400
-            teams = filter_func()
+            teams = filter_func(DB.session)
         elif assigned_to_route:
-            teams = core.Team.assigned_to_route(assigned_to_route)
+            teams = core.Team.assigned_to_route(
+                DB.session, assigned_to_route)
         else:
-            teams = list(core.Team.all())
+            teams = list(core.Team.all(DB.session))
 
         output = {
             'items': teams
@@ -60,7 +70,7 @@ class TeamList(Resource):
         if errors:
             return errors, 400
 
-        output = core.Team.create_new(parsed_data)
+        output = core.Team.create_new(DB.session, parsed_data)
         return Team._single_response(output, 201)
 
 
@@ -85,18 +95,18 @@ class Team(Resource):
         if errors:
             return errors, 400
 
-        output = core.Team.upsert(name, parsed_data)
+        output = core.Team.upsert(DB.session, name, parsed_data)
         return Team._single_response(output, 200)
 
     def delete(self, name):
-        core.Team.delete(name)
+        core.Team.delete(DB.session, name)
         return '', 204
 
 
 class StationList(Resource):
 
     def get(self):
-        items = list(core.Station.all())
+        items = list(core.Station.all(DB.session))
         output = {
             'items': items
         }
@@ -117,7 +127,7 @@ class StationList(Resource):
         if errors:
             return errors, 400
 
-        output = core.Station.create_new(parsed_data)
+        output = core.Station.create_new(DB.session, parsed_data)
         return Station._single_response(output, 201)
 
 
@@ -142,18 +152,18 @@ class Station(Resource):
         if errors:
             return errors, 400
 
-        output = core.Station.upsert(name, parsed_data)
+        output = core.Station.upsert(DB.session, name, parsed_data)
         return Station._single_response(output, 200)
 
     def delete(self, name):
-        core.Station.delete(name)
+        core.Station.delete(DB.session, name)
         return '', 204
 
 
 class RouteList(Resource):
 
     def get(self):
-        items = list(core.Route.all())
+        items = list(core.Route.all(DB.session))
         output = {
             'items': items
         }
@@ -174,7 +184,7 @@ class RouteList(Resource):
         if errors:
             return errors, 400
 
-        output = core.Route.create_new(parsed_data)
+        output = core.Route.create_new(DB.session, parsed_data)
         return Route._single_response(output, 201)
 
 
@@ -198,11 +208,11 @@ class Route(Resource):
         if errors:
             return errors, 400
 
-        output = core.Route.upsert(name, parsed_data)
+        output = core.Route.upsert(DB.session, name, parsed_data)
         return Route._single_response(output, 200)
 
     def delete(self, name):
-        core.Route.delete(name)
+        core.Route.delete(DB.session, name)
         return '', 204
 
 
@@ -217,7 +227,8 @@ class StationUserList(Resource):
         if errors:
             return errors, 400
 
-        success = core.Station.assign_user(station_name, parsed_data['name'])
+        success = core.Station.assign_user(
+            DB.session, station_name, parsed_data['name'])
         if success:
             return '', 204
         else:
@@ -227,7 +238,8 @@ class StationUserList(Resource):
 class StationUser(Resource):
 
     def delete(self, station_name, user_name):
-        success = core.Station.unassign_user(station_name, user_name)
+        success = core.Station.unassign_user(
+            DB.session, station_name, user_name)
         if success:
             return '', 204
         else:
@@ -241,12 +253,9 @@ class RouteTeamList(Resource):
         Assign a team to a route
         '''
         data = request.get_json()
-        parsed_data, errors = TEAM_SCHEMA.load(data)
-        if errors:
-            return errors, 400
         team_name = data['name']
 
-        success = core.Route.assign_team(route_name, team_name)
+        success = core.Route.assign_team(DB.session, route_name, team_name)
         if success:
             return '', 204
         else:
@@ -256,7 +265,7 @@ class RouteTeamList(Resource):
 class RouteTeam(Resource):
 
     def delete(self, route_name, team_name):
-        success = core.Route.unassign_team(route_name, team_name)
+        success = core.Route.unassign_team(DB.session, route_name, team_name)
         if success:
             return '', 204
         else:
@@ -275,7 +284,7 @@ class UserRoleList(Resource):
             return errors, 400
         role_name = data['name']
 
-        success = core.User.assign_role(user_name, role_name)
+        success = core.User.assign_role(DB.session, user_name, role_name)
         if success:
             return '', 204
         else:
@@ -285,7 +294,7 @@ class UserRoleList(Resource):
 class UserRole(Resource):
 
     def delete(self, user_name, role_name):
-        success = core.User.unassign_role(user_name, role_name)
+        success = core.User.unassign_role(DB.session, user_name, role_name)
         if success:
             return '', 204
         else:
@@ -300,11 +309,10 @@ class RouteStationList(Resource):
         '''
         data = request.get_json()
         parsed_data, errors = STATION_SCHEMA.load(data)
-        if errors:
-            return errors, 400
         station_name = data['name']
 
-        success = core.Route.assign_station(route_name, station_name)
+        success = core.Route.assign_station(
+            DB.session, route_name, station_name)
         if success:
             return '', 204
         else:
@@ -314,7 +322,8 @@ class RouteStationList(Resource):
 class RouteStation(Resource):
 
     def delete(self, route_name, station_name):
-        success = core.Route.unassign_station(route_name, station_name)
+        success = core.Route.unassign_station(
+            DB.session, route_name, station_name)
         if success:
             return '', 204
         else:
@@ -325,31 +334,31 @@ class TeamStation(Resource):
 
     @marshal_with(STATE_FIELDS)
     def get(self, team_name, station_name):
-        state = core.Team.get_station_data(team_name, station_name)
+        state = core.Team.get_station_data(DB.session, team_name, station_name)
         return state, 200
 
 
 class Assignments(Resource):
 
     def get(self):
-        output = {}
-        assignments = core.get_assignments()
+        data = core.get_assignments(DB.session)
 
-        route_teams = {}
-        for route_name, teams in assignments['teams'].items():
-            teams = [TEAM_SCHEMA.dump(team).data for team in teams]
-            route_teams[route_name] = teams
+        out_stations = {}
+        for route_name, stations in data['stations'].items():
+            out_stations[route_name] = [STATION_SCHEMA.dump(station)[0]
+                                        for station in stations]
 
-        route_stations = {}
-        for route_name, stations in assignments['stations'].items():
-            stations = [STATION_SCHEMA.dump(station).data
-                        for station in stations]
-            route_stations[route_name] = stations
+        out_teams = {}
+        for route_name, teams in data['teams'].items():
+            out_teams[route_name] = [TEAM_SCHEMA.dump(team)[0]
+                                     for team in teams]
 
-        output['stations'] = route_stations
-        output['teams'] = route_teams
+        output = {
+            'stations': out_stations,
+            'teams': out_teams
+        }
 
-        output = make_response(dumps(output), 200)
+        output = make_response(dumps(output, cls=MyJsonEncoder), 200)
         output.content_type = 'application/json'
         return output
 
@@ -361,7 +370,8 @@ class Dashboard(Resource):
 
     def get(self, station_name):
         output = []
-        for team_name, state in core.Station.team_states(station_name):
+        for team_name, state in core.Station.team_states(
+                DB.session, station_name):
             output.append({
                 'team': team_name,
                 'state': state.value,
@@ -376,7 +386,8 @@ class Dashboard(Resource):
 class Job(Resource):
 
     def _action_advance(self, station_name, team_name):
-        new_state = core.Team.advance_on_station(team_name, station_name)
+        new_state = core.Team.advance_on_station(
+                DB.session, team_name, station_name)
         output = {
             'result': {
                 'state': new_state.value

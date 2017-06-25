@@ -1,247 +1,246 @@
-import unittest
+from flask_testing import TestCase
 
+from powonline.web import make_app
 from powonline import core
-
-from util import (
-    make_dummy_route_dict,
-    make_dummy_station_dict,
-    make_dummy_team_dict,
-)
-
-TEAM_BLUE = make_dummy_team_dict(True, name='team-blue')
-TEAM_RED = make_dummy_team_dict(True, name='team-red')
-TEAM_WITHOUT_ROUTE = make_dummy_team_dict(True, name='team-without-route')
-
-ROUTE_BLUE = make_dummy_route_dict(True, name='route-blue')
-ROUTE_RED = make_dummy_route_dict(True, name='route-red')
-
-STATION_START = make_dummy_station_dict(True, name='station-start')
-STATION_BLUE = make_dummy_station_dict(True, name='station-blue')
-STATION_RED = make_dummy_station_dict(True, name='station-red')
-STATION_END = make_dummy_station_dict(True, name='station-end')
+from powonline import model
 
 
-class CommonTest(unittest.TestCase):
+def here(localname):
+    from os.path import join, dirname
+    return join(dirname(__file__), localname)
+
+
+class CommonTest(TestCase):
+
+    SQLALCHEMY_DATABASE_URI = 'postgresql://exhuma@/powonline_testing'
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    TESTING = True
+
+    def create_app(self):
+        return make_app(CommonTest.SQLALCHEMY_DATABASE_URI)
 
     def setUp(self):
-        core.ROUTES.update({
-            'route-blue': ROUTE_BLUE,
-            'route-red': ROUTE_RED,
-        })
-        core.STATIONS.update({
-            'station-start': STATION_START,
-            'station-blue': STATION_BLUE,
-            'station-red': STATION_RED,
-            'station-end': STATION_END,
-        })
-        core.TEAMS.update({
-            'team-blue': TEAM_BLUE,
-            'team-red': TEAM_RED,
-            'team-without-route': TEAM_WITHOUT_ROUTE,
-        })
-        core.TEAM_ROUTE_MAP.update({
-            'team-blue': 'route-blue',
-            'team-red': 'route-red',
-        })
-        core.ROUTE_STATION_MAP.update({
-            'station-blue': {'route-blue'},
-            'station-red': {'route-red'},
-            'station-start': {'route-blue', 'route-red'},
-            'station-end': {'route-blue', 'route-red'},
-        })
-        core.TEAM_STATION_MAP.update({
-            'team-blue': {'station-start': {'state': core.TeamState.ARRIVED}},
-            'team-red': {'station-start': {'state': core.TeamState.FINISHED},
-                         'station-red': {'state': core.TeamState.ARRIVED}},
-        })
-        core.USER_ROLES.update({
-            'user1': {'role1'}
-        })
+        model.DB.create_all()
+
+        with open(here('seed.sql')) as seed:
+            model.DB.session.execute(seed.read())
+            model.DB.session.commit()
+
+        self.maxDiff = None
+        self.session = model.DB.session  # avoids unrelated diffs for this commit
 
     def tearDown(self):
-        core.USER_ROLES.clear()
-        core.ROUTES.clear()
-        core.STATIONS.clear()
-        core.TEAMS.clear()
-        core.TEAM_ROUTE_MAP.clear()
-        core.ROUTE_STATION_MAP.clear()
-        core.TEAM_STATION_MAP.clear()
+        model.DB.session.remove()
+        model.DB.drop_all()
 
 
 class TestCore(CommonTest):
 
     def test_get_assignments(self):
-        result = core.get_assignments()
-        expected = {
-            'stations': {
-                'route-blue': {STATION_START, STATION_BLUE, STATION_END},
-                'route-red': {STATION_START, STATION_RED, STATION_END},
-            },
-            'teams': {
-                'route-blue': {TEAM_BLUE},
-                'route-red': {TEAM_RED},
-            }
-        }
-        self.assertEqual(result, expected)
+        result = core.get_assignments(self.session)
+        result_stations_a = {_.name for _ in result['stations']['route-blue']}
+        result_stations_b = {_.name for _ in result['stations']['route-red']}
+        result_teams_a = {_.name for _ in result['teams']['route-blue']}
+        result_teams_b = {_.name for _ in result['teams']['route-red']}
+
+        expected_stations_a = {'station-start', 'station-blue', 'station-end'}
+        expected_stations_b = {'station-start', 'station-red', 'station-end'}
+        expected_teams_a = {'team-blue'}
+        expected_teams_b = {'team-red'}
+
+        self.assertEqual(result_teams_a, expected_teams_a)
+        self.assertEqual(result_teams_b, expected_teams_b)
+        self.assertEqual(result_stations_a, expected_stations_a)
+        self.assertEqual(result_stations_b, expected_stations_b)
 
 
 class TestTeam(CommonTest):
 
     def test_all(self):
-        result = set(core.Team.all())
+        result = {_.name for _ in core.Team.all(self.session)}
         expected = {
-            TEAM_BLUE,
-            TEAM_RED,
-            TEAM_WITHOUT_ROUTE,
+            'team-blue',
+            'team-red',
+            'team-without-route',
         }
         self.assertEqual(result, expected)
 
     def test_quickfilter_without_route(self):
-        result = set(core.Team.quickfilter_without_route())
-        expected = {TEAM_WITHOUT_ROUTE}
+        result = list(core.Team.quickfilter_without_route(self.session))
+        self.assertEqual(len(result), 1)
+        result = result[0].name
+        expected = 'team-without-route'
         self.assertEqual(result, expected)
 
     def test_assigned_to_route(self):
-        result = set(core.Team.assigned_to_route('route-blue'))
-        expected = {TEAM_BLUE}
-        self.assertEqual(result, expected)
+        result = list(core.Team.assigned_to_route(self.session, 'route-blue'))
+        self.assertEqual(len(result), 1)
+        expected = 'team-blue'
+        self.assertEqual(result[0].name, expected)
 
     def test_create_new(self):
-        result = core.Team.create_new({'name': 'foo'})
+        result = core.Team.create_new(self.session, {
+            'name': 'foo', 'email': 'foo@example.com'})
         self.assertEqual(result.name, 'foo')
-        self.assertEqual(len(set(core.Team.all())), 4)
-        self.assertIn(result, set(core.Team.all()))
+        self.assertEqual(len(set(core.Team.all(self.session))), 4)
+        self.assertIn(result, set(core.Team.all(self.session)))
 
     def test_upsert(self):
-        result = core.Team.upsert('team-red', {'name': 'foo', 'contact': 'bar'})
-        result.update.assert_called_with(name='foo', contact='bar')
+        core.Team.upsert(
+            self.session, 'team-red', {'name': 'foo', 'contact': 'bar'})
+        new_names = {_.name for _ in core.Team.all(self.session)}
+        self.assertEqual(new_names, {'team-blue', 'team-without-route', 'foo'})
 
     def test_delete(self):
-        result = core.Team.delete('team-red')
-        self.assertEqual(len(set(core.Team.all())), 2)
+        result = core.Team.delete(self.session, 'team-red')
+        self.assertEqual(len(set(core.Team.all(self.session))), 2)
         self.assertIsNone(result)
 
     def test_get_station_data(self):
-        result1 = core.Team.get_station_data('team-red', 'station-start')
-        result2 = core.Team.get_station_data('team-blue', 'station-finish')
-        expected1 = {'state': core.TeamState.FINISHED}
-        expected2 = {'state': core.TeamState.UNKNOWN}
-        self.assertEqual(result1, expected1)
-        self.assertEqual(result2, expected2)
+        result1 = core.Team.get_station_data(self.session,
+                                             'team-red', 'station-start')
+        result2 = core.Team.get_station_data(self.session,
+                                             'team-blue', 'station-finish')
+        expected1 = core.TeamState.FINISHED
+        expected2 = core.TeamState.UNKNOWN
+        self.assertEqual(result1.state, expected1)
+        self.assertEqual(result2.state, expected2)
 
     def test_advance_on_station(self):
-        new_state = core.Team.advance_on_station('team-red', 'station_start')
-        self.assertEqual(new_state, core.TeamState.ARRIVED)
-        new_state = core.Team.advance_on_station('team-red', 'station_start')
-        self.assertEqual(new_state, core.TeamState.FINISHED)
-        new_state = core.Team.advance_on_station('team-red', 'station_start')
+        new_state = core.Team.advance_on_station(
+            self.session, 'team-red', 'station-start')
         self.assertEqual(new_state, core.TeamState.UNKNOWN)
-        new_state = core.Team.advance_on_station('team-red', 'station_start')
+        new_state = core.Team.advance_on_station(
+            self.session, 'team-red', 'station-start')
         self.assertEqual(new_state, core.TeamState.ARRIVED)
+        new_state = core.Team.advance_on_station(
+            self.session, 'team-red', 'station-start')
+        self.assertEqual(new_state, core.TeamState.FINISHED)
+        new_state = core.Team.advance_on_station(
+            self.session, 'team-red', 'station-start')
+        self.assertEqual(new_state, core.TeamState.UNKNOWN)
 
 
 class TestStation(CommonTest):
 
     def test_all(self):
-        result = set(core.Station.all())
+        result = {_.name for _ in core.Station.all(self.session)}
         expected = {
-            STATION_START,
-            STATION_BLUE,
-            STATION_RED,
-            STATION_END,
+            'station-start',
+            'station-red',
+            'station-blue',
+            'station-end',
         }
         self.assertEqual(result, expected)
 
     def test_create_new(self):
-        result = core.Station.create_new({'name': 'foo'})
+        result = core.Station.create_new(self.session, {'name': 'foo'})
         self.assertEqual(result.name, 'foo')
-        self.assertEqual(len(set(core.Station.all())), 5)
-        self.assertIn(result, set(core.Station.all()))
+        self.assertEqual(len(set(core.Station.all(self.session))), 5)
+        self.assertIn(result, set(core.Station.all(self.session)))
 
     def test_upsert(self):
-        result = core.Station.upsert('station-red',
-                                     {'name': 'foo', 'contact': 'bar'})
-        result.update.assert_called_with(name='foo', contact='bar')
+        core.Station.upsert(self.session,
+                            'station-red',
+                            {'name': 'foo', 'contact': 'bar'})
+        result = core.Station.all(self.session)
+        names = {_.name for _ in result}
+        self.assertEqual(names, {
+            'station-end', 'foo', 'station-start', 'station-blue'})
 
     def test_delete(self):
-        result = core.Station.delete('station-red')
-        self.assertEqual(len(set(core.Station.all())), 3)
+        result = core.Station.delete(self.session, 'station-red')
+        self.assertEqual(len(set(core.Station.all(self.session))), 3)
         self.assertIsNone(result)
 
     def test_assign_user(self):
-        result = core.Station.accessible_by('user1')
+        result = core.Station.accessible_by(self.session, 'john')
         self.assertEqual(result, set())
-        result = core.Station.assign_user('station-red', 'user1')
+        result = core.Station.assign_user(self.session, 'station-red', 'john')
         self.assertTrue(result)
-        result = core.Station.accessible_by('user1')
-        self.assertEqual(result, {STATION_RED.name})
+        result = core.Station.accessible_by(self.session, 'john')
+        self.assertEqual(result, {'station-red'})
 
     def test_team_states(self):
-        result = core.Station.team_states(STATION_START.name)
-        expected = [('team-blue', core.TeamState.ARRIVED),
-                    ('team-red', core.TeamState.FINISHED)]
-        self.assertCountEqual(result, expected)
+        result = set(core.Station.team_states(self.session, 'station-start'))
+        expected = {('team-blue', core.TeamState.UNKNOWN),
+                    ('team-without-route', core.TeamState.UNKNOWN),
+                    ('team-red', core.TeamState.FINISHED)}
+        self.assertEqual(result, expected)
 
 
 class TestRoute(CommonTest):
 
     def test_all(self):
-        result = set(core.Route.all())
+        result = {_.name for _ in core.Route.all(self.session)}
         expected = {
-            ROUTE_BLUE,
-            ROUTE_RED,
+            'route-blue',
+            'route-red'
         }
         self.assertEqual(result, expected)
 
     def test_create_new(self):
-        result = core.Route.create_new({'name': 'foo'})
+        result = core.Route.create_new(self.session, {'name': 'foo'})
+        stored_data = set(core.Route.all(self.session))
         self.assertEqual(result.name, 'foo')
-        self.assertEqual(len(set(core.Route.all())), 3)
-        self.assertIn(result, set(core.Route.all()))
+        self.assertEqual(len(stored_data), 3)
+        self.assertIn(result, set(stored_data))
 
     def test_upsert(self):
-        result = core.Route.upsert('route-red',
-                                   {'name': 'foo', 'contact': 'bar'})
-        result.update.assert_called_with(name='foo', contact='bar')
+        core.Route.upsert(
+            self.session, 'route-red', {'name': 'foo'})
+        result = core.Route.upsert(
+            self.session, 'foo', {'name': 'bar'})
+        stored_data = set(core.Route.all(self.session))
+        self.assertEqual(result.name, 'bar')
+        self.assertEqual(len(stored_data), 2)
+        self.assertIn(result, set(stored_data))
 
     def test_delete(self):
-        result = core.Route.delete('route-red')
-        self.assertEqual(len(set(core.Route.all())), 1)
+        result = core.Route.delete(self.session, 'route-red')
+        self.assertEqual(len(set(core.Route.all(self.session))), 1)
         self.assertIsNone(result)
 
     def test_assign_team(self):
-        result = core.Route.assign_team('route-red', 'team-without-route')
+        result = core.Route.assign_team(
+            self.session, 'route-red', 'team-without-route')
         self.assertTrue(result)
-        result = set(core.Team.assigned_to_route('route-red'))
-        self.assertIn(TEAM_WITHOUT_ROUTE, result)
+        result = {_.name for _ in core.Team.assigned_to_route(
+            self.session, 'route-red')}
+        self.assertEqual({'team-red', 'team-without-route'}, result)
 
     def test_unassign_team(self):
-        result = core.Route.unassign_team('route-red', 'team-red')
+        result = core.Route.unassign_team(
+            self.session, 'route-red', 'team-red')
         self.assertTrue(result)
-        result = set(core.Team.assigned_to_route('route-red'))
-        self.assertNotIn(TEAM_RED, result)
+        result = set(core.Team.assigned_to_route(self.session, 'route-red'))
+        self.assertEqual(set(), result)
 
     def test_assign_station(self):
-        result = core.Route.assign_station('route-red', 'station-blue')
+        result = core.Route.assign_station(self.session,
+                                           'route-red', 'station-blue')
         self.assertTrue(result)
-        result = set(core.Station.assigned_to_route('route-red'))
-        self.assertIn(STATION_BLUE, result)
+        result = {_.name for _ in core.Station.assigned_to_route(
+            self.session, 'route-red')}
+        self.assertEqual({'station-start', 'station-end',
+                          'station-red', 'station-blue'}, result)
 
     def test_unassign_station(self):
-        result = core.Route.unassign_station('route-red', 'station-red')
+        result = core.Route.unassign_station(self.session,
+                                             'route-red', 'station-red')
         self.assertTrue(result)
-        result = set(core.Station.assigned_to_route('route-red'))
-        self.assertNotIn(STATION_RED, result)
+        result = set(core.Station.assigned_to_route(self.session, 'route-red'))
+        self.assertNotIn(set(), result)
 
 
 class TestUser(CommonTest):
 
     def test_assign_role(self):
-        core.User.assign_role('user1', 'role2')
-        result = core.User.roles('user1')
-        self.assertIn('role2', result)
+        core.User.assign_role(self.session, 'jane', 'a-role')
+        result = {_.name for _ in core.User.roles(self.session, 'jane')}
+        self.assertIn('a-role', result)
 
     def test_unassign_role(self):
-        core.User.unassign_role('user1', 'role1')
-        result = core.User.roles('user1')
-        self.assertNotIn('role1', result)
+        core.User.unassign_role(self.session, 'john', 'a-role')
+        result = {_.name for _ in core.User.roles(self.session, 'john')}
+        self.assertNotIn('a-role', result)

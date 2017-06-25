@@ -2,8 +2,12 @@ from unittest.mock import patch
 import json
 import unittest
 
+from flask_testing import TestCase
+
+from powonline.model import DB
 from powonline.web import make_app
 import powonline.core as core
+import powonline.model as model
 
 from util import (
     make_dummy_route_dict,
@@ -12,36 +16,52 @@ from util import (
 )
 
 
-class TestPublicAPIAsManager(unittest.TestCase):
+def here(localname):
+    from os.path import join, dirname
+    return join(dirname(__file__), localname)
+
+
+class TestPublicAPIAsManager(TestCase):
+
+    SQLALCHEMY_DATABASE_URI = 'postgresql://exhuma@/powonline_testing'
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    TESTING = True
+
+    def create_app(self):
+        return make_app(TestPublicAPIAsManager.SQLALCHEMY_DATABASE_URI)
 
     def setUp(self):
-        self.app_object = make_app()
-        self.app_object.config['TESTING'] = True
-        self.app = self.app_object.test_client()
+        self.app = self.client  # <-- avoiding unrelated diffs for now.
+                                #     Can be removed in a later commit
+        DB.create_all()
+
+        with open(here('seed.sql')) as seed:
+            DB.session.execute(seed.read())
+            DB.session.commit()
+
         self.maxDiff = None
 
     def tearDown(self):
-        from powonline import core
-        core.USER_STATION_MAP.clear()
-        core.TEAM_ROUTE_MAP.clear()
+        DB.session.remove()
+        DB.drop_all()
 
     def test_fetch_list_of_teams_all(self):
         with patch('powonline.resources.core') as _core:
             _core.Team.all.return_value = []
             self.app.get('/team')
-            _core.Team.all.assert_called_with()
+            _core.Team.all.assert_called_with(DB.session)
 
     def test_fetch_list_of_teams_by_route(self):
         with patch('powonline.resources.core') as _core:
             _core.Team.assigned_to_route.return_value = []
             self.app.get('/team?assigned_route=foo')
-            _core.Team.assigned_to_route.assert_called_with('foo')
+            _core.Team.assigned_to_route.assert_called_with(DB.session, 'foo')
 
     def test_fetch_list_of_teams_quickfilter_without_route(self):
         with patch('powonline.resources.core') as _core:
             _core.Team.quickfilter_without_route.return_value = []
             self.app.get('/team?quickfilter=without_route')
-            _core.Team.quickfilter_without_route.assert_called_with()
+            _core.Team.quickfilter_without_route.assert_called_with(DB.session)
 
     def test_fetch_list_of_stations(self):
         with patch('powonline.resources.core') as _core:
@@ -218,81 +238,81 @@ class TestPublicAPIAsManager(unittest.TestCase):
         self.assertEqual(response.status_code, 204, response.data)
 
     def test_assign_user_to_station(self):
-        simpleuser = {'name': 'example-user'}
-        response = self.app.post('/station/example-station/users',
+        simpleuser = {'name': 'john'}
+        response = self.app.post('/station/station-red/users',
                                  headers={'Content-Type': 'application/json'},
                                  data=json.dumps(simpleuser))
         self.assertEqual(response.status_code, 204, response.data)
 
     def test_assign_user_to_two_stations(self):
-        simpleuser = {'name': 'example-user'}
-        response = self.app.post('/station/example-station-1/users',
+        simpleuser = {'name': 'john'}
+        response = self.app.post('/station/station-red/users',
                                  headers={'Content-Type': 'application/json'},
                                  data=json.dumps(simpleuser))
         self.assertEqual(response.status_code, 204, response.data)
-        response = self.app.post('/station/example-station-2/users',
+        response = self.app.post('/station/station-blue/users',
                                  headers={'Content-Type': 'application/json'},
                                  data=json.dumps(simpleuser))
-        self.assertEqual(response.status_code, 400, response.data)
+        self.assertEqual(response.status_code, 204, response.data)
 
     def test_unassign_user_from_station(self):
-        response = self.app.delete('/station/example-station/users/some-user')
+        response = self.app.delete('/station/station-red/users/user-red')
         self.assertEqual(response.status_code, 204, response.data)
 
     def test_assign_team_to_route(self):
-        simpleteam = {'name': 'example-team'}
-        response = self.app.post('/route/example-route/teams',
+        simpleteam = {'name': 'team-without-route'}
+        response = self.app.post('/route/route-red/teams',
                                  headers={'Content-Type': 'application/json'},
                                  data=json.dumps(simpleteam))
         self.assertEqual(response.status_code, 204, response.data)
 
     def test_assign_team_to_two_routes(self):
-        simpleteam = {'name': 'example-team'}
-        response = self.app.post('/route/example-route-1/teams',
+        simpleteam = {'name': 'team-without-route'}
+        response = self.app.post('/route/route-red/teams',
                                  headers={'Content-Type': 'application/json'},
                                  data=json.dumps(simpleteam))
         self.assertEqual(response.status_code, 204, response.data)
-        response = self.app.post('/route/example-route-2/teams',
+        response = self.app.post('/route/route-blue/teams',
                                  headers={'Content-Type': 'application/json'},
                                  data=json.dumps(simpleteam))
         self.assertEqual(response.status_code, 400, response.data)
 
     def test_unassign_team_from_route(self):
-        response = self.app.delete('/route/example-route/teams/someteam')
+        response = self.app.delete('/route/route-red/teams/team-red')
         self.assertEqual(response.status_code, 204, response.data)
 
     def test_assign_role_to_user(self):
-        simplerole = {'name': 'example-role'}
-        response = self.app.post('/user/example-user/roles',
+        simplerole = {'name': 'a-role'}
+        response = self.app.post('/user/jane/roles',
                                  headers={'Content-Type': 'application/json'},
                                  data=json.dumps(simplerole))
         self.assertEqual(response.status_code, 204, response.data)
 
     def test_unassign_role_from_user(self):
-        response = self.app.delete('/user/example-user/roles/somerole')
+        response = self.app.delete('/user/john/roles/a-role')
         self.assertEqual(response.status_code, 204, response.data)
 
     def test_assign_station_to_route(self):
-        simplestation = {'name': 'example-station'}
-        response = self.app.post('/route/example-route/stations',
+        simplestation = {'name': 'station-red'}
+        response = self.app.post('/route/route-red/stations',
                                  headers={'Content-Type': 'application/json'},
                                  data=json.dumps(simplestation))
         self.assertEqual(response.status_code, 204, response.data)
 
     def test_assign_station_to_two_routes(self):
         # should *pass*. A station can be on multiple routes!
-        simplestation = {'name': 'example-station'}
-        response = self.app.post('/route/example-route-1/stations',
+        simplestation = {'name': 'station-start'}
+        response = self.app.post('/route/route-red/stations',
                                  headers={'Content-Type': 'application/json'},
                                  data=json.dumps(simplestation))
         self.assertEqual(response.status_code, 204, response.data)
-        response = self.app.post('/route/example-route-2/stations',
+        response = self.app.post('/route/route-blue/stations',
                                  headers={'Content-Type': 'application/json'},
                                  data=json.dumps(simplestation))
         self.assertEqual(response.status_code, 204, response.data)
 
     def test_unassign_station_from_route(self):
-        response = self.app.delete('/route/example-route/stations/somestation')
+        response = self.app.delete('/route/route-red/stations/station-red')
         self.assertEqual(response.status_code, 204, response.data)
 
     def test_show_team_station_state(self):
@@ -344,9 +364,6 @@ class TestPublicAPIAsManager(unittest.TestCase):
                 (0, 'team2', 'unknown'),
             }
             self.assertEqual(testable, expected)
-
-
-
 
 
 class TestPublicAPIAsStationManager(unittest.TestCase):
