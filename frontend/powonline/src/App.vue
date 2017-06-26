@@ -6,7 +6,7 @@
     <router-link class="navlink" to="/route">Routes</router-link>
     <router-view></router-view>
     <div id="errors">
-      <error-block :error="error" v-for="error in errors"></error-block>
+      <error-block :error="error" v-for="(error, idx) in errors" :key="'error-' + idx"></error-block>
     </div>
   </div>
 </template>
