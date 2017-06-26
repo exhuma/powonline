@@ -14,7 +14,7 @@
       placeholder='Enter a new email' />
     <button @click="addTeam">Add</button>
     <hr />
-    <div class="red">
+    <div>
       <v-btn dark default>Normal</v-btn>
     </div>
     <team-block v-for="team in teams" :name="team.name" :key="team.name"></team-block>
