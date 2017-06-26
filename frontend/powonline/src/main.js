@@ -7,6 +7,7 @@ import Vuex from 'vuex'
 import axios from 'axios'
 
 import ErrorBlock from './components/ErrorBlock'
+import MiniStatus from './components/MiniStatus'
 import RouteBlock from './components/RouteBlock'
 import StationBlock from './components/StationBlock'
 import TeamBlock from './components/TeamBlock'
@@ -437,6 +438,14 @@ const store = new Vuex.Store({
         {name: routeName},
         {name: routeName}
       ]
+    },
+    teamState: (state, getters) => (teamName, stationName) => {
+      const output = []
+      console.log(state)
+      state.dashboard.forEach(item => {
+        console.log(teamName, stationName, item)
+      })
+      return output
     }
   }
 
@@ -454,7 +463,8 @@ new Vue({
   }
 })
 
+Vue.component('error-block', ErrorBlock)
+Vue.component('mini-status', MiniStatus)
+Vue.component('route-block', RouteBlock)
 Vue.component('station-block', StationBlock)
 Vue.component('team-block', TeamBlock)
-Vue.component('route-block', RouteBlock)
-Vue.component('error-block', ErrorBlock)

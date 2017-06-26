@@ -2,6 +2,11 @@
   <div class="team-block">
     {{ name }}
     <button @click="deleteTeam">Delete</button>
+    <mini-status
+      :station="station.name"
+      :team="name"
+      :key="name + station.name"
+      v-for="station in stations"></mini-status>
   </div>
 </template>
 
@@ -12,6 +17,11 @@ export default {
     'name': {
       type: String,
       default: 'Unknown Team'
+    }
+  },
+  computed: {
+    stations () {
+      return this.$store.state.stations
     }
   },
   methods: {
