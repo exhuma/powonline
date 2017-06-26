@@ -451,6 +451,12 @@ const store = new Vuex.Store({
 
 })
 
+Vue.component('error-block', ErrorBlock)
+Vue.component('mini-status', MiniStatus)
+Vue.component('route-block', RouteBlock)
+Vue.component('station-block', StationBlock)
+Vue.component('team-block', TeamBlock)
+
 /* eslint-disable no-new */
 new Vue({
   el: '#app',
@@ -462,9 +468,3 @@ new Vue({
     this.$store.dispatch('refreshRemote')
   }
 })
-
-Vue.component('error-block', ErrorBlock)
-Vue.component('mini-status', MiniStatus)
-Vue.component('route-block', RouteBlock)
-Vue.component('station-block', StationBlock)
-Vue.component('team-block', TeamBlock)
