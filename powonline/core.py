@@ -91,7 +91,7 @@ class Station:
 
     @staticmethod
     def all(session):
-        return session.query(model.Station)
+        return session.query(model.Station).order_by(model.Station.order)
 
     @staticmethod
     def create_new(session, data):

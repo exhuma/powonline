@@ -80,6 +80,7 @@ class Station(DB.Model):
     name = Column(Unicode, primary_key=True, nullable=False)
     contact = Column(Unicode)
     phone = Column(Unicode)
+    order = Column(Integer, nullable=False, server_default='500')
     is_start = Column(Boolean, nullable=False, server_default='false')
     is_end = Column(Boolean, nullable=False, server_default='false')
 
