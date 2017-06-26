@@ -468,3 +468,9 @@ Vue.component('mini-status', MiniStatus)
 Vue.component('route-block', RouteBlock)
 Vue.component('station-block', StationBlock)
 Vue.component('team-block', TeamBlock)
+
+Vue.directive('mdl', {
+  bind: function () {
+    componentHandler.upgradeElement(this.el)
+  }
+});
