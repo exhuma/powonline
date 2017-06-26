@@ -4,6 +4,7 @@ import Vue from 'vue'
 import App from './App'
 import router from './router'
 import Vuex from 'vuex'
+import Vuetify from 'vuetify'
 import axios from 'axios'
 
 import ErrorBlock from './components/ErrorBlock'
@@ -14,6 +15,7 @@ import TeamBlock from './components/TeamBlock'
 
 Vue.config.productionTip = false
 Vue.use(Vuex)
+Vue.use(Vuetify)
 
 const BASE_URL = 'http://192.168.1.92:5000'
 const store = new Vuex.Store({
