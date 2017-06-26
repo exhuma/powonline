@@ -108,21 +108,39 @@ const store = new Vuex.Store({
       }
     },
     deleteRoute (state, routeName) {
-      const idx = state.routes.indexOf(routeName)
+      let idx = -1  // TODO there must be a better way than the following loop
+      state.routes.forEach(item => {
+        if (item.name === routeName) {
+          idx = state.routes.indexOf(item)
+        }
+      })
+
       if (idx > -1) {
-        state.routes.splice(idx, -1)
+        state.routes.splice(idx, 1)
       }
     },
     deleteStation (state, stationName) {
-      const idx = state.routes.indexOf(stationName)
+      let idx = -1  // TODO there must be a better way than the following loop
+      state.stations.forEach(item => {
+        if (item.name === stationName) {
+          idx = state.stations.indexOf(item)
+        }
+      })
+
       if (idx > -1) {
-        state.stations.splice(idx, -1)
+        state.stations.splice(idx, 1)
       }
     },
     deleteTeam (state, teamName) {
-      const idx = state.teams.indexOf(teamName)
+      let idx = -1  // TODO there must be a better way than the following loop
+      state.teams.forEach(item => {
+        if (item.name === teamName) {
+          idx = state.teams.indexOf(item)
+        }
+      })
+
       if (idx > -1) {
-        state.teams.splice(idx, -1)
+        state.teams.splice(idx, 1)
       }
     }
   },
