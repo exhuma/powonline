@@ -12,28 +12,17 @@
 </template>
 
 <script>
-import axios from 'axios'
 export default {
   name: 'station_dashboard',
-  created () {
-    this.update()
-  },
-  data () {
-    return {
-      states: []
+  computed: {
+    states () {
+      return this.$store.state.dashboard
     }
   },
+  created () {
+    this.$store.dispatch('fetchDashboard', this.$route.params.stationName)
+  },
   methods: {
-    update: function (event) {
-      this.states = []
-      const baseUrl = this.$store.state.baseUrl
-      axios.get(baseUrl + '/station/' + this.$route.params.stationName + '/dashboard')
-      .then(response => {
-        response.data.forEach(state => {
-          this.states.push(state)
-        })
-      }) // TODO better error handling
-    },
     advanceState: function (event) {
       const state = this.states[event.target.getAttribute('data-idx')]
       this.$store.dispatch('advanceState', {

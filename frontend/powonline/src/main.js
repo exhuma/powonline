@@ -23,7 +23,7 @@ const store = new Vuex.Store({
     errors: [],
     route_station_map: {},  // map stations to routes (key=stationName, value=routeName)
     route_team_map: {},  // map teams to routes (key=teamName, value=routeName)
-    dashboard: {}, // maps team names to station-states
+    dashboard: [], // maps team names to station-states
     dashboardStation: '',
     teamStates: [],
     baseUrl: BASE_URL
@@ -49,6 +49,9 @@ const store = new Vuex.Store({
     },
     logError (state, error) {
       state.errors.push(error)
+    },
+    updateDashboard (state, data) {
+      state.dashboard = data
     },
     replaceAssignments (state, assignments) {
       // Replace team-to-route mapping
@@ -157,9 +160,26 @@ const store = new Vuex.Store({
         }
       })
       .then(response => {
-        const newState = response.data.result.state
-        console.log(newState)  // XXX
-      }) // TODO better error handling
+        context.dispatch('fetchDashboard', payload.stationName)
+      })
+      .catch(e => {
+        context.commit('logError', e)
+      })
+    },
+
+    /**
+     * Fetch the dashboard data for a station
+     *
+     * :param stationName: The name of the station
+     */
+    fetchDashboard (context, stationName) {
+      axios.get(BASE_URL + '/station/' + stationName + '/dashboard')
+      .then(response => {
+        context.commit('updateDashboard', response.data)
+      })
+      .catch(e => {
+        context.commit('logError', e)
+      })
     },
 
     /**
