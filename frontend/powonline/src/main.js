@@ -317,7 +317,7 @@ const store = new Vuex.Store({
         context.commit('deleteRoute', routeName)
       })
       .catch(e => {
-        console.log(e)
+        context.commit('logError', e)
       })
     },
 
@@ -330,7 +330,7 @@ const store = new Vuex.Store({
         context.commit('deleteStation', stationName)
       })
       .catch(e => {
-        console.log(e)  // TODO Better error handling
+        context.commit('logError', e)
       })
     },
 
@@ -343,11 +343,10 @@ const store = new Vuex.Store({
         context.commit('deleteTeam', teamName)
       })
       .catch(e => {
-        console.log(e)  // TODO Better error-handling
+        context.commit('logError', e)
       })
     }
   },
-
   getters: {
     unassignedTeams (state, getters) {
       // fetch *all* assignments of teams
