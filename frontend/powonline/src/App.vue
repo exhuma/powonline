@@ -1,39 +1,7 @@
 <template>
   <div id="app">
     <v-app>
-
-      <v-navigation-drawer persistent light :mini-variant.sync="mini" v-model="drawer">
-        <v-list class="pa-0">
-          <v-list-item>
-            <v-list-tile avatar tag="div">
-              <v-list-tile-content>
-                <v-list-tile-title>Powonline</v-list-tile-title>
-              </v-list-tile-content>
-              <v-list-tile-action>
-                <v-btn icon @click.native.stop="mini = !mini">
-                  <v-icon>chevron_left</v-icon>
-                </v-btn>
-              </v-list-tile-action>
-            </v-list-tile>
-          </v-list-item>
-        </v-list>
-        <v-list class="pt-0" dense>
-          <v-divider></v-divider>
-          <v-list-item v-for="route in routes" :key="route.to">
-            <v-list-tile>
-              <v-list-tile-action>
-                <v-icon>{{route.icon}}</v-icon>
-              </v-list-tile-action>
-              <v-list-tile-content>
-                <v-list-tile-title><router-link class="navlink" :to="route.to">{{ route.label }}</router-link></v-list-tile-title>
-              </v-list-tile-content>
-            </v-list-tile>
-          </v-list-item>
-        </v-list>
-      </v-navigation-drawer>
-
       <v-toolbar class="brown darken-4">
-        <v-toolbar-side-icon light @click.native.stop="drawer = !drawer"></v-toolbar-side-icon>
         <v-toolbar-title class="white--text">{{ pageTitle }}</v-toolbar-title>
       </v-toolbar>
       <main>
@@ -42,9 +10,15 @@
           <div id="errors">
             <error-block :error="error" v-for="(error, idx) in errors" :key="'error-' + idx"></error-block>
           </div>
+          <br clear="all"/>
         </v-container>
+        <v-bottom-nav value="true" class="brown darken-4">
+          <v-btn v-for="route in routes" @click.native="go" :data-to="route.to" :key="route.to" flat light :value="here === route.to">
+            <span>{{ route.label }}</span>
+            <v-icon>{{route.icon}}</v-icon>
+          </v-btn>
+        </v-bottom-nav>
       </main>
-      <v-footer class="brown darken-4"></v-footer>
     </v-app>
   </div>
 </template>
@@ -54,15 +28,18 @@ export default {
   name: 'app',
   data () {
     return {
-      drawer: true,
       routes: [
         { label: 'Home', to: '/', icon: 'home' },
         { label: 'Stations', to: '/station', icon: 'place' },
         { label: 'Teams', to: '/team', icon: 'group' },
         { label: 'Routes', to: '/route', icon: 'gesture' }
-      ],
-      mini: false,
-      right: null
+      ]
+    }
+  },
+  methods: {
+    go (e) {
+      const destination = e.target.getAttribute('data-to')
+      this.$router.push(destination)
     }
   },
   computed: {
@@ -71,6 +48,9 @@ export default {
     },
     errors () {
       return this.$store.state.errors
+    },
+    here () {
+      return this.$route.path
     }
   }
 }
