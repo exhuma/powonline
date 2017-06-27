@@ -7,7 +7,7 @@
       type='text'
       v-model:stationname='stationname'
       label='Enter a new stationname' />
-    <v-btn @click="addStation">Add</v-btn>
+    <v-btn @click.native="addStation">Add</v-btn>
     <hr />
     <station-block v-for="station in stations" :name="station.name" :key="station.name"></station-block>
   </div>

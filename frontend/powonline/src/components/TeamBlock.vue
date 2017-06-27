@@ -1,7 +1,7 @@
 <template>
   <div class="team-block">
     {{ name }}
-    <button @click="deleteTeam">Delete</button>
+    <button @click.native="deleteTeam">Delete</button>
     <mini-status
       :station="station.name"
       :team="name"

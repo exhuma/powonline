@@ -7,7 +7,7 @@
       type='text'
       v-model:routename='routename'
       placeholder='Enter a new routename' />
-    <button @click="addRoute">Add</button>
+    <button @click.native="addRoute">Add</button>
     <hr />
     <route-block v-for="route in routes" :name="route.name" :key="route.name"></route-block>
   </div>

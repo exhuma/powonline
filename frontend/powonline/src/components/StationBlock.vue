@@ -10,7 +10,7 @@
     </v-card-text>
     <v-divider></v-divider>
     <v-card-row actions>
-        <v-btn flat class="green--text darken-1" @click="deleteStation">Delete</v-btn>
+        <v-btn flat class="green--text darken-1" @click.native="deleteStation">Delete</v-btn>
     </v-card-row>
   </v-card>
 </template>

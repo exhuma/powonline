@@ -1,7 +1,7 @@
 <template>
   <div class="route-block">
     {{ name }}
-    <button @click="deleteRoute">Delete</button>
+    <button @click.native="deleteRoute">Delete</button>
 
     <hr />
 
@@ -9,17 +9,17 @@
       <tr>
         <td>
           <h2>Teams assigned to this route</h2>
-          <li v-for="(team, idx) in assignedTeams">{{ team }}<button @click="unassignTeam" :data-idx="idx">Unassign</button></li>
+          <li v-for="(team, idx) in assignedTeams">{{ team }}<button @click.native="unassignTeam" :data-idx="idx">Unassign</button></li>
 
           <h2>Teams not assigned to any route</h2>
-          <li v-for="(team, idx) in unassignedTeams">{{ team }}<button @click="assignTeam" :data-idx="idx">Assign</button></li>
+          <li v-for="(team, idx) in unassignedTeams">{{ team }}<button @click.native="assignTeam" :data-idx="idx">Assign</button></li>
         </td>
         <td>
           <h2>Stations assigned to this route</h2>
-          <li v-for="(station, idx) in assignedStations">{{ station }}<button @click="unassignStation" :data-idx="idx">Unassign</button></li>
+          <li v-for="(station, idx) in assignedStations">{{ station }}<button @click.native="unassignStation" :data-idx="idx">Unassign</button></li>
 
           <h2>Stations not assigned to this route</h2>
-          <li v-for="(station, idx) in unassignedStations">{{ station }}<button @click="assignStation" :data-idx="idx">Assign</button></li>
+          <li v-for="(station, idx) in unassignedStations">{{ station }}<button @click.native="assignStation" :data-idx="idx">Assign</button></li>
         </td>
       </tr>
     </table>
