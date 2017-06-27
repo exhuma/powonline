@@ -17,6 +17,8 @@ Vue.config.productionTip = false
 Vue.use(Vuex)
 Vue.use(Vuetify)
 
+import 'vuetify/dist/vuetify.min.css'
+
 const BASE_URL = 'http://192.168.1.92:5000'
 const store = new Vuex.Store({
   state: {
