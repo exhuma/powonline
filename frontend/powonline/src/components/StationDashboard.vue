@@ -6,7 +6,7 @@
       {{ state.score }} -
       {{ state.state }}
       <br />
-      <button @click="advanceState" :data-idx="idx">Advance</button>
+      <button @click.native="advanceState" :data-idx="idx">Advance</button>
     </p>
   </div>
 </template>

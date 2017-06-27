@@ -2,7 +2,7 @@
   <div class="error-block">
     <p v-if="error.config.method">
       Error when retrieving <tt>{{ error.config.method}} {{error.config.url}}</tt>
-      <button @click="toggleDisplay">i</button>
+      <button @click.native="toggleDisplay">i</button>
       <pre v-show="displayError">{{ error }}</pre>
     </p>
   </div>

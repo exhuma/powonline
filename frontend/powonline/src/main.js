@@ -4,6 +4,7 @@ import Vue from 'vue'
 import App from './App'
 import router from './router'
 import Vuex from 'vuex'
+import Vuetify from 'vuetify'
 import axios from 'axios'
 
 import ErrorBlock from './components/ErrorBlock'
@@ -14,6 +15,9 @@ import TeamBlock from './components/TeamBlock'
 
 Vue.config.productionTip = false
 Vue.use(Vuex)
+Vue.use(Vuetify)
+
+import 'vuetify/dist/vuetify.min.css'
 
 const BASE_URL = 'http://192.168.1.92:5000'
 const store = new Vuex.Store({
@@ -27,9 +31,13 @@ const store = new Vuex.Store({
     dashboard: [], // maps team names to station-states
     dashboardStation: '',
     teamStates: [],
-    baseUrl: BASE_URL
+    baseUrl: BASE_URL,
+    pageTitle: 'Powonline'
   },
   mutations: {
+    changeTitle (state, title) {
+      state.pageTitle = title
+    },
     addTeam (state, team) {
       state.teams.push(team)
     },

@@ -1,14 +1,24 @@
 <template>
   <div id="StationList">
-    <h1>Station List</h1>
-    <input 
-      id="StationNameImput"
-      @keyup.enter="addStation"
-      type='text'
-      v-model:stationname='stationname'
-      placeholder='Enter a new stationname' />
-    <button @click="addStation">Add</button>
-    <hr />
+    <v-card>
+      <v-card-row class="brown darken-4">
+        <v-card-title>
+          <span class="white--text">Add New Station</span>
+        </v-card-title>
+      </v-card-row>
+      <v-card-text>
+        <v-text-field
+          id="StationNameImput"
+          @keyup.enter.native="addStation"
+          type='text'
+          v-model:stationname='stationname'
+          label='Enter a new stationname' />
+      </v-card-text>
+      <v-divider></v-divider>
+      <v-card-row actions>
+        <v-btn @click.native="addStation" flat>Add</v-btn>
+      </v-card-row>
+    </v-card>
     <station-block v-for="station in stations" :name="station.name" :key="station.name"></station-block>
   </div>
 </template>
@@ -24,9 +34,12 @@ export default {
       input.select()
     }
   },
+  created () {
+    this.$store.commit('changeTitle', 'Station List')
+  },
   data () {
     return {
-      stationname: 'default'
+      stationname: ''
     }
   },
   computed: {
@@ -36,24 +49,3 @@ export default {
   }
 }
 </script>
-
-<!-- Add "scoped" attribute to limit CSS to this component only -->
-<style scoped>
-h1, h2 {
-  font-weight: normal;
-}
-
-ul {
-  list-style-type: none;
-  padding: 0;
-}
-
-li {
-  display: inline-block;
-  margin: 0 10px;
-}
-
-a {
-  color: #42b983;
-}
-</style>
