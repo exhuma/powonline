@@ -1,6 +1,6 @@
 <template>
   <v-card class="mt-3">
-    <v-card-row class="green darken-1">
+    <v-card-row class="brown darken-1">
       <v-card-title><span class="white--text">Station: "{{ name }}"</span></v-card-title>
     </v-card-row>
     <v-card-text>
@@ -10,7 +10,7 @@
     </v-card-text>
     <v-divider></v-divider>
     <v-card-row actions>
-        <v-btn flat class="green--text darken-1" @click.native="deleteStation">Delete</v-btn>
+        <v-btn flat class="brown--text darken-1" @click.native="deleteStation">Delete</v-btn>
     </v-card-row>
   </v-card>
 </template>

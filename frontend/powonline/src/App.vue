@@ -32,9 +32,9 @@
         </v-list>
       </v-navigation-drawer>
 
-      <v-toolbar>
+      <v-toolbar class="brown darken-4">
         <v-toolbar-side-icon light @click.native.stop="drawer = !drawer"></v-toolbar-side-icon>
-        <v-toolbar-title>{{ pageTitle }}</v-toolbar-title>
+        <v-toolbar-title class="white--text">{{ pageTitle }}</v-toolbar-title>
       </v-toolbar>
       <main>
         <v-container fluid>
@@ -44,7 +44,7 @@
           </div>
         </v-container>
       </main>
-      <v-footer></v-footer>
+      <v-footer class="brown darken-4"></v-footer>
     </v-app>
   </div>
 </template>

@@ -1,6 +1,6 @@
 <template>
   <v-card class="mt-3">
-    <v-card-row class="green darken-1">
+    <v-card-row class="brown darken-1">
       <v-card-title><span class="white--text">Route: "{{ name }}"</span></v-card-title>
     </v-card-row>
     <v-card-text>
@@ -8,7 +8,7 @@
         <!-- Assigned Items -->
         <v-flex xs6>
           <v-card class="mx-3">
-            <v-card-row class="green lighten-2">
+            <v-card-row class="brown lighten-2">
               <v-card-title>Assigned Teams</v-card-title>
             </v-card-row>
             <v-card-row v-for="(team, idx) in assignedTeams" :key="idx">
@@ -21,7 +21,7 @@
         </v-flex>
         <v-flex xs6>
           <v-card class="mx-3">
-            <v-card-row class="green lighten-2">
+            <v-card-row class="brown lighten-2">
               <v-card-title>Assigned Stations</v-card-title>
             </v-card-row>
             <v-card-row v-for="(station, idx) in assignedStations" :key="idx">
@@ -36,7 +36,7 @@
         <!-- Unassigned Items -->
         <v-flex xs6 class="mt-4"> 
           <v-card class="mx-3">
-            <v-card-row class="green lighten-2">
+            <v-card-row class="brown lighten-2">
               <v-card-title>Unassigned Teams</v-card-title>
             </v-card-row>
             <v-card-row v-for="(team, idx) in unassignedTeams" :key="idx">
@@ -49,7 +49,7 @@
         </v-flex>
         <v-flex xs6 class="mt-4">
           <v-card class="mx-3">
-            <v-card-row class="green lighten-2">
+            <v-card-row class="brown lighten-2">
               <v-card-title>Unassigned Stations</v-card-title>
             </v-card-row>
             <v-card-row v-for="(station, idx) in unassignedStations" :key="idx">
