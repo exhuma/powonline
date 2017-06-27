@@ -19,7 +19,7 @@
         </v-list>
         <v-list class="pt-0" dense>
           <v-divider></v-divider>
-          <v-list-item v-for="route in routes">
+          <v-list-item v-for="route in routes" :key="route.to">
             <v-list-tile>
               <v-list-tile-action>
                 <v-icon>{{route.icon}}</v-icon>
