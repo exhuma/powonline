@@ -64,30 +64,10 @@
     </v-card-text>
     <v-divider></v-divider>
     <v-card-row actions>
-      <v-btn flat class="green--text darken-1" @click.native="deleteRoute">Delete</v-btn>
+      <v-btn flat class="brown--text darken-1" @click.native="deleteRoute">Delete</v-btn>
     </v-card-row>
   </v-card>
 </template>
-
-<!--
-<template>
-  <div class="route-block">
-    <table>
-      <tr>
-        <td>
-          <h2>Teams not assigned to any route</h2>
-        </td>
-        <td>
-          <h2>Stations assigned to this route</h2>
-
-          <h2>Stations not assigned to this route</h2>
-        </td>
-      </tr>
-    </table>
-
-  </div>
-</template>
--->
 
 <script>
 export default {
