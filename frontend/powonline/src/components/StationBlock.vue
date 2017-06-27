@@ -1,7 +1,7 @@
 <template>
   <v-card class="mt-3">
     <v-card-row class="green darken-1">
-      <v-card-title><span class="white--text">{{ name }}</span></v-card-title>
+      <v-card-title><span class="white--text">Station: "{{ name }}"</span></v-card-title>
     </v-card-row>
     <v-card-text>
       <v-card-row>
