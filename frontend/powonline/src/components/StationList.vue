@@ -1,13 +1,24 @@
 <template>
   <div id="StationList">
-    <v-text-field
-      id="StationNameImput"
-      @keyup.enter.native="addStation"
-      type='text'
-      v-model:stationname='stationname'
-      label='Enter a new stationname' />
-    <v-btn @click.native="addStation">Add</v-btn>
-    <hr />
+    <v-card>
+      <v-card-row class="green darken-1">
+        <v-card-title>
+          <span class="white--text">Add New Station</span>
+        </v-card-title>
+      </v-card-row>
+      <v-card-text>
+        <v-text-field
+          id="StationNameImput"
+          @keyup.enter.native="addStation"
+          type='text'
+          v-model:stationname='stationname'
+          label='Enter a new stationname' />
+      </v-card-text>
+      <v-divider></v-divider>
+      <v-card-row actions>
+        <v-btn @click.native="addStation" flat>Add</v-btn>
+      </v-card-row>
+    </v-card>
     <station-block v-for="station in stations" :name="station.name" :key="station.name"></station-block>
   </div>
 </template>

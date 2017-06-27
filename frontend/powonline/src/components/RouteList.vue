@@ -1,16 +1,29 @@
 <template>
   <div id="RouteList">
-    <input 
-      id="RouteNameImput"
-      @keyup.enter.native="addRoute"
-      type='text'
-      v-model:routename='routename'
-      placeholder='Enter a new routename' />
-    <button @click.native="addRoute">Add</button>
-    <hr />
+    <v-card>
+      <v-card-row class="green darken-1">
+        <v-card-title>
+          <span class="white--text">Add New Route</span>
+        </v-card-title>
+      </v-card-row>
+      <v-card-text>
+        <v-text-field
+          name="route-input"
+          id="RouteNameImput"
+          @keyup.enter.native="addRoute"
+          type='text'
+          v-model:routename='routename'
+          label='Enter a new routename' />
+      </v-card-text>
+      <v-divider></v-divider>
+      <v-card-row actions>
+        <v-btn @click.native="addRoute" flat>Add</v-btn>
+      </v-card-row>
+    </v-card>
     <route-block v-for="route in routes" :name="route.name" :key="route.name"></route-block>
   </div>
 </template>
+
 
 <script>
 export default {
@@ -28,7 +41,7 @@ export default {
   },
   data () {
     return {
-      routename: 'default'
+      routename: ''
     }
   },
   computed: {

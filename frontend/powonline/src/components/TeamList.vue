@@ -1,23 +1,35 @@
 <template>
   <div id="TeamList">
-    <v-text-field
-      name="team-input"
-      id="TeamNameImput"
-      @keyup.enter.native="addTeam"
-      type='text'
-      v-model:teamname='teamname'
-      label='Enter a new teamname' />
-    <v-text-field
-      name="email-input"
-      id="EmailInput"
-      type='text'
-      v-model:email='email'
-      label='Enter a new email' />
-    <v-btn v-on:click="addTeam">Add</v-btn>
-    <hr />
+    <v-card>
+      <v-card-row class="green darken-1">
+        <v-card-title>
+          <span class="white--text">Add New Team</span>
+        </v-card-title>
+      </v-card-row>
+      <v-card-text>
+        <v-text-field
+          name="team-input"
+          id="TeamNameImput"
+          @keyup.enter.native="addTeam"
+          type='text'
+          v-model:teamname='teamname'
+          label='Enter a new teamname' />
+        <v-text-field
+          name="email-input"
+          id="EmailInput"
+          type='text'
+          v-model:email='email'
+          label='Enter a new email' />
+      </v-card-text>
+      <v-divider></v-divider>
+      <v-card-row actions>
+        <v-btn @click.native="addTeam" flat>Add</v-btn>
+      </v-card-row>
+    </v-card>
     <team-block v-for="team in teams" :name="team.name" :key="team.name"></team-block>
   </div>
 </template>
+
 
 <script>
 export default {
