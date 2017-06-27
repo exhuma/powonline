@@ -1,13 +1,13 @@
 <template>
   <div id="StationList">
     <h1>Station List</h1>
-    <input 
+    <v-text-field
       id="StationNameImput"
       @keyup.enter="addStation"
       type='text'
       v-model:stationname='stationname'
-      placeholder='Enter a new stationname' />
-    <button @click="addStation">Add</button>
+      label='Enter a new stationname' />
+    <v-btn @click="addStation">Add</v-btn>
     <hr />
     <station-block v-for="station in stations" :name="station.name" :key="station.name"></station-block>
   </div>
@@ -26,7 +26,7 @@ export default {
   },
   data () {
     return {
-      stationname: 'default'
+      stationname: ''
     }
   },
   computed: {

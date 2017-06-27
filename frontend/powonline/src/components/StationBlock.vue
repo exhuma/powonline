@@ -1,8 +1,18 @@
 <template>
-  <div class="station-block">
-    <a :href="'#/station/' + name">{{ name }}</a>
-    <button @click="deleteStation">Delete</button>
-  </div>
+  <v-card>
+    <v-card-row class="green darken-1">
+      <v-card-title><span class="white--text">{{ name }}</span></v-card-title>
+    </v-card-row>
+    <v-card-text>
+      <v-card-row>
+        <a :href="'#/station/' + name">Dashboard</a>
+      </v-card-row>
+    </v-card-text>
+    <v-divider></v-divider>
+    <v-card-row actions>
+        <v-btn flat class="green--text darken-1" @click="deleteStation">Delete</v-btn>
+    </v-card-row>
+  </v-card>
 </template>
 
 <script>

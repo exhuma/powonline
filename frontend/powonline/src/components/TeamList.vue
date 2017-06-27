@@ -1,22 +1,21 @@
 <template>
   <div id="TeamList">
     <h1>Team List</h1>
-    <input 
+    <v-text-field
+      name="team-input"
       id="TeamNameImput"
       @keyup.enter="addTeam"
       type='text'
       v-model:teamname='teamname'
-      placeholder='Enter a new teamname' />
-    <input 
+      label='Enter a new teamname' />
+    <v-text-field
+      name="email-input"
       id="EmailInput"
       type='text'
       v-model:email='email'
-      placeholder='Enter a new email' />
-    <button @click="addTeam">Add</button>
+      label='Enter a new email' />
+    <v-btn v-on:click="addTeam">Add</v-btn>
     <hr />
-    <div>
-      <v-btn dark default>Normal</v-btn>
-    </div>
     <team-block v-for="team in teams" :name="team.name" :key="team.name"></team-block>
   </div>
 </template>
@@ -44,8 +43,8 @@ export default {
   },
   data () {
     return {
-      teamname: 'default',
-      email: 'john.doe@example.com'
+      teamname: '',
+      email: ''
     }
   },
   computed: {

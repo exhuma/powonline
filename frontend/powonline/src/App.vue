@@ -1,6 +1,5 @@
 <template>
-  <!--
-  <v-app top-toolbar left-fixed-sidebar>
+  <v-app id="app" top-toolbar left-fixed-sidebar>
     <v-toolbar>
       <v-toolbar-side-icon @click.native.stop="sidebar = !sidebar" />
       <v-toolbar-logo>Toolbar</v-toolbar-logo>
@@ -27,7 +26,7 @@
       </v-content>
     </main>
   </v-app>
-  -->
+  <!--
   <div id="app">
     <router-link class="navlink" to="/">Index</router-link>
     <router-link class="navlink" to="/station">Stations</router-link>
@@ -38,6 +37,7 @@
       <error-block :error="error" v-for="(error, idx) in errors" :key="'error-' + idx"></error-block>
     </div>
   </div>
+  -->
 </template>
 
 <script>
@@ -50,20 +50,3 @@ export default {
   }
 }
 </script>
-
-<style>
-#app {
-  font-family: 'Avenir', Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
-}
-.error {
-  border: 1px solid #a00;
-  background: #fee;
-  text-align: left;
-  padding: 1em;
-}
-</style>
