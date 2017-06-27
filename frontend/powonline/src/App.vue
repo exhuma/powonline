@@ -34,7 +34,7 @@
 
       <v-toolbar>
         <v-toolbar-side-icon light @click.native.stop="drawer = !drawer"></v-toolbar-side-icon>
-        <v-toolbar-title>Toolbar</v-toolbar-title>
+        <v-toolbar-title>{{ pageTitle }}</v-toolbar-title>
       </v-toolbar>
       <main>
         <v-container fluid>
@@ -66,6 +66,9 @@ export default {
     }
   },
   computed: {
+    pageTitle () {
+      return this.$store.state.pageTitle
+    },
     errors () {
       return this.$store.state.errors
     }

@@ -31,9 +31,13 @@ const store = new Vuex.Store({
     dashboard: [], // maps team names to station-states
     dashboardStation: '',
     teamStates: [],
-    baseUrl: BASE_URL
+    baseUrl: BASE_URL,
+    pageTitle: 'Powonline'
   },
   mutations: {
+    changeTitle (state, title) {
+      state.pageTitle = title
+    },
     addTeam (state, team) {
       state.teams.push(team)
     },
