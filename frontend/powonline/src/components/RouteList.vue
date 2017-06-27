@@ -2,7 +2,7 @@
   <div id="RouteList">
     <input 
       id="RouteNameImput"
-      @keyup.enter="addRoute"
+      @keyup.enter.native="addRoute"
       type='text'
       v-model:routename='routename'
       placeholder='Enter a new routename' />

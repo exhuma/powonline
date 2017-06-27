@@ -3,7 +3,7 @@
     <v-text-field
       name="team-input"
       id="TeamNameImput"
-      @keyup.enter="addTeam"
+      @keyup.enter.native="addTeam"
       type='text'
       v-model:teamname='teamname'
       label='Enter a new teamname' />

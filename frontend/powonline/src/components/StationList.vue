@@ -2,7 +2,7 @@
   <div id="StationList">
     <v-text-field
       id="StationNameImput"
-      @keyup.enter="addStation"
+      @keyup.enter.native="addStation"
       type='text'
       v-model:stationname='stationname'
       label='Enter a new stationname' />
