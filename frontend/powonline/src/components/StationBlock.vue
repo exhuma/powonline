@@ -1,5 +1,5 @@
 <template>
-  <v-card>
+  <v-card class="mt-3">
     <v-card-row class="green darken-1">
       <v-card-title><span class="white--text">{{ name }}</span></v-card-title>
     </v-card-row>
