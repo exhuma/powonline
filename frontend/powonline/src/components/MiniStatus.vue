@@ -1,7 +1,5 @@
 <template>
-  <div class="mini-status">
-    {{ stateIcon }}
-  </div>
+  <v-icon>{{ stateIcon }}</v-icon>
 </template>
 
 <script>
@@ -21,16 +19,16 @@ export default {
     .then(response => {
       switch (response.data.state) {
         case 'unknown':
-          this.stateIcon = 'u'
+          this.stateIcon = 'radio_button_unchecked'
           break
         case 'arrived':
-          this.stateIcon = 'a'
+          this.stateIcon = 'radio_button_checked'
           break
         case 'finished':
-          this.stateIcon = 'f'
+          this.stateIcon = 'check'
           break
         default:
-          this.stateIcon = 'u'
+          this.stateIcon = 'radio_button_unchecked'
           break
       }
     })
@@ -45,12 +43,3 @@ export default {
   }
 }
 </script>
-
-<style scoped>
-  DIV {
-    width: 32px;
-    height: 32px;
-    border: 1px solid black;
-    display: inline-block;
-  }
-</style>
