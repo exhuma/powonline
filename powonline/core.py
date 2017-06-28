@@ -157,7 +157,7 @@ class Station:
             station_name=station_name)
         mapping = {state.team_name: state for state in states}
 
-        for team in session.query(model.Team):
+        for team in session.query(model.Team).order_by(model.Team.order):
             state = mapping.get(team.name, model.TeamStation(
                 team_name=team.name,
                 station_name=station_name,

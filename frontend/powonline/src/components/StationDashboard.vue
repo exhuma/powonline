@@ -39,7 +39,6 @@ export default {
             break
         }
       })
-      // TODO sort the 3 arrays by "order"
       return outputUnknown.concat(outputArrived).concat(outputFinished)
     }
   },
