@@ -1,7 +1,7 @@
 <template>
   <div id="app">
     <v-app>
-      <v-toolbar class="brown darken-4">
+      <v-toolbar class="red darken-1">
         <v-toolbar-title class="white--text">{{ pageTitle }}</v-toolbar-title>
       </v-toolbar>
       <main>
@@ -12,7 +12,7 @@
           </div>
           <br clear="all"/>
         </v-container>
-        <v-bottom-nav value="true" class="brown darken-4">
+        <v-bottom-nav value="true" class="red darken-1">
           <v-btn v-for="route in routes" @click.native="go" :data-to="route.to" :key="route.to" flat light :value="here === route.to">
             <span>{{ route.label }}</span>
             <v-icon>{{route.icon}}</v-icon>
