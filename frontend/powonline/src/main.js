@@ -10,6 +10,7 @@ import axios from 'axios'
 import ErrorBlock from './components/ErrorBlock'
 import MiniStatus from './components/MiniStatus'
 import RouteBlock from './components/RouteBlock'
+import StateIcon from './components/StateIcon'
 import StationBlock from './components/StationBlock'
 import TeamBlock from './components/TeamBlock'
 
@@ -462,6 +463,7 @@ const store = new Vuex.Store({
 Vue.component('error-block', ErrorBlock)
 Vue.component('mini-status', MiniStatus)
 Vue.component('route-block', RouteBlock)
+Vue.component('state-icon', StateIcon)
 Vue.component('station-block', StationBlock)
 Vue.component('team-block', TeamBlock)
 
