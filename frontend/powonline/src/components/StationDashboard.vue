@@ -1,13 +1,15 @@
 <template>
-  <div id="StationList">
-    <h1>Dashboard for {{ $route.params.stationName }}</h1>
-    <p v-for="(state, idx) in states">
-      {{ state.team }} -
-      {{ state.score }} -
-      {{ state.state }}
-      <br />
-      <button @click.native="advanceState" :data-idx="idx">Advance</button>
-    </p>
+  <div id="Dashboard">
+    <v-card v-for="(state, idx) in states" class="mb-2">
+      <v-card-row class="brown darken-4">
+        <v-card-title>
+          <span class="white--text">{{ state.team }}</span>
+        </v-card-title>
+      </v-card-row>
+      <v-card-text v-ripple>
+        <state-icon class="clickable" @click.native="advanceState" :data-idx="idx" :state="state.state"></state-icon> <span class="clickable" @click="advanceState" :data-idx="idx">{{ state.state }}</span>
+      </v-card-text>
+    </v-card>
   </div>
 </template>
 
@@ -34,4 +36,8 @@ export default {
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
-<style scoped></style>
+<style scoped>
+.clickable {
+  cursor: pointer;
+}
+</style>
