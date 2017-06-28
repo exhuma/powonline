@@ -13,12 +13,34 @@
   </div>
 </template>
 
+
 <script>
 export default {
   name: 'station_dashboard',
   computed: {
     states () {
-      return this.$store.state.dashboard
+      // We want a custom ordering. First, we want to see teams with "unknown"
+      // state, then those which have "arrived", and finally the "finished"
+      // teams.  As second sort criteria we use the internal ordering (as
+      // stored in the db-column "order").
+      const outputUnknown = []
+      const outputArrived = []
+      const outputFinished = []
+      this.$store.state.dashboard.forEach(item => {
+        switch (item.state) {
+          case 'unknown':
+            outputUnknown.push(item)
+            break
+          case 'arrived':
+            outputArrived.push(item)
+            break
+          case 'finished':
+            outputFinished.push(item)
+            break
+        }
+      })
+      // TODO sort the 3 arrays by "order"
+      return outputUnknown.concat(outputArrived).concat(outputFinished)
     }
   },
   created () {
