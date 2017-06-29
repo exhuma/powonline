@@ -44,6 +44,7 @@ export default {
   },
   created () {
     this.$store.dispatch('fetchDashboard', this.$route.params.stationName)
+    this.$store.commit('changeTitle', 'Dashboard for ' + this.$route.params.stationName)
   },
   methods: {
     advanceState: function (event) {
