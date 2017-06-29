@@ -485,7 +485,6 @@ const store = new Vuex.Store({
     },
     teamState: (state, getters) => (teamName, stationName) => {
       const output = []
-      console.log(state)
       state.dashboard.forEach(item => {
         console.log(teamName, stationName, item)
       })
