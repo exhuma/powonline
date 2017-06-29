@@ -383,6 +383,9 @@ const store = new Vuex.Store({
       .then(response => {
         context.commit('deleteRoute', routeName)
       })
+      .then(function () {
+        context.dispatch('refreshAssignments')
+      })
       .catch(e => {
         context.commit('logError', e)
       })
@@ -396,6 +399,9 @@ const store = new Vuex.Store({
       .then(response => {
         context.commit('deleteStation', stationName)
       })
+      .then(function () {
+        context.dispatch('refreshAssignments')
+      })
       .catch(e => {
         context.commit('logError', e)
       })
@@ -408,6 +414,9 @@ const store = new Vuex.Store({
       axios.delete(BASE_URL + '/team/' + teamName)
       .then(response => {
         context.commit('deleteTeam', teamName)
+      })
+      .then(function () {
+        context.dispatch('refreshAssignments')
       })
       .catch(e => {
         context.commit('logError', e)
