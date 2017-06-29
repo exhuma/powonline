@@ -152,17 +152,17 @@ class Station:
         # TODO this could be improved by just using one query
         station = session.query(model.Station).filter_by(
             name=station_name).one()
-
         states = session.query(model.TeamStation).filter_by(
             station_name=station_name)
         mapping = {state.team_name: state for state in states}
 
-        for team in session.query(model.Team).order_by(model.Team.order):
-            state = mapping.get(team.name, model.TeamStation(
-                team_name=team.name,
-                station_name=station_name,
-                state=TeamState.UNKNOWN))
-            yield (team.name, state.state)
+        for route in station.routes:
+            for team in route.teams:
+                state = mapping.get(team.name, model.TeamStation(
+                    team_name=team.name,
+                    station_name=station_name,
+                    state=TeamState.UNKNOWN))
+                yield (team.name, state.state)
 
     @staticmethod
     def accessible_by(session, username):
