@@ -1,8 +1,13 @@
 <template>
   <div class="error-block">
-    <p v-if="error.config.method">
+    <p v-if="error && error.config && error.config.method">
       Error when retrieving <tt>{{ error.config.method}} {{error.config.url}}</tt>
-      <button @click.native="toggleDisplay">i</button>
+      <button @click="toggleDisplay">i</button>
+      <pre v-show="displayError">{{ error }}</pre>
+    </p>
+    <p v-else>
+      Unexpeced Error
+      <button @click="toggleDisplay">i</button>
       <pre v-show="displayError">{{ error }}</pre>
     </p>
   </div>
