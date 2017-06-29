@@ -241,6 +241,13 @@ const store = new Vuex.Store({
      * Refresh everything from the server
      */
     refreshRemote (context) {
+      context.dispatch('refreshTeams')
+      context.dispatch('refreshRoutes')
+      context.dispatch('refreshAssignments')
+      context.dispatch('refreshStations')
+    },
+
+    refreshTeams (context, data) {
       // --- Fetch Teams from server
       axios.get(BASE_URL + '/team')
       .then(response => {
@@ -249,7 +256,9 @@ const store = new Vuex.Store({
       .catch(e => {
         context.commit('logError', e)
       })
+    },
 
+    refreshRoutes (context, data) {
       // --- Fetch Routes from server
       axios.get(BASE_URL + '/route')
       .then(response => {
@@ -258,20 +267,30 @@ const store = new Vuex.Store({
       .catch(e => {
         context.commit('logError', e)
       })
+    },
 
-      // --- Fetch team/route assignments from server
-      axios.get(BASE_URL + '/assignments')
-      .then(response => {
-        context.commit('replaceAssignments', response.data)
-      })
-      .catch(e => {
-        context.commit('logError', e)
-      })
-
+    /**
+     * Refresh Stations from the server
+     */
+    refreshStations (context, data) {
       // --- Fetch Stations from server
       axios.get(BASE_URL + '/station')
       .then(response => {
         context.commit('replaceStations', response.data.items)
+      })
+      .catch(e => {
+        context.commit('logError', e)
+      })
+    },
+
+    /**
+     * Refresh assignments from the backend
+     */
+    refreshAssignments (context, data) {
+      // --- Fetch team/route assignments from server
+      axios.get(BASE_URL + '/assignments')
+      .then(response => {
+        context.commit('replaceAssignments', response.data)
       })
       .catch(e => {
         context.commit('logError', e)
