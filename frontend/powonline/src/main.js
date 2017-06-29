@@ -33,7 +33,8 @@ const store = new Vuex.Store({
     dashboardStation: '',
     teamStates: [],
     baseUrl: BASE_URL,
-    pageTitle: 'Powonline'
+    pageTitle: 'Powonline',
+    isBottomNavVisible: true
   },
   mutations: {
     changeTitle (state, title) {
@@ -155,6 +156,12 @@ const store = new Vuex.Store({
       if (idx > -1) {
         state.teams.splice(idx, 1)
       }
+    },
+    showBottomNav (state) {
+      state.isBottomNavVisible = true
+    },
+    hideBottomNav (state) {
+      state.isBottomNavVisible = false
     }
   },
   actions: {
@@ -496,7 +503,7 @@ Vue.component('station-block', StationBlock)
 Vue.component('team-block', TeamBlock)
 
 /* eslint-disable no-new */
-new Vue({
+const vue = new Vue({
   el: '#app',
   router,
   store,
@@ -505,4 +512,27 @@ new Vue({
   created () {
     this.$store.dispatch('refreshRemote')
   }
+})
+
+var lastKnownScrollPos = 0
+var ticking = false
+
+window.addEventListener('scroll', function (e) {
+  const isScrollingDown = lastKnownScrollPos < window.scrollY
+  lastKnownScrollPos = window.scrollY
+  if (!ticking) {
+    window.requestAnimationFrame(function () {
+      if (isScrollingDown) {
+        if (vue.$store.state.isBottomNavVisible) {
+          vue.$store.commit('hideBottomNav')
+        }
+      } else {
+        if (!vue.$store.state.isBottomNavVisible) {
+          vue.$store.commit('showBottomNav')
+        }
+      }
+      ticking = false
+    })
+  }
+  ticking = true
 })
