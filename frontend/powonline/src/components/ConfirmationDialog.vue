@@ -3,10 +3,10 @@
     <v-btn primary light slot="activator">{{ buttonText }}</v-btn>
     <v-card>
       <v-card-row>
-        <v-card-title><slot name="title">{{ dialogTitle }}</slot></v-card-title>
+        <v-card-title><slot name="title">Confirm Action</slot></v-card-title>
       </v-card-row>
       <v-card-row>
-        <v-card-text><slot name="text">{{ dialogText }}</slot></v-card-text>
+        <v-card-text><slot name="text">Are you sure?</slot></v-card-text>
       </v-card-row>
       <v-card-row actions>
         <v-btn class="green--text darken-1" flat="flat" @click.native="discardAction">No</v-btn>
