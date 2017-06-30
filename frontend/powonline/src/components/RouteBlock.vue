@@ -64,7 +64,14 @@
     </v-card-text>
     <v-divider></v-divider>
     <v-card-row actions>
-      <v-btn flat class="brown--text darken-1" @click.native="deleteRoute">Delete</v-btn>
+      <confirmation-dialog buttonText="Delete" :actionArgument="name" actionName="deleteRouteRemote">
+        <v-card-title slot="title">Do you want to delete the route "{{ name }}"?</v-card-title>
+        <v-card-text slot="text">
+          <p>this will delete the route with the name "{{ name }}" and all
+            related information!</p>
+          <p>Are you sure?</p>
+        </v-card-text>
+      </confirmation-dialog>
     </v-card-row>
   </v-card>
 </template>
@@ -112,9 +119,6 @@ export default {
       const idx = event.target.getAttribute('data-idx')
       const station = this.unassignedStations[idx]
       this.$store.dispatch('assignStationToRouteRemote', {stationName: station, routeName: this.name})
-    },
-    deleteRoute: function (event) {
-      this.$store.dispatch('deleteRouteRemote', this.name)
     }
   }
 }
