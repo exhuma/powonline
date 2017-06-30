@@ -5,6 +5,7 @@ setup(
     version=VERSION.strip(),
     packages=find_packages(),
     install_requires=[
+        'bcrypt',
         'config-resolver >= 4.2, <5.0',
         'flask',
         'flask-restful',
