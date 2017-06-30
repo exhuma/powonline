@@ -1,27 +1,29 @@
 <template>
   <div id="RouteList">
-    <v-card v-show="isAddBlockVisible">
-      <v-card-row class="brown darken-4">
-        <v-card-title>
-          <span class="white--text">Add New Route</span>
-          <v-spacer></v-spacer>
-          <v-btn @click.native="closeAddBlock" icon light><v-icon>close</v-icon></v-btn>
-        </v-card-title>
-      </v-card-row>
-      <v-card-text>
-        <v-text-field
-          name="route-input"
-          id="RouteNameImput"
-          @keyup.enter.native="addRoute"
-          type='text'
-          v-model:routename='routename'
-          label='Enter a new routename' />
-      </v-card-text>
-      <v-divider></v-divider>
-      <v-card-row actions>
-        <v-btn @click.native="addRoute" flat>Add</v-btn>
-      </v-card-row>
-    </v-card>
+    <transition name="slide">
+      <v-card v-show="isAddBlockVisible">
+        <v-card-row class="brown darken-4">
+          <v-card-title>
+            <span class="white--text">Add New Route</span>
+            <v-spacer></v-spacer>
+            <v-btn @click.native="closeAddBlock" icon light><v-icon>close</v-icon></v-btn>
+          </v-card-title>
+        </v-card-row>
+        <v-card-text>
+          <v-text-field
+            name="route-input"
+            id="RouteNameImput"
+            @keyup.enter.native="addRoute"
+            type='text'
+            v-model:routename='routename'
+            label='Enter a new routename' />
+        </v-card-text>
+        <v-divider></v-divider>
+        <v-card-row actions>
+          <v-btn @click.native="addRoute" flat>Add</v-btn>
+        </v-card-row>
+      </v-card>
+    </transition>
     <route-block v-for="route in routes" :name="route.name" :key="route.name"></route-block>
   </div>
 </template>
@@ -59,3 +61,17 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.slide-enter-active, .slide-leave-active {
+  transition: all .3s
+}
+.slide-enter {
+  transform: translateY(-100px);
+  opacity: 0;
+}
+.slide-leave-to {
+  transform: translateY(-100px);
+  opacity: 0;
+}
+</style>
