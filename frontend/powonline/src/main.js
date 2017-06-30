@@ -7,6 +7,7 @@ import Vuex from 'vuex'
 import Vuetify from 'vuetify'
 import axios from 'axios'
 
+import ConfirmationDialog from './components/ConfirmationDialog'
 import ErrorBlock from './components/ErrorBlock'
 import MiniStatus from './components/MiniStatus'
 import RouteBlock from './components/RouteBlock'
@@ -494,6 +495,7 @@ const store = new Vuex.Store({
 
 })
 
+Vue.component('confirmation-dialog', ConfirmationDialog)
 Vue.component('error-block', ErrorBlock)
 Vue.component('mini-status', MiniStatus)
 Vue.component('route-block', RouteBlock)
