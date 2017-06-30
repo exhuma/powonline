@@ -14,16 +14,20 @@ import RouteBlock from './components/RouteBlock'
 import StateIcon from './components/StateIcon'
 import StationBlock from './components/StationBlock'
 import TeamBlock from './components/TeamBlock'
+import UserBlock from './components/UserBlock'
 
 Vue.config.productionTip = false
 Vue.use(Vuex)
 Vue.use(Vuetify)
+
+axios.defaults.headers.common['Authorization'] = 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6ImhlbGxvIiwicm9sZXMiOlsiYWRtaW4iLCJzdGF0aW9uIl19.Gyx8Jt-X1t3KVtVr9jUomdZ9z7RRtFt7B-jZApXq9XU'
 
 import 'vuetify/dist/vuetify.min.css'
 
 const BASE_URL = 'http://192.168.1.92:5000'
 const store = new Vuex.Store({
   state: {
+    users: [],
     stations: [],
     teams: [],
     routes: [],
@@ -38,13 +42,17 @@ const store = new Vuex.Store({
     isBottomNavVisible: true,
     isAddBlockVisible: {
       '/route': false,
+      '/station': false,
       '/team': false,
-      '/station': false
+      '/user': false
     }
   },
   mutations: {
     changeTitle (state, title) {
       state.pageTitle = title
+    },
+    addUser (state, user) {
+      state.users.push(user)
     },
     addTeam (state, team) {
       state.teams.push(team)
@@ -57,6 +65,9 @@ const store = new Vuex.Store({
     },
     replaceTeams (state, teams) {
       state.teams = teams
+    },
+    replaceUsers (state, users) {
+      state.users = users
     },
     replaceRoutes (state, routes) {
       state.routes = routes
@@ -163,6 +174,18 @@ const store = new Vuex.Store({
         state.teams.splice(idx, 1)
       }
     },
+    deleteUser (state, userName) {
+      let idx = -1  // TODO there must be a better way than the following loop
+      state.users.forEach(item => {
+        if (item.name === userName) {
+          idx = state.users.indexOf(item)
+        }
+      })
+
+      if (idx > -1) {
+        state.users.splice(idx, 1)
+      }
+    },
     showAddBlock (state, path) {
       state.isAddBlockVisible[path] = true
     },
@@ -205,6 +228,21 @@ const store = new Vuex.Store({
       axios.get(BASE_URL + '/station/' + stationName + '/dashboard')
       .then(response => {
         context.commit('updateDashboard', response.data)
+      })
+      .catch(e => {
+        context.commit('logError', e)
+      })
+    },
+
+    /**
+     * Add a user to the backend store
+     *
+     * :param user: The user object to add
+     */
+    addUserRemote (context, user) {
+      axios.post(BASE_URL + '/user', user)
+      .then(response => {
+        context.commit('addUser', user)
       })
       .catch(e => {
         context.commit('logError', e)
@@ -264,6 +302,18 @@ const store = new Vuex.Store({
       context.dispatch('refreshRoutes')
       context.dispatch('refreshAssignments')
       context.dispatch('refreshStations')
+      context.dispatch('refreshUsers')
+    },
+
+    refreshUsers (context, data) {
+      // --- Fetch Users from server
+      axios.get(BASE_URL + '/user')
+      .then(response => {
+        context.commit('replaceUsers', response.data.items)
+      })
+      .catch(e => {
+        context.commit('logError', e)
+      })
     },
 
     refreshTeams (context, data) {
@@ -427,6 +477,22 @@ const store = new Vuex.Store({
     },
 
     /**
+     * Delete a user
+     */
+    deleteUserRemote (context, userName) {
+      axios.delete(BASE_URL + '/user/' + userName)
+      .then(response => {
+        context.commit('deleteUser', userName)
+      })
+      .then(function () {
+        context.dispatch('refreshAssignments')
+      })
+      .catch(e => {
+        context.commit('logError', e)
+      })
+    },
+
+    /**
      * Delete a team
      */
     deleteTeamRemote (context, teamName) {
@@ -513,6 +579,7 @@ Vue.component('route-block', RouteBlock)
 Vue.component('state-icon', StateIcon)
 Vue.component('station-block', StationBlock)
 Vue.component('team-block', TeamBlock)
+Vue.component('user-block', UserBlock)
 
 /* eslint-disable no-new */
 const vue = new Vue({

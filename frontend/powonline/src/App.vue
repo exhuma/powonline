@@ -34,7 +34,8 @@ export default {
         { label: 'Home', to: '/', icon: 'home' },
         { label: 'Stations', to: '/station', icon: 'place' },
         { label: 'Teams', to: '/team', icon: 'group' },
-        { label: 'Routes', to: '/route', icon: 'gesture' }
+        { label: 'Routes', to: '/route', icon: 'gesture' },
+        { label: 'Users', to: '/user', icon: 'face' }
       ]
     }
   },

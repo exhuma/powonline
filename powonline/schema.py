@@ -35,8 +35,8 @@ class RouteSchema(Schema):
 
 
 class UserSchema(Schema):
-    # TODO: Should the name be the PK? Email or ID would be better.
     name = fields.String(required=True)
+    password = fields.String()
 
 
 class RoleSchema(Schema):
@@ -48,9 +48,11 @@ class JobSchema(Schema):
     args = fields.Dict(required=True)
 
 
-def make_list_schema(item_schema):
+def make_list_schema(item_schema, exclude=None):
+    exclude = exclude or []
+
     class ListSchema(Schema):
-        items = fields.Nested(item_schema, many=True)
+        items = fields.Nested(item_schema, many=True, exclude=exclude)
     return ListSchema()
 
 
@@ -59,7 +61,9 @@ ROUTE_SCHEMA = RouteSchema()
 STATION_SCHEMA = StationSchema()
 TEAM_SCHEMA = TeamSchema()
 USER_SCHEMA = UserSchema()
+USER_SCHEMA_SAFE = UserSchema(exclude=['password'])
 JOB_SCHEMA = JobSchema()
 TEAM_LIST_SCHEMA = make_list_schema(TeamSchema)
 STATION_LIST_SCHEMA = make_list_schema(StationSchema)
 ROUTE_LIST_SCHEMA = make_list_schema(RouteSchema)
+USER_LIST_SCHEMA = make_list_schema(UserSchema, exclude=['password'])

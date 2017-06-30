@@ -18,6 +18,8 @@ from .resources import (
     Team,
     TeamList,
     TeamStation,
+    User,
+    UserList,
     UserRole,
     UserRoleList,
 )
@@ -45,6 +47,8 @@ def make_app(db_uri):
     api.add_resource(StationUser, '/station/<station_name>/users/<user_name>')
     api.add_resource(RouteTeamList, '/route/<route_name>/teams')
     api.add_resource(RouteTeam, '/route/<route_name>/teams/<team_name>')
+    api.add_resource(UserList, '/user')
+    api.add_resource(User, '/user/<name>')
     api.add_resource(UserRoleList, '/user/<user_name>/roles')
     api.add_resource(UserRole, '/user/<user_name>/roles/<role_name>')
     api.add_resource(RouteStationList, '/route/<route_name>/stations')

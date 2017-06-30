@@ -15,7 +15,9 @@ from .schema import (
     STATION_SCHEMA,
     TEAM_LIST_SCHEMA,
     TEAM_SCHEMA,
+    USER_LIST_SCHEMA,
     USER_SCHEMA,
+    USER_SCHEMA_SAFE,
 )
 
 
@@ -31,6 +33,70 @@ class MyJsonEncoder(JSONEncoder):
         if isinstance(value, set):
             return list(value)
         super().default(value)
+
+
+class UserList(Resource):
+
+    def get(self):
+        users = list(core.User.all(DB.session))
+        output = {
+            'items': users
+        }
+
+        parsed_output, errors = USER_LIST_SCHEMA.dumps(output)
+        if errors:
+            LOG.critical('Unable to process return value: %r', errors)
+            return 'Server was unable to process the response', 500
+
+        output = make_response(parsed_output, 200)
+        output.content_type = 'application/json'
+        return output
+
+    def post(self):
+        data = request.get_json()
+
+        parsed_data, errors = USER_SCHEMA.load(data)
+        if errors:
+            return errors, 400
+
+        output = core.User.create_new(DB.session, parsed_data)
+        return User._single_response(output, 201)
+
+
+class User(Resource):
+
+    @staticmethod
+    def _single_response(output, status_code=200):
+        parsed_output, errors = USER_SCHEMA_SAFE.dumps(output)
+        if errors:
+            LOG.critical('Unable to process return value: %r', errors)
+            return 'Server was unable to process the response', 500
+
+        response = make_response(parsed_output)
+        response.status_code = status_code
+        response.content_type = 'application/json'
+        return response
+
+    def get(self, name):
+        user = core.User.get(DB.session, name)
+        if not user:
+            return 'No such user', 404
+
+        return User._single_response(user, 200)
+
+    def put(self, name):
+        data = request.get_json()
+
+        parsed_data, errors = USER_SCHEMA.load(data)
+        if errors:
+            return errors, 400
+
+        output = core.User.upsert(DB.session, name, parsed_data)
+        return User._single_response(output, 200)
+
+    def delete(self, name):
+        core.User.delete(DB.session, name)
+        return '', 204
 
 
 class TeamList(Resource):

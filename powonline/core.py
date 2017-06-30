@@ -238,6 +238,25 @@ class Route:
 class User:
 
     @staticmethod
+    def get(session, name):
+        return session.query(model.User).filter_by(name=name).one_or_none()
+
+    @staticmethod
+    def delete(session, name):
+        session.query(model.User).filter_by(name=name).delete()
+        return None
+
+    @staticmethod
+    def create_new(session, data):
+        user = model.User(**data)
+        user = session.add(user)
+        return user
+
+    @staticmethod
+    def all(session):
+        return session.query(model.User)
+
+    @staticmethod
     def assign_role(session, user_name, role_name):
         user = session.query(model.User).filter_by(name=user_name).one()
         role = session.query(model.Role).filter_by(name=role_name).one()
