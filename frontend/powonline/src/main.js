@@ -35,7 +35,12 @@ const store = new Vuex.Store({
     teamStates: [],
     baseUrl: BASE_URL,
     pageTitle: 'Powonline',
-    isBottomNavVisible: true
+    isBottomNavVisible: true,
+    isAddBlockVisible: {
+      '/route': false,
+      '/team': false,
+      '/station': false
+    }
   },
   mutations: {
     changeTitle (state, title) {
@@ -157,6 +162,12 @@ const store = new Vuex.Store({
       if (idx > -1) {
         state.teams.splice(idx, 1)
       }
+    },
+    showAddBlock (state, path) {
+      state.isAddBlockVisible[path] = true
+    },
+    closeAddBlock (state, path) {
+      state.isAddBlockVisible[path] = false
     },
     showBottomNav (state) {
       state.isBottomNavVisible = true

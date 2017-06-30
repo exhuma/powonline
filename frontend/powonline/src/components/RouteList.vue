@@ -1,9 +1,11 @@
 <template>
   <div id="RouteList">
-    <v-card>
+    <v-card v-show="isAddBlockVisible">
       <v-card-row class="brown darken-4">
         <v-card-title>
           <span class="white--text">Add New Route</span>
+          <v-spacer></v-spacer>
+          <v-btn @click.native="closeAddBlock" icon light><v-icon>close</v-icon></v-btn>
         </v-card-title>
       </v-card-row>
       <v-card-text>
@@ -34,6 +36,9 @@ export default {
       const input = document.getElementById('RouteNameImput')
       input.focus()
       input.select()
+    },
+    closeAddBlock () {
+      this.$store.commit('closeAddBlock', this.$route.path)
     }
   },
   created () {
@@ -47,6 +52,9 @@ export default {
   computed: {
     routes () {
       return this.$store.state.routes
+    },
+    isAddBlockVisible () {
+      return this.$store.state.isAddBlockVisible[this.$route.path]
     }
   }
 }

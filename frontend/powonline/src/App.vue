@@ -3,6 +3,8 @@
     <v-app>
       <v-toolbar class="red darken-1">
         <v-toolbar-title class="white--text">{{ pageTitle }}</v-toolbar-title>
+        <v-spacer></v-spacer>
+        <v-btn @click.native="addElement" icon light><v-icon>add</v-icon></v-btn>
       </v-toolbar>
       <main>
         <v-container fluid>
@@ -40,6 +42,9 @@ export default {
     go (e) {
       const destination = e.target.getAttribute('data-to')
       this.$router.push(destination)
+    },
+    addElement () {
+      this.$store.commit('showAddBlock', this.$route.path)
     }
   },
   computed: {
