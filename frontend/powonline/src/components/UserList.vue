@@ -54,6 +54,7 @@ export default {
   },
   created () {
     this.$store.commit('changeTitle', 'User List')
+    this.$store.dispatch('refreshUsers')
   },
   data () {
     return {
