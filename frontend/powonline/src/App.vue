@@ -43,7 +43,6 @@
           <div id="errors">
             <error-block :error="error" v-for="(error, idx) in errors" :key="'error-' + idx"></error-block>
           </div>
-          <br clear="all"/>
         </v-container>
         <v-bottom-nav :value="isBottomNavVisible" class="red darken-1">
           <v-btn v-for="route in routes" @click.native="go" :data-to="route.to" :key="route.to" flat light :value="here === route.to">
