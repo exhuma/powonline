@@ -275,3 +275,25 @@ class User:
     def roles(session, user_name):
         user = session.query(model.User).filter_by(name=user_name).one()
         return user.roles
+
+
+class Role:
+
+    @staticmethod
+    def get(session, name):
+        return session.query(model.Role).filter_by(name=name).one_or_none()
+
+    @staticmethod
+    def delete(session, name):
+        session.query(model.Role).filter_by(name=name).delete()
+        return None
+
+    @staticmethod
+    def create_new(session, data):
+        role = model.Role(**data)
+        role = session.add(role)
+        return role
+
+    @staticmethod
+    def all(session):
+        return session.query(model.Role)

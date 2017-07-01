@@ -15,6 +15,7 @@ import StateIcon from './components/StateIcon'
 import StationBlock from './components/StationBlock'
 import TeamBlock from './components/TeamBlock'
 import UserBlock from './components/UserBlock'
+import UserRoleCheckbox from './components/UserRoleCheckbox'
 
 Vue.config.productionTip = false
 Vue.use(Vuex)
@@ -580,6 +581,7 @@ Vue.component('state-icon', StateIcon)
 Vue.component('station-block', StationBlock)
 Vue.component('team-block', TeamBlock)
 Vue.component('user-block', UserBlock)
+Vue.component('user-role-checkbox', UserRoleCheckbox)
 
 /* eslint-disable no-new */
 const vue = new Vue({

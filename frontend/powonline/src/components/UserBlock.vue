@@ -3,6 +3,14 @@
     <v-card-row class="brown darken-1">
       <v-card-title><span class="white--text">User: "{{ name }}"</span></v-card-title>
     </v-card-row>
+    <v-card-text>
+      <user-role-checkbox
+        v-for="role in roles"
+        :key="role[0]"
+        :user="name"
+        :label="role[0]"
+        :role="role[0]"></user-role-checkbox>
+    </v-card-text>
     <v-divider></v-divider>
     <v-card-row actions>
       <confirmation-dialog buttonText="Delete" :actionArgument="name" actionName="deleteUserRemote">
@@ -18,8 +26,39 @@
 </template>
 
 <script>
+import axios from 'axios'
 export default {
   name: 'user-block',
+  data () {
+    return {
+      roles: []
+    }
+  },
+  methods: {
+    onChangeValue (newValue) {
+      const mod = newValue.substring(0, 1)
+      const name = newValue.substring(1)
+      if (mod === '-') {
+        axios.delete(this.$store.state.baseUrl + '/user/' + this.name + '/roles/' + name)
+      } else if (mod === '+') {
+        axios.post(this.$store.state.baseUrl + '/user/' + this.name + '/roles', {
+          'name': name
+        })
+      }
+    },
+    refreshRoles () {
+      axios.get(this.$store.state.baseUrl + '/user/' + this.name + '/roles')
+      .then(response => {
+        this.roles = response.data
+      })
+      .catch(e => {
+        this.$store.commit('logError', e)
+      })
+    }
+  },
+  created () {
+    this.refreshRoles()
+  },
   props: {
     'name': {
       type: String,

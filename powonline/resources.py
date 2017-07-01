@@ -340,6 +340,17 @@ class RouteTeam(Resource):
 
 class UserRoleList(Resource):
 
+    def get(self, user_name):
+        user = core.User.get(DB.session, user_name)
+        if not user:
+            return 'No such user', 404
+        all_roles = core.Role.all(DB.session)
+        user_roles = {role.name for role in user.roles}
+        output = []
+        for role in all_roles:
+            output.append((role.name, role.name in user_roles))
+        return jsonify(output)
+
     def post(self, user_name):
         '''
         Assign a role to a user
@@ -365,6 +376,17 @@ class UserRole(Resource):
             return '', 204
         else:
             return 'Unexpected error!', 500
+
+    def get(self, user_name, role_name):
+        user = core.User.get(DB.session, user_name)
+        if not user:
+            return 'No such user', 404
+        roles = {_.name for _ in user.roles}
+
+        if role_name in roles:
+            return jsonify(True)
+        else:
+            return jsonify(False)
 
 
 class RouteStationList(Resource):
