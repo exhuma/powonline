@@ -21,11 +21,10 @@ Vue.config.productionTip = false
 Vue.use(Vuex)
 Vue.use(Vuetify)
 
-axios.defaults.headers.common['Authorization'] = 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VybmFtZSI6ImhlbGxvIiwicm9sZXMiOlsiYWRtaW4iLCJzdGF0aW9uIl19.Gyx8Jt-X1t3KVtVr9jUomdZ9z7RRtFt7B-jZApXq9XU'
-
 import 'vuetify/dist/vuetify.min.css'
 
 const BASE_URL = 'http://192.168.1.92:5000'
+
 const store = new Vuex.Store({
   state: {
     users: [],
@@ -41,6 +40,8 @@ const store = new Vuex.Store({
     baseUrl: BASE_URL,
     pageTitle: 'Powonline',
     isBottomNavVisible: true,
+    jwt: '',
+    roles: [],
     isAddBlockVisible: {
       '/route': false,
       '/station': false,
@@ -49,6 +50,16 @@ const store = new Vuex.Store({
     }
   },
   mutations: {
+    loginUser (state, data) {
+      state.jwt = data['token']
+      state.roles = data['roles']
+      axios.defaults.headers.common['Authorization'] = 'Bearer ' + data['token']
+    },
+    logoutUser (state, data) {
+      state.jwt = ''
+      state.roles = []
+      axios.defaults.headers.common['Authorization'] = ''
+    },
     changeTitle (state, title) {
       state.pageTitle = title
     },
