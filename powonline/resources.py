@@ -2,7 +2,7 @@ from functools import wraps
 from json import dumps, JSONEncoder
 import logging
 
-from flask import request, make_response, jsonify
+from flask import request, make_response, jsonify, current_app
 from flask_restful import Resource, marshal_with, fields
 import jwt
 
@@ -67,8 +67,10 @@ class require_permissions:
                           'a bearer token!')
                 return 'Access Denied (not a bearer token)!', 401
             try:
-                # TODO "secret" might not be too secure ;)
-                auth_payload = jwt.decode(token, 'secret', algorithms=['HS256'])
+                jwt_secret = current_app.localconfig.get(
+                    'security', 'jwt_secret')
+                auth_payload = jwt.decode(
+                    token, jwt_secret, algorithms=['HS256'])
             except jwt.exceptions.DecodeError:
                 LOG.info('Bearer token seems to have been tampered with!')
                 return 'Access Denied (invalid token)!', 401

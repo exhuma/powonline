@@ -1,6 +1,6 @@
 import logging
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 import jwt
 
 from .model import DB
@@ -43,8 +43,9 @@ def login():
         'username': username,
         'roles': list(roles)
     }
+    jwt_secret = current_app.localconfig.get('security', 'jwt_secret')
     result = {
-        'token': jwt.encode(payload, 'secret').decode('ascii'),
+        'token': jwt.encode(payload, jwt_secret).decode('ascii'),
         'roles': list(roles)  # convenience for the frontend
     }
     return jsonify(result)
