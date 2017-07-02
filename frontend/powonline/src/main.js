@@ -343,6 +343,9 @@ const store = new Vuex.Store({
 
     refreshUsers (context, data) {
       // --- Fetch Users from server
+      if (context.state.roles.indexOf('admin') === -1) {
+        return
+      }
       axios.get(BASE_URL + '/user')
       .then(response => {
         context.commit('replaceUsers', response.data.items)
