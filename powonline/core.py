@@ -91,7 +91,7 @@ class Station:
 
     @staticmethod
     def all(session):
-        return session.query(model.Station)
+        return session.query(model.Station).order_by(model.Station.order)
 
     @staticmethod
     def create_new(session, data):
@@ -152,17 +152,17 @@ class Station:
         # TODO this could be improved by just using one query
         station = session.query(model.Station).filter_by(
             name=station_name).one()
-
         states = session.query(model.TeamStation).filter_by(
             station_name=station_name)
         mapping = {state.team_name: state for state in states}
 
-        for team in session.query(model.Team):
-            state = mapping.get(team.name, model.TeamStation(
-                team_name=team.name,
-                station_name=station_name,
-                state=TeamState.UNKNOWN))
-            yield (team.name, state.state)
+        for route in station.routes:
+            for team in route.teams:
+                state = mapping.get(team.name, model.TeamStation(
+                    team_name=team.name,
+                    station_name=station_name,
+                    state=TeamState.UNKNOWN))
+                yield (team.name, state.state)
 
     @staticmethod
     def accessible_by(session, username):
@@ -238,6 +238,25 @@ class Route:
 class User:
 
     @staticmethod
+    def get(session, name):
+        return session.query(model.User).filter_by(name=name).one_or_none()
+
+    @staticmethod
+    def delete(session, name):
+        session.query(model.User).filter_by(name=name).delete()
+        return None
+
+    @staticmethod
+    def create_new(session, data):
+        user = model.User(**data)
+        user = session.add(user)
+        return user
+
+    @staticmethod
+    def all(session):
+        return session.query(model.User)
+
+    @staticmethod
     def assign_role(session, user_name, role_name):
         user = session.query(model.User).filter_by(name=user_name).one()
         role = session.query(model.Role).filter_by(name=role_name).one()
@@ -256,3 +275,59 @@ class User:
     def roles(session, user_name):
         user = session.query(model.User).filter_by(name=user_name).one()
         return user.roles
+
+    @staticmethod
+    def assign_station(session, user_name, station_name):
+        '''
+        Returns true if the operation worked, false if the use is already
+        assigned to another station.
+        '''
+        station = session.query(model.Station).filter_by(
+            name=station_name).one()
+        user = session.query(model.User).filter_by(name=user_name).one()
+        station.users.add(user)
+        return True
+
+    @staticmethod
+    def unassign_station(session, user_name, station_name):
+        station = session.query(model.Station).filter_by(
+            name=station_name).one()
+
+        found_user = None
+        for user in station.users:
+            if user.name == user_name:
+                found_user = user
+                break
+
+        if found_user:
+            station.users.remove(found_user)
+
+        return True
+
+    @staticmethod
+    def may_access_station(session, user_name, station_name):
+        user = session.query(model.User).filter_by(
+            name=user_name).one()
+        user_stations = {_.name for _ in user.stations}
+        return station_name in user_stations
+
+class Role:
+
+    @staticmethod
+    def get(session, name):
+        return session.query(model.Role).filter_by(name=name).one_or_none()
+
+    @staticmethod
+    def delete(session, name):
+        session.query(model.Role).filter_by(name=name).delete()
+        return None
+
+    @staticmethod
+    def create_new(session, data):
+        role = model.Role(**data)
+        role = session.add(role)
+        return role
+
+    @staticmethod
+    def all(session):
+        return session.query(model.Role)

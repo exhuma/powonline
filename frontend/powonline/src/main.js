@@ -4,31 +4,94 @@ import Vue from 'vue'
 import App from './App'
 import router from './router'
 import Vuex from 'vuex'
+import Vuetify from 'vuetify'
 import axios from 'axios'
 
+import ConfirmationDialog from './components/ConfirmationDialog'
 import ErrorBlock from './components/ErrorBlock'
+import HomePage from './components/HomePage'
+import MiniStatus from './components/MiniStatus'
 import RouteBlock from './components/RouteBlock'
+import StateIcon from './components/StateIcon'
 import StationBlock from './components/StationBlock'
 import TeamBlock from './components/TeamBlock'
+import UserBlock from './components/UserBlock'
+import UserRoleCheckbox from './components/UserRoleCheckbox'
+import UserStationCheckbox from './components/UserStationCheckbox'
 
 Vue.config.productionTip = false
 Vue.use(Vuex)
+Vue.use(Vuetify)
 
-const BASE_URL = 'http://192.168.1.92:5000'
+import 'vuetify/dist/vuetify.min.css'
+
+const BASE_URL = 'http://powonline.albert.lu/api'
+
+axios.interceptors.request.use(config => {
+  const jwt = localStorage.getItem('jwt') || ''
+  if (jwt !== '') {
+    config.headers['Authorization'] = 'Bearer ' + jwt
+    console.debug('Intercepted and set auth token to ' + jwt)
+  } else {
+    console.debug('JWT was null!')
+  }
+  return config
+}, error => {
+  // nothing to do
+  return Promise.reject(error)
+})
+
 const store = new Vuex.Store({
   state: {
+    users: [],
     stations: [],
     teams: [],
     routes: [],
     errors: [],
     route_station_map: {},  // map stations to routes (key=stationName, value=routeName)
     route_team_map: {},  // map teams to routes (key=teamName, value=routeName)
-    dashboard: {}, // maps team names to station-states
+    dashboard: [], // maps team names to station-states
     dashboardStation: '',
     teamStates: [],
-    baseUrl: BASE_URL
+    jwt: '',
+    roles: [],
+    baseUrl: BASE_URL,
+    pageTitle: 'Powonline',
+    isBottomNavVisible: true,
+    isAddBlockVisible: {
+      '/route': false,
+      '/station': false,
+      '/team': false,
+      '/user': false
+    }
   },
   mutations: {
+    setToken (state, data) {
+      console.debug('Setting token to ' + data['token'])
+      console.debug('Setting roles to ' + data['roles'])
+      state.jwt = data['token']
+      state.roles = data['roles']
+    },
+    loginUser (state, data) {
+      localStorage.setItem('roles', data['roles'])
+      localStorage.setItem('jwt', data['token'])
+      state.jwt = data['token']
+      state.roles = data['roles']
+      console.debug('Set auth token in LS to ' + data['token'])
+    },
+    logoutUser (state, data) {
+      localStorage.removeItem('jwt')
+      localStorage.removeItem('roles')
+      state.jwt = ''
+      state.roles = []
+      console.debug('cleared LS')
+    },
+    changeTitle (state, title) {
+      state.pageTitle = title
+    },
+    addUser (state, user) {
+      state.users.push(user)
+    },
     addTeam (state, team) {
       state.teams.push(team)
     },
@@ -41,6 +104,9 @@ const store = new Vuex.Store({
     replaceTeams (state, teams) {
       state.teams = teams
     },
+    replaceUsers (state, users) {
+      state.users = users
+    },
     replaceRoutes (state, routes) {
       state.routes = routes
     },
@@ -49,6 +115,9 @@ const store = new Vuex.Store({
     },
     logError (state, error) {
       state.errors.push(error)
+    },
+    updateDashboard (state, data) {
+      state.dashboard = data
     },
     replaceAssignments (state, assignments) {
       // Replace team-to-route mapping
@@ -108,22 +177,64 @@ const store = new Vuex.Store({
       }
     },
     deleteRoute (state, routeName) {
-      const idx = state.routes.indexOf(routeName)
+      let idx = -1  // TODO there must be a better way than the following loop
+      state.routes.forEach(item => {
+        if (item.name === routeName) {
+          idx = state.routes.indexOf(item)
+        }
+      })
+
       if (idx > -1) {
-        state.routes.splice(idx, -1)
+        state.routes.splice(idx, 1)
       }
     },
     deleteStation (state, stationName) {
-      const idx = state.routes.indexOf(stationName)
+      let idx = -1  // TODO there must be a better way than the following loop
+      state.stations.forEach(item => {
+        if (item.name === stationName) {
+          idx = state.stations.indexOf(item)
+        }
+      })
+
       if (idx > -1) {
-        state.stations.splice(idx, -1)
+        state.stations.splice(idx, 1)
       }
     },
     deleteTeam (state, teamName) {
-      const idx = state.teams.indexOf(teamName)
+      let idx = -1  // TODO there must be a better way than the following loop
+      state.teams.forEach(item => {
+        if (item.name === teamName) {
+          idx = state.teams.indexOf(item)
+        }
+      })
+
       if (idx > -1) {
-        state.teams.splice(idx, -1)
+        state.teams.splice(idx, 1)
       }
+    },
+    deleteUser (state, userName) {
+      let idx = -1  // TODO there must be a better way than the following loop
+      state.users.forEach(item => {
+        if (item.name === userName) {
+          idx = state.users.indexOf(item)
+        }
+      })
+
+      if (idx > -1) {
+        state.users.splice(idx, 1)
+      }
+    },
+    showAddBlock (state, path) {
+      state.isAddBlockVisible[path] = true
+    },
+    closeAddBlock (state, path) {
+      state.isAddBlockVisible[path] = false
+    },
+    showBottomNav (state) {
+      state.isBottomNavVisible = true
+    },
+    hideBottomNav (state) {
+      state.isBottomNavVisible = false
     }
   },
   actions: {
@@ -139,9 +250,41 @@ const store = new Vuex.Store({
         }
       })
       .then(response => {
-        const newState = response.data.result.state
-        console.log(newState)  // XXX
-      }) // TODO better error handling
+        context.dispatch('fetchDashboard', payload.stationName)
+      })
+      .catch(e => {
+        context.commit('logError', e)
+      })
+    },
+
+    /**
+     * Fetch the dashboard data for a station
+     *
+     * :param stationName: The name of the station
+     */
+    fetchDashboard (context, stationName) {
+      axios.get(BASE_URL + '/station/' + stationName + '/dashboard')
+      .then(response => {
+        context.commit('updateDashboard', response.data)
+      })
+      .catch(e => {
+        context.commit('logError', e)
+      })
+    },
+
+    /**
+     * Add a user to the backend store
+     *
+     * :param user: The user object to add
+     */
+    addUserRemote (context, user) {
+      axios.post(BASE_URL + '/user', user)
+      .then(response => {
+        context.commit('addUser', user)
+      })
+      .catch(e => {
+        context.commit('logError', e)
+      })
     },
 
     /**
@@ -193,6 +336,28 @@ const store = new Vuex.Store({
      * Refresh everything from the server
      */
     refreshRemote (context) {
+      context.dispatch('refreshTeams')
+      context.dispatch('refreshRoutes')
+      context.dispatch('refreshAssignments')
+      context.dispatch('refreshStations')
+      context.dispatch('refreshUsers')
+    },
+
+    refreshUsers (context, data) {
+      // --- Fetch Users from server
+      if (context.state.roles.indexOf('admin') === -1) {
+        return
+      }
+      axios.get(BASE_URL + '/user')
+      .then(response => {
+        context.commit('replaceUsers', response.data.items)
+      })
+      .catch(e => {
+        context.commit('logError', e)
+      })
+    },
+
+    refreshTeams (context, data) {
       // --- Fetch Teams from server
       axios.get(BASE_URL + '/team')
       .then(response => {
@@ -201,7 +366,9 @@ const store = new Vuex.Store({
       .catch(e => {
         context.commit('logError', e)
       })
+    },
 
+    refreshRoutes (context, data) {
       // --- Fetch Routes from server
       axios.get(BASE_URL + '/route')
       .then(response => {
@@ -210,20 +377,30 @@ const store = new Vuex.Store({
       .catch(e => {
         context.commit('logError', e)
       })
+    },
 
-      // --- Fetch team/route assignments from server
-      axios.get(BASE_URL + '/assignments')
-      .then(response => {
-        context.commit('replaceAssignments', response.data)
-      })
-      .catch(e => {
-        context.commit('logError', e)
-      })
-
+    /**
+     * Refresh Stations from the server
+     */
+    refreshStations (context, data) {
       // --- Fetch Stations from server
       axios.get(BASE_URL + '/station')
       .then(response => {
         context.commit('replaceStations', response.data.items)
+      })
+      .catch(e => {
+        context.commit('logError', e)
+      })
+    },
+
+    /**
+     * Refresh assignments from the backend
+     */
+    refreshAssignments (context, data) {
+      // --- Fetch team/route assignments from server
+      axios.get(BASE_URL + '/assignments')
+      .then(response => {
+        context.commit('replaceAssignments', response.data)
       })
       .catch(e => {
         context.commit('logError', e)
@@ -316,8 +493,11 @@ const store = new Vuex.Store({
       .then(response => {
         context.commit('deleteRoute', routeName)
       })
+      .then(function () {
+        context.dispatch('refreshAssignments')
+      })
       .catch(e => {
-        console.log(e)
+        context.commit('logError', e)
       })
     },
 
@@ -329,8 +509,27 @@ const store = new Vuex.Store({
       .then(response => {
         context.commit('deleteStation', stationName)
       })
+      .then(function () {
+        context.dispatch('refreshAssignments')
+      })
       .catch(e => {
-        console.log(e)  // TODO Better error handling
+        context.commit('logError', e)
+      })
+    },
+
+    /**
+     * Delete a user
+     */
+    deleteUserRemote (context, userName) {
+      axios.delete(BASE_URL + '/user/' + userName)
+      .then(response => {
+        context.commit('deleteUser', userName)
+      })
+      .then(function () {
+        context.dispatch('refreshAssignments')
+      })
+      .catch(e => {
+        context.commit('logError', e)
       })
     },
 
@@ -342,12 +541,14 @@ const store = new Vuex.Store({
       .then(response => {
         context.commit('deleteTeam', teamName)
       })
+      .then(function () {
+        context.dispatch('refreshAssignments')
+      })
       .catch(e => {
-        console.log(e)  // TODO Better error-handling
+        context.commit('logError', e)
       })
     }
   },
-
   getters: {
     unassignedTeams (state, getters) {
       // fetch *all* assignments of teams
@@ -400,24 +601,64 @@ const store = new Vuex.Store({
         {name: routeName},
         {name: routeName}
       ]
+    },
+    teamState: (state, getters) => (teamName, stationName) => {
+      const output = []
+      state.dashboard.forEach(item => {
+        console.log(teamName, stationName, item)
+      })
+      return output
     }
   }
 
 })
 
+Vue.component('confirmation-dialog', ConfirmationDialog)
+Vue.component('error-block', ErrorBlock)
+Vue.component('home-page', HomePage)
+Vue.component('mini-status', MiniStatus)
+Vue.component('route-block', RouteBlock)
+Vue.component('state-icon', StateIcon)
+Vue.component('station-block', StationBlock)
+Vue.component('team-block', TeamBlock)
+Vue.component('user-block', UserBlock)
+Vue.component('user-role-checkbox', UserRoleCheckbox)
+Vue.component('user-station-checkbox', UserStationCheckbox)
+
 /* eslint-disable no-new */
-new Vue({
+const vue = new Vue({
   el: '#app',
   router,
   store,
   template: '<App/>',
   components: { App },
   created () {
+    const savedToken = localStorage.getItem('jwt') || ''
+    const savedRoles = localStorage.getItem('roles') || []
+    this.$store.commit('setToken', {token: savedToken, roles: savedRoles})
     this.$store.dispatch('refreshRemote')
   }
 })
 
-Vue.component('station-block', StationBlock)
-Vue.component('team-block', TeamBlock)
-Vue.component('route-block', RouteBlock)
-Vue.component('error-block', ErrorBlock)
+var lastKnownScrollPos = 0
+var ticking = false
+
+window.addEventListener('scroll', function (e) {
+  const isScrollingDown = lastKnownScrollPos < window.scrollY
+  lastKnownScrollPos = window.scrollY
+  if (!ticking) {
+    window.requestAnimationFrame(function () {
+      if (isScrollingDown) {
+        if (vue.$store.state.isBottomNavVisible) {
+          vue.$store.commit('hideBottomNav')
+        }
+      } else {
+        if (!vue.$store.state.isBottomNavVisible) {
+          vue.$store.commit('showBottomNav')
+        }
+      }
+      ticking = false
+    })
+  }
+  ticking = true
+})

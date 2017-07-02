@@ -1,22 +1,39 @@
 <template>
   <div id="TeamList">
-    <h1>Team List</h1>
-    <input 
-      id="TeamNameImput"
-      @keyup.enter="addTeam"
-      type='text'
-      v-model:teamname='teamname'
-      placeholder='Enter a new teamname' />
-    <input 
-      id="EmailInput"
-      type='text'
-      v-model:email='email'
-      placeholder='Enter a new email' />
-    <button @click="addTeam">Add</button>
-    <hr />
+    <transition name="slide">
+      <v-card v-show="isAddBlockVisible">
+        <v-card-row class="brown darken-4">
+          <v-card-title>
+            <span class="white--text">Add New Team</span>
+            <v-spacer></v-spacer>
+            <v-btn @click.native="closeAddBlock" icon light><v-icon>close</v-icon></v-btn>
+          </v-card-title>
+        </v-card-row>
+        <v-card-text>
+          <v-text-field
+            name="team-input"
+            id="TeamNameImput"
+            @keyup.enter.native="addTeam"
+            type='text'
+            v-model:teamname='teamname'
+            label='Enter a new teamname' />
+          <v-text-field
+            name="email-input"
+            id="EmailInput"
+            type='text'
+            v-model:email='email'
+            label='Enter a new email' />
+        </v-card-text>
+        <v-divider></v-divider>
+        <v-card-row actions>
+          <v-btn @click.native="addTeam" flat>Add</v-btn>
+        </v-card-row>
+      </v-card>
+    </transition>
     <team-block v-for="team in teams" :name="team.name" :key="team.name"></team-block>
   </div>
 </template>
+
 
 <script>
 export default {
@@ -37,39 +54,41 @@ export default {
       const input = document.getElementById('TeamNameImput')
       input.focus()
       input.select()
+    },
+    closeAddBlock () {
+      this.$store.commit('closeAddBlock', this.$route.path)
     }
+  },
+  created () {
+    this.$store.commit('changeTitle', 'Team List')
   },
   data () {
     return {
-      teamname: 'default',
-      email: 'john.doe@example.com'
+      teamname: '',
+      email: ''
     }
   },
   computed: {
     teams () {
       return this.$store.state.teams
+    },
+    isAddBlockVisible () {
+      return this.$store.state.isAddBlockVisible[this.$route.path]
     }
   }
 }
 </script>
 
-<!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
-h1, h2 {
-  font-weight: normal;
+.slide-enter-active, .slide-leave-active {
+  transition: all .3s
 }
-
-ul {
-  list-style-type: none;
-  padding: 0;
+.slide-enter {
+  transform: translateY(-100px);
+  opacity: 0;
 }
-
-li {
-  display: inline-block;
-  margin: 0 10px;
-}
-
-a {
-  color: #42b983;
+.slide-leave-to {
+  transform: translateY(-100px);
+  opacity: 0;
 }
 </style>

@@ -1,8 +1,10 @@
+from functools import wraps
 from json import dumps, JSONEncoder
 import logging
 
-from flask import request, make_response
+from flask import request, make_response, jsonify, current_app, g
 from flask_restful import Resource, marshal_with, fields
+import jwt
 
 from . import core
 from .model import DB
@@ -15,7 +17,9 @@ from .schema import (
     STATION_SCHEMA,
     TEAM_LIST_SCHEMA,
     TEAM_SCHEMA,
+    USER_LIST_SCHEMA,
     USER_SCHEMA,
+    USER_SCHEMA_SAFE,
 )
 
 
@@ -24,6 +28,81 @@ STATE_FIELDS = {
     'state': fields.String(attribute=lambda x: x.state.value)
 }
 
+PERMISSION_MAP = {
+    'admin': {
+        'admin_routes',
+        'admin_stations',
+        'admin_teams',
+        'manage_permissions',
+        'manage_station',
+    },
+    'station_manager': {
+        'manage_station'
+    },
+}
+
+
+class require_permissions:
+    '''
+    Decorator for routes.
+
+    All permissions defined in the decorator are required.
+    '''
+
+    def __init__(self, *permissions):
+        self.permissions = set(permissions)
+
+    def __call__(self, f):
+        @wraps(f)
+        def fun(*args, **kwargs):
+            auth_header = request.headers.get('Authorization')
+            if not auth_header:
+                LOG.debug('No Authorization header present!')
+                return 'Access Denied (no "Authorization" header passed)!', 401
+            method, _, token = auth_header.partition(' ')
+            method = method.lower().strip()
+            token = token.strip()
+            if method != 'bearer' or not token:
+                LOG.debug('Authorization header does not provide '
+                          'a bearer token!')
+                return 'Access Denied (not a bearer token)!', 401
+            try:
+                jwt_secret = current_app.localconfig.get(
+                    'security', 'jwt_secret')
+                auth_payload = jwt.decode(
+                    token, jwt_secret, algorithms=['HS256'])
+            except jwt.exceptions.DecodeError:
+                LOG.info('Bearer token seems to have been tampered with!')
+                return 'Access Denied (invalid token)!', 401
+
+            # Expand the user roles to permissions, collecting them all in one
+            # big set.
+            user_roles = set(auth_payload.get('roles', []))
+            LOG.debug('Bearer token with the following roles: %r', user_roles)
+            all_permissions = set()
+            for role in user_roles:
+                all_permissions |= PERMISSION_MAP.get(role, set())
+
+            LOG.debug('Bearer token grants the following permissions: %r',
+                      all_permissions)
+
+            # by removing the users permissions from the required permissions,
+            # we will end up with an empty set if the user is granted access.
+            # All remaining permissions are those that the user was not granted
+            # (the user is missing those permissions to gain entry).
+            # Hence, if the resulting set is non-empty, we block access.
+            missing_permissions = self.permissions - all_permissions
+            if missing_permissions:
+                LOG.debug('User was missing the following permissions: %r',
+                          missing_permissions)
+                return 'Access Denied (Not enough permissions)!', 401
+
+            # Keep a reference to the JWT payload in the "g" object
+            g.jwt_payload = auth_payload
+
+            return f(*args, **kwargs)
+        return fun
+
 
 class MyJsonEncoder(JSONEncoder):
 
@@ -31,6 +110,75 @@ class MyJsonEncoder(JSONEncoder):
         if isinstance(value, set):
             return list(value)
         super().default(value)
+
+
+class UserList(Resource):
+
+    @require_permissions('manage_permissions')
+    def get(self):
+        users = list(core.User.all(DB.session))
+        output = {
+            'items': users
+        }
+
+        parsed_output, errors = USER_LIST_SCHEMA.dumps(output)
+        if errors:
+            LOG.critical('Unable to process return value: %r', errors)
+            return 'Server was unable to process the response', 500
+
+        output = make_response(parsed_output, 200)
+        output.content_type = 'application/json'
+        return output
+
+    @require_permissions('manage_permissions')
+    def post(self):
+        data = request.get_json()
+
+        parsed_data, errors = USER_SCHEMA.load(data)
+        if errors:
+            return errors, 400
+
+        output = core.User.create_new(DB.session, parsed_data)
+        return User._single_response(output, 201)
+
+
+class User(Resource):
+
+    @staticmethod
+    def _single_response(output, status_code=200):
+        parsed_output, errors = USER_SCHEMA_SAFE.dumps(output)
+        if errors:
+            LOG.critical('Unable to process return value: %r', errors)
+            return 'Server was unable to process the response', 500
+
+        response = make_response(parsed_output)
+        response.status_code = status_code
+        response.content_type = 'application/json'
+        return response
+
+    @require_permissions('manage_permissions')
+    def get(self, name):
+        user = core.User.get(DB.session, name)
+        if not user:
+            return 'No such user', 404
+
+        return User._single_response(user, 200)
+
+    @require_permissions('manage_permissions')
+    def put(self, name):
+        data = request.get_json()
+
+        parsed_data, errors = USER_SCHEMA.load(data)
+        if errors:
+            return errors, 400
+
+        output = core.User.upsert(DB.session, name, parsed_data)
+        return User._single_response(output, 200)
+
+    @require_permissions('manage_permissions')
+    def delete(self, name):
+        core.User.delete(DB.session, name)
+        return '', 204
 
 
 class TeamList(Resource):
@@ -63,6 +211,7 @@ class TeamList(Resource):
         output.content_type = 'application/json'
         return output
 
+    @require_permissions('admin_teams')
     def post(self):
         data = request.get_json()
 
@@ -88,6 +237,7 @@ class Team(Resource):
         response.content_type = 'application/json'
         return response
 
+    @require_permissions('admin_teams')
     def put(self, name):
         data = request.get_json()
 
@@ -98,6 +248,7 @@ class Team(Resource):
         output = core.Team.upsert(DB.session, name, parsed_data)
         return Team._single_response(output, 200)
 
+    @require_permissions('admin_teams')
     def delete(self, name):
         core.Team.delete(DB.session, name)
         return '', 204
@@ -120,6 +271,7 @@ class StationList(Resource):
         output.content_type = 'application/json'
         return output
 
+    @require_permissions('admin_stations')
     def post(self):
         data = request.get_json()
 
@@ -145,6 +297,7 @@ class Station(Resource):
         response.content_type = 'application/json'
         return response
 
+    @require_permissions('admin_stations')
     def put(self, name):
         data = request.get_json()
 
@@ -155,6 +308,7 @@ class Station(Resource):
         output = core.Station.upsert(DB.session, name, parsed_data)
         return Station._single_response(output, 200)
 
+    @require_permissions('admin_stations')
     def delete(self, name):
         core.Station.delete(DB.session, name)
         return '', 204
@@ -177,6 +331,7 @@ class RouteList(Resource):
         output.content_type = 'application/json'
         return output
 
+    @require_permissions('admin_routes')
     def post(self):
         data = request.get_json()
 
@@ -202,6 +357,7 @@ class Route(Resource):
         response.content_type = 'application/json'
         return response
 
+    @require_permissions('admin_routes')
     def put(self, name):
         data = request.get_json()
         parsed_data, errors = ROUTE_SCHEMA.load(data)
@@ -211,6 +367,7 @@ class Route(Resource):
         output = core.Route.upsert(DB.session, name, parsed_data)
         return Route._single_response(output, 200)
 
+    @require_permissions('admin_routes')
     def delete(self, name):
         core.Route.delete(DB.session, name)
         return '', 204
@@ -218,25 +375,78 @@ class Route(Resource):
 
 class StationUserList(Resource):
 
-    def post(self, station_name):
-        '''
-        Assigns a user to a station
-        '''
+    def _assign_user_to_station(self, station_name):
         data = request.get_json()
-        parsed_data, errors = USER_SCHEMA.load(data)
+        user, errors = USER_SCHEMA.load(data)
         if errors:
             return errors, 400
-
         success = core.Station.assign_user(
-            DB.session, station_name, parsed_data['name'])
+            DB.session, station_name, user['name'])
         if success:
             return '', 204
         else:
-            return 'User is already assigned to a station', 400
+            return 'Station is already assigned to that user', 400
+
+    def _assign_station_to_user(self, user_name):
+        data = request.get_json()
+        station, errors = STATION_SCHEMA.load(data)
+        if errors:
+            return errors, 400
+        success = core.User.assign_station(
+            DB.session, user_name, station['name'])
+        if success:
+            return '', 204
+        else:
+            return 'Station is already assigned to that user', 400
+
+    def _list_station_by_user(self, user_name):
+        user = core.User.get(DB.session, user_name)
+        if not user:
+            return 'No such user', 404
+        all_stations = core.Station.all(DB.session)
+        user_stations = {station.name for station in user.stations}
+        output = []
+        for station in all_stations:
+            output.append((station.name, station.name in user_stations))
+        return jsonify(output)
+
+    @require_permissions('manage_permissions')
+    def get(self, station_name=None, user_name=None):
+        if user_name and not station_name:
+            return self._list_station_by_user(user_name)
+        elif station_name and not user_name:
+            return self._list_user_by_station(station_name)
+        else:
+            return 'Unexpected input!', 400
+
+    @require_permissions('manage_permissions')
+    def post(self, station_name=None, user_name=None):
+        '''
+        Assigns a user to a station
+        '''
+        if user_name and not station_name:
+            return self._assign_station_to_user(user_name)
+        elif station_name and not user_name:
+            return self._assign_user_to_station(station_name)
+        else:
+            return 'Unexpected input!', 400
 
 
 class StationUser(Resource):
 
+    @require_permissions('manage_permissions')
+    def get(self, user_name=None, station_name=None):
+        user = core.User.get(DB.session, user_name)
+        if not user:
+            return 'No such user', 404
+        stations = {_.name for _ in user.stations}
+
+        if station_name in stations:
+            return jsonify(True)
+        else:
+            return jsonify(False)
+
+    @require_permissions('manage_permissions')
     def delete(self, station_name, user_name):
         success = core.Station.unassign_user(
             DB.session, station_name, user_name)
@@ -248,6 +458,7 @@ class StationUser(Resource):
 
 class RouteTeamList(Resource):
 
+    @require_permissions('admin_routes')
     def post(self, route_name):
         '''
         Assign a team to a route
@@ -264,6 +475,7 @@ class RouteTeamList(Resource):
 
 class RouteTeam(Resource):
 
+    @require_permissions('admin_routes')
     def delete(self, route_name, team_name):
         success = core.Route.unassign_team(DB.session, route_name, team_name)
         if success:
@@ -274,6 +486,19 @@ class RouteTeam(Resource):
 
 class UserRoleList(Resource):
 
+    @require_permissions('manage_permissions')
+    def get(self, user_name):
+        user = core.User.get(DB.session, user_name)
+        if not user:
+            return 'No such user', 404
+        all_roles = core.Role.all(DB.session)
+        user_roles = {role.name for role in user.roles}
+        output = []
+        for role in all_roles:
+            output.append((role.name, role.name in user_roles))
+        return jsonify(output)
+
+    @require_permissions('manage_permissions')
     def post(self, user_name):
         '''
         Assign a role to a user
@@ -293,6 +518,7 @@ class UserRoleList(Resource):
 
 class UserRole(Resource):
 
+    @require_permissions('manage_permissions')
     def delete(self, user_name, role_name):
         success = core.User.unassign_role(DB.session, user_name, role_name)
         if success:
@@ -300,9 +526,22 @@ class UserRole(Resource):
         else:
             return 'Unexpected error!', 500
 
+    @require_permissions('manage_permissions')
+    def get(self, user_name, role_name):
+        user = core.User.get(DB.session, user_name)
+        if not user:
+            return 'No such user', 404
+        roles = {_.name for _ in user.roles}
+
+        if role_name in roles:
+            return jsonify(True)
+        else:
+            return jsonify(False)
+
 
 class RouteStationList(Resource):
 
+    @require_permissions('admin_routes')
     def post(self, route_name):
         '''
         Assign a station to a route
@@ -321,6 +560,7 @@ class RouteStationList(Resource):
 
 class RouteStation(Resource):
 
+    @require_permissions('admin_routes')
     def delete(self, route_name, station_name):
         success = core.Route.unassign_station(
             DB.session, route_name, station_name)
@@ -386,6 +626,11 @@ class Dashboard(Resource):
 class Job(Resource):
 
     def _action_advance(self, station_name, team_name):
+        if not core.User.may_access_station(
+                DB.session,
+                g.jwt_payload['username'],
+                station_name):
+            return 'Access denied to this station!', 401
         new_state = core.Team.advance_on_station(
                 DB.session, team_name, station_name)
         output = {
@@ -395,6 +640,7 @@ class Job(Resource):
         }
         return output, 200
 
+    @require_permissions('manage_station')
     def post(self):
         data = request.get_json()
         parsed_data, errors = JOB_SCHEMA.load(data)

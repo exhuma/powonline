@@ -2,6 +2,7 @@ from datetime import datetime
 from enum import Enum
 import logging
 
+from bcrypt import gensalt, hashpw, checkpw
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import (
     Boolean,
@@ -13,6 +14,7 @@ from sqlalchemy import (
     func,
     Table,
 )
+from sqlalchemy.dialects.postgresql import BYTEA
 from sqlalchemy.orm import relationship
 import sqlalchemy.types as types
 
@@ -80,6 +82,7 @@ class Station(DB.Model):
     name = Column(Unicode, primary_key=True, nullable=False)
     contact = Column(Unicode)
     phone = Column(Unicode)
+    order = Column(Integer, nullable=False, server_default='500')
     is_start = Column(Boolean, nullable=False, server_default='false')
     is_end = Column(Boolean, nullable=False, server_default='false')
 
@@ -125,7 +128,25 @@ class Route(DB.Model):
 
 class User(DB.Model):
     __tablename__ = 'user'
-    name = Column(Unicode, primary_key=True)  # TODO: Should the name be the PK? Email or ID would be better.
+    name = Column(Unicode, primary_key=True)
+    password = Column(BYTEA)
+    password_is_plaintext = Column(
+        Boolean, nullable=False, server_default='false')
+
+    def __init__(self, name, password):
+        self.name = name
+        self.password = hashpw(password.encode('utf8'), gensalt())
+        self.password_is_plaintext = False
+
+    def checkpw(self, password):
+        if self.password_is_plaintext:
+            self.password = hashpw(password.encode('utf8'), gensalt())
+            self.password_is_plaintext = False
+        return checkpw(password.encode('utf8'), self.password)
+
+    def setpw(self, new_password):
+        self.password = hashpw(new_password.encode('utf8'), gensalt())
+        self.password_is_plaintext = False
 
     roles = relationship('Role',
                          secondary='user_role',

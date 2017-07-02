@@ -61,3 +61,4 @@ def colorize_werkzeug():  # pragma: no cover
             return record
 
     logging.getLogger('werkzeug').addFilter(WerkzeugColorFilter())
+

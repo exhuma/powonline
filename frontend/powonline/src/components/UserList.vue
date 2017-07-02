@@ -1,39 +1,50 @@
 <template>
-  <div id="StationList">
+  <div id="UserList">
     <transition name="slide">
       <v-card v-show="isAddBlockVisible">
         <v-card-row class="brown darken-4">
           <v-card-title>
-            <span class="white--text">Add New Station</span>
+            <span class="white--text">Add New User</span>
             <v-spacer></v-spacer>
             <v-btn @click.native="closeAddBlock" icon light><v-icon>close</v-icon></v-btn>
           </v-card-title>
         </v-card-row>
         <v-card-text>
           <v-text-field
-            id="StationNameImput"
-            @keyup.enter.native="addStation"
+            name="user-input"
+            id="UserNameImput"
+            @keyup.enter.native="addUser"
             type='text'
-            v-model:stationname='stationname'
-            label='Enter a new stationname' />
+            v-model:username='username'
+            label='Enter a new username' />
+          <v-text-field
+            name="password"
+            @keyup.enter.native="addUser"
+            type='password'
+            v-model='password'
+            label='Password' />
         </v-card-text>
         <v-divider></v-divider>
         <v-card-row actions>
-          <v-btn @click.native="addStation" flat>Add</v-btn>
+          <v-btn @click.native="addUser" flat>Add</v-btn>
         </v-card-row>
       </v-card>
     </transition>
-    <station-block v-for="station in stations" :name="station.name" :key="station.name"></station-block>
+    <user-block v-for="user in users" :name="user.name" :key="user.name"></user-block>
   </div>
 </template>
 
+
 <script>
 export default {
-  name: 'station_list',
+  name: 'user_list',
   methods: {
-    addStation: function (event) {
-      this.$store.dispatch('addStationRemote', {name: this.stationname})
-      const input = document.getElementById('StationNameImput')
+    addUser: function (event) {
+      this.$store.dispatch('addUserRemote', {
+        name: this.username,
+        password: this.password
+      })
+      const input = document.getElementById('UserNameImput')
       input.focus()
       input.select()
     },
@@ -42,16 +53,18 @@ export default {
     }
   },
   created () {
-    this.$store.commit('changeTitle', 'Station List')
+    this.$store.commit('changeTitle', 'User List')
+    this.$store.dispatch('refreshUsers')
   },
   data () {
     return {
-      stationname: ''
+      username: '',
+      password: ''
     }
   },
   computed: {
-    stations () {
-      return this.$store.state.stations
+    users () {
+      return this.$store.state.users
     },
     isAddBlockVisible () {
       return this.$store.state.isAddBlockVisible[this.$route.path]

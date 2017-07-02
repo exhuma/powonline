@@ -1,30 +1,79 @@
 <template>
-  <div class="route-block">
-    {{ name }}
-    <button @click="deleteRoute">Delete</button>
+  <v-card class="mt-3">
+    <v-card-row class="brown darken-1">
+      <v-card-title><span class="white--text">Route: "{{ name }}"</span></v-card-title>
+    </v-card-row>
+    <v-card-text>
+      <v-layout row wrap>
+        <!-- Assigned Items -->
+        <v-flex xs6>
+          <v-card class="mx-3">
+            <v-card-row class="brown lighten-2">
+              <v-card-title>Assigned Teams</v-card-title>
+            </v-card-row>
+            <v-card-row v-for="(team, idx) in assignedTeams" :key="idx">
+              <v-flex xs6>{{ team }}</v-flex>
+              <v-flex xs6>
+                <v-btn @click.native="unassignTeam" :data-idx="idx" flat><v-icon>arrow_downward</v-icon></v-btn>
+              </v-flex>
+            </v-card-row>
+          </v-card>
+        </v-flex>
+        <v-flex xs6>
+          <v-card class="mx-3">
+            <v-card-row class="brown lighten-2">
+              <v-card-title>Assigned Stations</v-card-title>
+            </v-card-row>
+            <v-card-row v-for="(station, idx) in assignedStations" :key="idx">
+              <v-flex xs6>{{ station }}</v-flex>
+              <v-flex xs6>
+                <v-btn @click.native="unassignStation" :data-idx="idx" flat><v-icon>arrow_downward</v-icon></v-btn>
+              </v-flex>
+            </v-card-row>
+          </v-card>
+        </v-flex>
 
-    <hr />
-
-    <table>
-      <tr>
-        <td>
-          <h2>Teams assigned to this route</h2>
-          <li v-for="(team, idx) in assignedTeams">{{ team }}<button @click="unassignTeam" :data-idx="idx">Unassign</button></li>
-
-          <h2>Teams not assigned to any route</h2>
-          <li v-for="(team, idx) in unassignedTeams">{{ team }}<button @click="assignTeam" :data-idx="idx">Assign</button></li>
-        </td>
-        <td>
-          <h2>Stations assigned to this route</h2>
-          <li v-for="(station, idx) in assignedStations">{{ station }}<button @click="unassignStation" :data-idx="idx">Unassign</button></li>
-
-          <h2>Stations not assigned to this route</h2>
-          <li v-for="(station, idx) in unassignedStations">{{ station }}<button @click="assignStation" :data-idx="idx">Assign</button></li>
-        </td>
-      </tr>
-    </table>
-
-  </div>
+        <!-- Unassigned Items -->
+        <v-flex xs6 class="mt-4"> 
+          <v-card class="mx-3">
+            <v-card-row class="brown lighten-2">
+              <v-card-title>Unassigned Teams</v-card-title>
+            </v-card-row>
+            <v-card-row v-for="(team, idx) in unassignedTeams" :key="idx">
+              <v-flex xs6>{{ team }}</v-flex>
+              <v-flex xs6>
+                <v-btn @click.native="assignTeam" :data-idx="idx" flat><v-icon>arrow_upward</v-icon></v-btn>
+              </v-flex>
+            </v-card-row>
+          </v-card>
+        </v-flex>
+        <v-flex xs6 class="mt-4">
+          <v-card class="mx-3">
+            <v-card-row class="brown lighten-2">
+              <v-card-title>Unassigned Stations</v-card-title>
+            </v-card-row>
+            <v-card-row v-for="(station, idx) in unassignedStations" :key="idx">
+              <v-flex xs6>{{ station }}</v-flex>
+              <v-flex xs6>
+                <v-btn @click.native="assignStation" :data-idx="idx" flat><v-icon>arrow_upward</v-icon></v-btn>
+              </v-flex>
+            </v-card-row>
+          </v-card>
+        </v-flex>
+      </v-layout>
+    </v-card-text>
+    <v-divider></v-divider>
+    <v-card-row actions>
+      <confirmation-dialog buttonText="Delete" :actionArgument="name" actionName="deleteRouteRemote">
+        <v-card-title slot="title">Do you want to delete the route "{{ name }}"?</v-card-title>
+        <v-card-text slot="text">
+          <p>this will delete the route with the name "{{ name }}" and all
+            related information!</p>
+          <p>Are you sure?</p>
+        </v-card-text>
+      </confirmation-dialog>
+    </v-card-row>
+  </v-card>
 </template>
 
 <script>
@@ -70,9 +119,6 @@ export default {
       const idx = event.target.getAttribute('data-idx')
       const station = this.unassignedStations[idx]
       this.$store.dispatch('assignStationToRouteRemote', {stationName: station, routeName: this.name})
-    },
-    deleteRoute: function (event) {
-      this.$store.dispatch('deleteRouteRemote', this.name)
     }
   }
 }
