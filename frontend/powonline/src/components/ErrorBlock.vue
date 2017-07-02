@@ -21,7 +21,7 @@ export default {
     title () {
       if (this.error && this.error.config && this.error.config.method) {
         if (this.error.response.status === 401) {
-          return 'Access Denied!'
+          return this.error.response.data
         } else {
           return 'Error when retrieving ' + this.error.config.method.toUpperCase() + ' ' + this.error.config.url
         }
