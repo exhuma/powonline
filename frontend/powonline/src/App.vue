@@ -102,11 +102,11 @@ export default {
       const output = [
         { label: 'Home', to: '/', icon: 'home' },
         { label: 'Stations', to: '/station', icon: 'place' },
-        { label: 'Teams', to: '/team', icon: 'group' },
-        { label: 'Routes', to: '/route', icon: 'gesture' }
+        { label: 'Teams', to: '/team', icon: 'group' }
       ]
       const roles = this.$store.state.roles
       if (roles && roles.indexOf('admin') > -1) {
+        output.push({ label: 'Routes', to: '/route', icon: 'gesture' })
         output.push({ label: 'Users', to: '/user', icon: 'face' })
       }
       return output
