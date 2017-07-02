@@ -5,11 +5,16 @@ import StationDashboard from '@/components/StationDashboard'
 import StationList from '@/components/StationList'
 import TeamList from '@/components/TeamList'
 import UserList from '@/components/UserList'
+import HomePage from '@/components/HomePage'
 
 Vue.use(Router)
 
 export default new Router({
   routes: [
+    {
+      path: '/',
+      component: HomePage
+    },
     {
       path: '/station',
       component: StationList
