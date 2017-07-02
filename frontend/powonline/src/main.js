@@ -9,6 +9,7 @@ import axios from 'axios'
 
 import ConfirmationDialog from './components/ConfirmationDialog'
 import ErrorBlock from './components/ErrorBlock'
+import HomePage from './components/HomePage'
 import MiniStatus from './components/MiniStatus'
 import RouteBlock from './components/RouteBlock'
 import StateIcon from './components/StateIcon'
@@ -24,7 +25,7 @@ Vue.use(Vuetify)
 
 import 'vuetify/dist/vuetify.min.css'
 
-const BASE_URL = 'http://192.168.1.92:5000'
+const BASE_URL = 'http://powonline.albert.lu/api'
 
 axios.interceptors.request.use(config => {
   const jwt = localStorage.getItem('jwt') || ''
@@ -614,6 +615,7 @@ const store = new Vuex.Store({
 
 Vue.component('confirmation-dialog', ConfirmationDialog)
 Vue.component('error-block', ErrorBlock)
+Vue.component('home-page', HomePage)
 Vue.component('mini-status', MiniStatus)
 Vue.component('route-block', RouteBlock)
 Vue.component('state-icon', StateIcon)
