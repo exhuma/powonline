@@ -35,17 +35,6 @@ export default {
     }
   },
   methods: {
-    onChangeValue (newValue) {
-      const mod = newValue.substring(0, 1)
-      const name = newValue.substring(1)
-      if (mod === '-') {
-        axios.delete(this.$store.state.baseUrl + '/user/' + this.name + '/roles/' + name)
-      } else if (mod === '+') {
-        axios.post(this.$store.state.baseUrl + '/user/' + this.name + '/roles', {
-          'name': name
-        })
-      }
-    },
     refreshRoles () {
       axios.get(this.$store.state.baseUrl + '/user/' + this.name + '/roles')
       .then(response => {
