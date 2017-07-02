@@ -44,8 +44,12 @@ def make_app(config):
     api.add_resource(Station, '/station/<name>')
     api.add_resource(RouteList, '/route')
     api.add_resource(Route, '/route/<name>')
-    api.add_resource(StationUserList, '/station/<station_name>/users')
-    api.add_resource(StationUser, '/station/<station_name>/users/<user_name>')
+    api.add_resource(StationUserList,
+                     '/station/<station_name>/users',
+                     '/user/<user_name>/stations')
+    api.add_resource(StationUser,
+                     '/station/<station_name>/users/<user_name>',
+                     '/user/<user_name>/stations/<station_name>')
     api.add_resource(RouteTeamList, '/route/<route_name>/teams')
     api.add_resource(RouteTeam, '/route/<route_name>/teams/<team_name>')
     api.add_resource(UserList, '/user')

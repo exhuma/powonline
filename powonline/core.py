@@ -276,6 +276,34 @@ class User:
         user = session.query(model.User).filter_by(name=user_name).one()
         return user.roles
 
+    @staticmethod
+    def assign_station(session, user_name, station_name):
+        '''
+        Returns true if the operation worked, false if the use is already
+        assigned to another station.
+        '''
+        station = session.query(model.Station).filter_by(
+            name=station_name).one()
+        user = session.query(model.User).filter_by(name=user_name).one()
+        station.users.add(user)
+        return True
+
+    @staticmethod
+    def unassign_station(session, user_name, station_name):
+        station = session.query(model.Station).filter_by(
+            name=station_name).one()
+
+        found_user = None
+        for user in station.users:
+            if user.name == user_name:
+                found_user = user
+                break
+
+        if found_user:
+            station.users.remove(found_user)
+
+        return True
+
 
 class Role:
 

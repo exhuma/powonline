@@ -372,25 +372,76 @@ class Route(Resource):
 
 class StationUserList(Resource):
 
-    @require_permissions('manage_permissions')
-    def post(self, station_name):
-        '''
-        Assigns a user to a station
-        '''
+    def _assign_user_to_station(self, station_name):
         data = request.get_json()
-        parsed_data, errors = USER_SCHEMA.load(data)
+        user, errors = USER_SCHEMA.load(data)
         if errors:
             return errors, 400
-
         success = core.Station.assign_user(
-            DB.session, station_name, parsed_data['name'])
+            DB.session, station_name, user['name'])
         if success:
             return '', 204
         else:
-            return 'User is already assigned to a station', 400
+            return 'Station is already assigned to that user', 400
+
+    def _assign_station_to_user(self, user_name):
+        data = request.get_json()
+        station, errors = STATION_SCHEMA.load(data)
+        if errors:
+            return errors, 400
+        success = core.User.assign_station(
+            DB.session, user_name, station['name'])
+        if success:
+            return '', 204
+        else:
+            return 'Station is already assigned to that user', 400
+
+    def _list_station_by_user(self, user_name):
+        user = core.User.get(DB.session, user_name)
+        if not user:
+            return 'No such user', 404
+        all_stations = core.Station.all(DB.session)
+        user_stations = {station.name for station in user.stations}
+        output = []
+        for station in all_stations:
+            output.append((station.name, station.name in user_stations))
+        return jsonify(output)
+
+    @require_permissions('manage_permissions')
+    def get(self, station_name=None, user_name=None):
+        if user_name and not station_name:
+            return self._list_station_by_user(user_name)
+        elif station_name and not user_name:
+            return self._list_user_by_station(station_name)
+        else:
+            return 'Unexpected input!', 400
+
+    @require_permissions('manage_permissions')
+    def post(self, station_name=None, user_name=None):
+        '''
+        Assigns a user to a station
+        '''
+        if user_name and not station_name:
+            return self._assign_station_to_user(user_name)
+        elif station_name and not user_name:
+            return self._assign_user_to_station(station_name)
+        else:
+            return 'Unexpected input!', 400
 
 
 class StationUser(Resource):
+
+    @require_permissions('manage_permissions')
+    def get(self, user_name=None, station_name=None):
+        user = core.User.get(DB.session, user_name)
+        if not user:
+            return 'No such user', 404
+        stations = {_.name for _ in user.stations}
+
+        if station_name in stations:
+            return jsonify(True)
+        else:
+            return jsonify(False)
 
     @require_permissions('manage_permissions')
     def delete(self, station_name, user_name):
