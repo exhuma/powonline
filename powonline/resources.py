@@ -2,7 +2,7 @@ from functools import wraps
 from json import dumps, JSONEncoder
 import logging
 
-from flask import request, make_response, jsonify, current_app
+from flask import request, make_response, jsonify, current_app, g
 from flask_restful import Resource, marshal_with, fields
 import jwt
 
@@ -96,6 +96,9 @@ class require_permissions:
                 LOG.debug('User was missing the following permissions: %r',
                           missing_permissions)
                 return 'Access Denied (Not enough permissions)!', 401
+
+            # Keep a reference to the JWT payload in the "g" object
+            g.jwt_payload = auth_payload
 
             return f(*args, **kwargs)
         return fun
@@ -623,6 +626,11 @@ class Dashboard(Resource):
 class Job(Resource):
 
     def _action_advance(self, station_name, team_name):
+        if not core.User.may_access_station(
+                DB.session,
+                g.jwt_payload['username'],
+                station_name):
+            return 'Access denied to this station!', 401
         new_state = core.Team.advance_on_station(
                 DB.session, team_name, station_name)
         output = {

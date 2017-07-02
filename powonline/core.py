@@ -304,6 +304,12 @@ class User:
 
         return True
 
+    @staticmethod
+    def may_access_station(session, user_name, station_name):
+        user = session.query(model.User).filter_by(
+            name=user_name).one()
+        user_stations = {_.name for _ in user.stations}
+        return station_name in user_stations
 
 class Role:
 
