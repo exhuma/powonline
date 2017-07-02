@@ -25,6 +25,20 @@ import 'vuetify/dist/vuetify.min.css'
 
 const BASE_URL = 'http://192.168.1.92:5000'
 
+axios.interceptors.request.use(config => {
+  const jwt = localStorage.getItem('jwt') || ''
+  if (jwt !== '') {
+    config.headers['Authorization'] = 'Bearer ' + jwt
+    console.debug('Intercepted and set auth token to ' + jwt)
+  } else {
+    console.debug('JWT was null!')
+  }
+  return config
+}, error => {
+  // nothing to do
+  return Promise.reject(error)
+})
+
 const store = new Vuex.Store({
   state: {
     users: [],
@@ -37,11 +51,11 @@ const store = new Vuex.Store({
     dashboard: [], // maps team names to station-states
     dashboardStation: '',
     teamStates: [],
+    jwt: '',
+    roles: [],
     baseUrl: BASE_URL,
     pageTitle: 'Powonline',
     isBottomNavVisible: true,
-    jwt: '',
-    roles: [],
     isAddBlockVisible: {
       '/route': false,
       '/station': false,
@@ -50,15 +64,25 @@ const store = new Vuex.Store({
     }
   },
   mutations: {
-    loginUser (state, data) {
+    setToken (state, data) {
+      console.debug('Setting token to ' + data['token'])
+      console.debug('Setting roles to ' + data['roles'])
       state.jwt = data['token']
       state.roles = data['roles']
-      axios.defaults.headers.common['Authorization'] = 'Bearer ' + data['token']
+    },
+    loginUser (state, data) {
+      localStorage.setItem('roles', data['roles'])
+      localStorage.setItem('jwt', data['token'])
+      state.jwt = data['token']
+      state.roles = data['roles']
+      console.debug('Set auth token in LS to ' + data['token'])
     },
     logoutUser (state, data) {
+      localStorage.removeItem('jwt')
+      localStorage.removeItem('roles')
       state.jwt = ''
       state.roles = []
-      axios.defaults.headers.common['Authorization'] = ''
+      console.debug('cleared LS')
     },
     changeTitle (state, title) {
       state.pageTitle = title
@@ -602,6 +626,9 @@ const vue = new Vue({
   template: '<App/>',
   components: { App },
   created () {
+    const savedToken = localStorage.getItem('jwt') || ''
+    const savedRoles = localStorage.getItem('roles') || []
+    this.$store.commit('setToken', {token: savedToken, roles: savedRoles})
     this.$store.dispatch('refreshRemote')
   }
 })

@@ -105,13 +105,16 @@ export default {
         { label: 'Teams', to: '/team', icon: 'group' },
         { label: 'Routes', to: '/route', icon: 'gesture' }
       ]
-      if (this.$store.state.roles.indexOf('admin') > -1) {
+      const roles = this.$store.state.roles
+      if (roles && roles.indexOf('admin') > -1) {
         output.push({ label: 'Users', to: '/user', icon: 'face' })
       }
       return output
     },
     tokenIsAvailable () {
-      return this.$store.state.jwt !== ''
+      const token = this.$store.state.jwt
+      const result = token !== ''
+      return result
     },
     isBottomNavVisible () {
       return this.$store.state.isBottomNavVisible
