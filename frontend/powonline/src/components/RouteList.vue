@@ -45,6 +45,7 @@ export default {
   },
   created () {
     this.$store.commit('changeTitle', 'Route List')
+    this.$store.dispatch('refreshRemote')
   },
   data () {
     return {
