@@ -4,12 +4,20 @@
       <v-card-title><span class="white--text">User: "{{ name }}"</span></v-card-title>
     </v-card-row>
     <v-card-text>
+      <h6>Roles</h6>
       <user-role-checkbox
         v-for="role in roles"
         :key="role[0]"
         :user="name"
         :label="role[0]"
         :role="role[0]"></user-role-checkbox>
+      <h6>Stations</h6>
+      <user-station-checkbox
+        v-for="station in stations"
+        :key="station[0]"
+        :user="name"
+        :label="station[0]"
+        :station="station[0]"></user-station-checkbox>
     </v-card-text>
     <v-divider></v-divider>
     <v-card-row actions>
@@ -31,10 +39,20 @@ export default {
   name: 'user-block',
   data () {
     return {
-      roles: []
+      roles: [],
+      stations: []
     }
   },
   methods: {
+    refreshStations () {
+      axios.get(this.$store.state.baseUrl + '/user/' + this.name + '/stations')
+      .then(response => {
+        this.stations = response.data
+      })
+      .catch(e => {
+        this.$store.commit('logError', e)
+      })
+    },
     refreshRoles () {
       axios.get(this.$store.state.baseUrl + '/user/' + this.name + '/roles')
       .then(response => {
@@ -47,6 +65,7 @@ export default {
   },
   created () {
     this.refreshRoles()
+    this.refreshStations()
   },
   props: {
     'name': {
