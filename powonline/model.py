@@ -130,16 +130,23 @@ class User(DB.Model):
     __tablename__ = 'user'
     name = Column(Unicode, primary_key=True)
     password = Column(BYTEA)
+    password_is_plaintext = Column(
+        Boolean, nullable=False, server_default='false')
 
     def __init__(self, name, password):
         self.name = name
         self.password = hashpw(password.encode('utf8'), gensalt())
+        self.password_is_plaintext = False
 
     def checkpw(self, password):
+        if self.password_is_plaintext:
+            self.password = hashpw(password.encode('utf8'), gensalt())
+            self.password_is_plaintext = False
         return checkpw(password.encode('utf8'), self.password)
 
     def setpw(self, new_password):
         self.password = hashpw(new_password.encode('utf8'), gensalt())
+        self.password_is_plaintext = False
 
     roles = relationship('Role',
                          secondary='user_role',
