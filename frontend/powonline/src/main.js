@@ -25,7 +25,7 @@ Vue.use(Vuetify)
 
 import 'vuetify/dist/vuetify.min.css'
 
-const BASE_URL = 'http://powonline.albert.lu/api'
+const BASE_URL = 'https://powonline.albert.lu/api'
 
 axios.interceptors.request.use(config => {
   const jwt = localStorage.getItem('jwt') || ''

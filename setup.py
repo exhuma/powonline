@@ -34,5 +34,5 @@ setup(
     author_email="michel@albert.lu",
     description="Tracker for PowWow 2017",
     license="BSD",
-    url="http://exhuma.github.com/powonline",
+    url="https://exhuma.github.com/powonline",
 )
