@@ -67,7 +67,6 @@ const store = new Vuex.Store({
   },
   mutations: {
     setToken (state, data) {
-      console.debug('Setting token to ' + data['token'])
       console.debug('Setting roles to ' + data['roles'])
       state.jwt = data['token']
       state.roles = data['roles']

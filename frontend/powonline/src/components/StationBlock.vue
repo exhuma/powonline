@@ -33,12 +33,3 @@ export default {
   }
 }
 </script>
-
-<!-- Add "scoped" attribute to limit CSS to this component only -->
-<style scoped>
-.station-block {
-  border: 1px solid black;
-  padding: 1em;
-}
-
-</style>
