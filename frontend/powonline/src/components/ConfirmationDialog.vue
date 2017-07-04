@@ -1,5 +1,6 @@
 <template>
   <v-dialog v-model="isDialogVisible">
+    <!-- REDDIT the tag below uses the "primary" color. How can I *set* the primary color? -->
     <v-btn primary light slot="activator">{{ buttonText }}</v-btn>
     <v-card>
       <v-card-row>

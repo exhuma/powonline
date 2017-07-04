@@ -6,6 +6,7 @@
           <span class="white--text">{{ state.team }}</span>
         </v-card-title>
       </v-card-row>
+      <!-- REDDIT This "text" row should hndle click events so that a user can click anywhere. I was unable to get this to work -->
       <v-card-text v-ripple>
         <state-icon class="clickable" @click.native="advanceState" :data-idx="idx" :state="state.state"></state-icon> <span class="clickable" @click="advanceState" :data-idx="idx">{{ state.state }}</span>
       </v-card-text>
@@ -44,6 +45,7 @@ export default {
   },
   created () {
     this.$store.dispatch('fetchDashboard', this.$route.params.stationName)
+    // REDDIT I'm using the "changeTitle" mutation for page titles. I'm not sure if this is... okay, or if a different layout & function would be better suited.
     this.$store.commit('changeTitle', 'Dashboard for ' + this.$route.params.stationName)
   },
   methods: {

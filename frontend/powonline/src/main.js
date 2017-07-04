@@ -7,6 +7,7 @@
  *       or standalone) has been set in webpack.base.conf with an alias.
  *
  */
+// REDDIT This file has large and become unwieldy. But I don't know how to split it into modules. How can I do that?
 import Vue from 'vue'
 import App from './App'
 import router from './router'
@@ -32,6 +33,7 @@ Vue.use(Vuetify)
 
 import 'vuetify/dist/vuetify.min.css'
 
+// REDDIT How can I make this site/environment specific. Someone suggested NODE_ENV but I don't understand how.
 const BASE_URL = 'https://powonline.albert.lu/api'
 
 /**
@@ -41,12 +43,13 @@ axios.interceptors.request.use(config => {
   const jwt = localStorage.getItem('jwt') || ''
   if (jwt !== '') {
     config.headers['Authorization'] = 'Bearer ' + jwt
-    console.debug('Intercepted and set auth token to ' + jwt)
+    console.debug('Intercepted and set auth token to ' + jwt)  // REDDIT How do you guys handle logging? Is there a good logging framework? Would it make sense to send the logs back to the backend? For example to forward it to an ELK stack?
   } else {
     console.debug('JWT was null!')
   }
   return config
 }, error => {
+  // REDDIT Is it possible to leave the second (error) callback out? Will it fall back to the default?
   // nothing to do
   return Promise.reject(error)
 })
@@ -346,8 +349,9 @@ const store = new Vuex.Store({
      *
      * :param routeName (str): The name of the route to remove.
      */
+      // REDDIT What would be a better way to remove an object from an array?
     deleteRoute (state, routeName) {
-      let idx = -1  // TODO REDDIT there must be a better way than the following loop
+      let idx = -1  // TODO there must be a better way than the following loop
       state.routes.forEach(item => {
         if (item.name === routeName) {
           idx = state.routes.indexOf(item)
@@ -898,6 +902,7 @@ const vue = new Vue({
   }
 })
 
+// REDDIT The following "scroll" code is written on the top-level. Seems a bit like polluting the global name-space to me. Is there a better way to do this?
 var lastKnownScrollPos = 0
 var ticking = false
 

@@ -19,6 +19,7 @@ export default {
   },
   computed: {
     title () {
+      // REDDIT the following line "guesses" that it's an XHR error from axios. I tried to use "typeof" first, but saw that it inherits from "object". Is this a limitation of axios or JS?
       if (this.error && this.error.config && this.error.config.method) {
         if (this.error.response.status === 401) {
           return this.error.response.data

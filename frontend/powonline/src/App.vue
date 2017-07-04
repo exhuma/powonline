@@ -1,9 +1,9 @@
 <template>
   <div id="app">
     <v-app>
-      <v-toolbar class="red darken-1">
+      <v-toolbar class="red darken-1"> <!-- REDDIT Is there no better way than "hardcoding" colours like this? As the styles are scoped to their respective components, how can I define "global" styles? -->
         <v-toolbar-title class="white--text">{{ pageTitle }}</v-toolbar-title>
-        <v-spacer></v-spacer>
+        <v-spacer></v-spacer>  <!-- REDDIT What does this do *exactly*? I can't find it in the docs. -->
         <v-btn @click.native="addElement" icon light><v-icon>add</v-icon></v-btn>
         <v-btn v-tooltip:bottom="{html: 'Logout'}" v-if="tokenIsAvailable" @click.native.stop="logoutUser" icon light><v-icon>exit_to_app</v-icon></v-btn>
         <v-btn v-tooltip:bottom="{html: 'Login'}" v-else @click.native.stop="showLoginDialog" icon light><v-icon>perm_identity</v-icon></v-btn>
@@ -12,10 +12,10 @@
         <v-container fluid>
 
           <v-dialog v-model="loginDialogVisible">
-
+            <!-- REDDIT When this dialog opens, hitting TAB to move the focus, does not jump to the buttons. How do I achieve that? -->
             <v-card>
               <v-card-row class="brown darken-4">
-                <v-card-title>
+                <v-card-title>  <!-- REDDIT Is it possible to write a CSS rule to target custom elements? For exampe a rule which targets each "v-card-title" element? -->
                   <span class="white--text">Login</span>
                 </v-card-title>
               </v-card-row>
@@ -31,7 +31,7 @@
                   v-model='password'
                   label='Password' />
               </v-card-text>
-              <v-divider></v-divider>
+              <v-divider></v-divider>  <!-- REDDIT This is documented as being a divider for lists. I've seen it used like this (outside of lists) in some examples. Is it safe to use it outside of lists? -->
               <v-card-row actions>
                 <v-btn class="green--text darken-1" flat="flat" @click.native="cancelLogin">Cancel</v-btn>
                 <v-btn class="green--text darken-1" flat="flat" @click.native="loginUser">Login</v-btn>
@@ -40,7 +40,8 @@
           </v-dialog>
 
           <router-view></router-view>
-          <div id="errors">
+
+          <div id="errors"> <!-- REDDIT I would prefer to use a popup for errors. How would I define a global popup for vuetify apps? I was thinking about storing the message in the vuex store and make a "dialog" component react to this. But it feels like abusing vuex. Is there another, cleaner way? -->
             <error-block :error="error" v-for="(error, idx) in errors" :key="'error-' + idx"></error-block>
           </div>
         </v-container>

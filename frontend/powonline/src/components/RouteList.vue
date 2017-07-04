@@ -1,6 +1,7 @@
 <template>
   <div id="RouteList">
     <transition name="slide">
+    <!-- REDDIT when closing this card, the content below it only shifts upwards after the transition is complete. Is there no way to make it move at the same time? -->
       <v-card v-show="isAddBlockVisible">
         <v-card-row class="brown darken-4">
           <v-card-title>

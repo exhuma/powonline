@@ -4,6 +4,7 @@
       <v-card-title><span class="white--text">Route: "{{ name }}"</span></v-card-title>
     </v-card-row>
     <v-card-text>
+      <!-- REDDIT this whole layout does not fit well on a mobile screen. Was unable to fix yet -->
       <v-layout row wrap>
         <!-- Assigned Items -->
         <v-flex xs6>
@@ -101,7 +102,7 @@ export default {
   },
   methods: {
     unassignTeam: function (event) {
-      const idx = event.target.getAttribute('data-idx')
+      const idx = event.target.getAttribute('data-idx')  // REDDIT is there not a better way than using a custom attribute here?
       const team = this.assignedTeams[idx]
       this.$store.dispatch('unassignTeamFromRouteRemote', {teamName: team, routeName: this.name})
     },
