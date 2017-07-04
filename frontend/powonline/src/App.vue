@@ -79,6 +79,7 @@ export default {
         if (response.status < 300) {
           this.$store.commit('loginUser', response.data)
         } else {
+          // TODO show alert to user
           this.$store.commit('logoutUser')
         }
       })
