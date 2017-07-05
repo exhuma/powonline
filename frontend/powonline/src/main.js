@@ -450,6 +450,10 @@ const store = new Vuex.Store({
   actions: {
     /**
      * Advance the state of a team on a station
+     *
+     * :param payload (object): An object with the following keys:
+     *     * stationName: The name of the station
+     *     * teamName: The name of the team
      */
     advanceState (context, payload) {
       axios.post(BASE_URL + '/job', {
@@ -553,8 +557,10 @@ const store = new Vuex.Store({
       context.dispatch('refreshUsers')
     },
 
-    refreshUsers (context, data) {
-      // --- Fetch Users from server
+    /**
+     * Refreshes the local users from the backend
+     */
+    refreshUsers (context) {
       if (context.state.roles.indexOf('admin') === -1) {
         return
       }
@@ -567,8 +573,10 @@ const store = new Vuex.Store({
       })
     },
 
-    refreshTeams (context, data) {
-      // --- Fetch Teams from server
+    /**
+     * Refreshes the local teams from the backend
+     */
+    refreshTeams (context) {
       axios.get(BASE_URL + '/team')
       .then(response => {
         context.commit('replaceTeams', response.data.items)
@@ -578,8 +586,10 @@ const store = new Vuex.Store({
       })
     },
 
-    refreshRoutes (context, data) {
-      // --- Fetch Routes from server
+    /**
+     * Refreshes the local routes from the backend
+     */
+    refreshRoutes (context) {
       axios.get(BASE_URL + '/route')
       .then(response => {
         context.commit('replaceRoutes', response.data.items)
@@ -590,9 +600,9 @@ const store = new Vuex.Store({
     },
 
     /**
-     * Refresh Stations from the server
+     * Refreshes the local stations from the backend
      */
-    refreshStations (context, data) {
+    refreshStations (context) {
       // --- Fetch Stations from server
       axios.get(BASE_URL + '/station')
       .then(response => {
@@ -604,9 +614,9 @@ const store = new Vuex.Store({
     },
 
     /**
-     * Refresh assignments from the backend
+     * Refreshes the local assignments from the backend
      */
-    refreshAssignments (context, data) {
+    refreshAssignments (context) {
       // --- Fetch team/route assignments from server
       axios.get(BASE_URL + '/assignments')
       .then(response => {
@@ -620,8 +630,9 @@ const store = new Vuex.Store({
     /**
      * Assign a team to a route
      *
-     * :param team: The team object to add to the route
-     * :param routeName: The name of the route the team should be assigned to
+     * :param data (object): An object with the following keys:
+     *     *  team: The team object to add to the route
+     *     *  routeName: The name of the route the team should be assigned to
      */
     assignTeamToRouteRemote (context, data) {
       // first, let's find the team object corresponding to this name (yes, I
@@ -645,8 +656,9 @@ const store = new Vuex.Store({
     /**
      * Unassign a team from a route
      *
-     * :param teamName: The name of the team
-     * :param routeName: The name of the route the team should be unassigned from
+     * :param data (object): An object with the following keys:
+     *     * teamName: The name of the team
+     *     * routeName: The name of the route the team should be unassigned from
      */
     unassignTeamFromRouteRemote (context, data) {
       axios.delete(BASE_URL + '/route/' + data.routeName + '/teams/' + data.teamName)
@@ -661,6 +673,10 @@ const store = new Vuex.Store({
 
     /**
      * Assign a station to a route
+     *
+     * :param data (object): An object with the following keys:
+     *     *  station: The station object to add to the route
+     *     *  routeName: The name of the route the station should be assigned to
      */
     assignStationToRouteRemote (context, data) {
       // first, let's find the station object corresponding to this name (yes, I
@@ -674,7 +690,7 @@ const store = new Vuex.Store({
       axios.post(BASE_URL + '/route/' + data.routeName + '/stations', station)
       .then(response => {
         context.commit('assignStationToRoute', {routeName: data.routeName, station: station})
-        context.dispatch('refreshRemote') // TODO Why is this not happening automatically?
+        context.dispatch('refreshRemote') // TODO Something causes a non-rective change which is why this is needed. Investigate!
       })
       .catch(e => {
         context.commit('logError', e)
@@ -683,12 +699,16 @@ const store = new Vuex.Store({
 
     /**
      * Unassign a station from a route
+     *
+     * :param data (object): An object with the following keys:
+     *     * stationName: The name of the station
+     *     * routeName: The name of the route the station should be unassigned from
      */
     unassignStationFromRouteRemote (context, data) {
       axios.delete(BASE_URL + '/route/' + data.routeName + '/stations/' + data.stationName)
       .then(response => {
         context.commit('unassignStationFromRoute', data)
-        context.dispatch('refreshRemote') // TODO Why is this not happening automatically?
+        context.dispatch('refreshRemote') // TODO Something causes a non-rective change which is why this is needed. Investigate!
       })
       .catch(e => {
         context.commit('logError', e)
@@ -697,6 +717,8 @@ const store = new Vuex.Store({
 
     /**
      * Delete a route
+     *
+     * :param routeName: The name of the route to delete
      */
     deleteRouteRemote (context, routeName) {
       axios.delete(BASE_URL + '/route/' + routeName)
@@ -713,6 +735,8 @@ const store = new Vuex.Store({
 
     /**
      * Delete a station
+     *
+     * :param stationName: The name of the station to delete
      */
     deleteStationRemote (context, stationName) {
       axios.delete(BASE_URL + '/station/' + stationName)
@@ -729,6 +753,8 @@ const store = new Vuex.Store({
 
     /**
      * Delete a user
+     *
+     * :param userName: The name of the user to delete
      */
     deleteUserRemote (context, userName) {
       axios.delete(BASE_URL + '/user/' + userName)
@@ -745,6 +771,8 @@ const store = new Vuex.Store({
 
     /**
      * Delete a team
+     *
+     * :param teamName: The name of the team to delete
      */
     deleteTeamRemote (context, teamName) {
       axios.delete(BASE_URL + '/team/' + teamName)
