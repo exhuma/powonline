@@ -788,6 +788,12 @@ const store = new Vuex.Store({
     }
   },
   getters: {
+
+    /**
+     * Get a list of team names which are not assigned to any route
+     *
+     * :returns: a list of strings
+     */
     unassignedTeams (state, getters) {
       // fetch *all* assignments of teams
       const assignedTeams = []
@@ -805,6 +811,15 @@ const store = new Vuex.Store({
       })
       return output
     },
+
+    /**
+     * Given the name of a route, this returns all team names assigned to that
+     * route.
+     *
+     * :param routeName: The name of the route of which we want to find the
+     *     assigned users.
+     * :returns: A list of strings
+     */
     assignedTeams: (state, getters) => (routeName) => {
       const assignedTeams = []
       const map = state.route_team_map
@@ -815,6 +830,15 @@ const store = new Vuex.Store({
       }
       return assignedTeams
     },
+
+    /**
+     * Given the name of a route, this returns a list of station names which
+     * are not assigned to that route.
+     *
+     * :param routeName: The name of the route of which we want to list the
+     *     unassigned stations.
+     * :returns: a list of strings
+     */
     unassignedStations: (state, getters) => (routeName) => {
       const unassignedStations = []
       const tmp = state.route_station_map[routeName] || []
@@ -828,18 +852,35 @@ const store = new Vuex.Store({
       })
       return unassignedStations
     },
+
+    /**
+     * Given the name of a route, this returns all stations which are assigned
+     * to that route.
+     *
+     * :param routeName: The name of the route of which we want to list the
+     *     assigned stations.
+     * :returns: a list of strings
+     */
     assignedStations: (state, getters) => (routeName) => {
       const tmp = state.route_station_map[routeName] || []
       const assignedStations = []
       tmp.forEach(item => { assignedStations.push(item.name) })
       return assignedStations
     },
+
+    /**
+     * **Unused**
+     */
     stationTeams: (state, getters) => (routeName) => {
       return [
         {name: routeName},
         {name: routeName}
       ]
     },
+
+    /**
+     * **Unused**
+     */
     teamState: (state, getters) => (teamName, stationName) => {
       const output = []
       state.dashboard.forEach(item => {
