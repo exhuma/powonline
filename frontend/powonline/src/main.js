@@ -866,27 +866,6 @@ const store = new Vuex.Store({
       const assignedStations = []
       tmp.forEach(item => { assignedStations.push(item.name) })
       return assignedStations
-    },
-
-    /**
-     * **Unused**
-     */
-    stationTeams: (state, getters) => (routeName) => {
-      return [
-        {name: routeName},
-        {name: routeName}
-      ]
-    },
-
-    /**
-     * **Unused**
-     */
-    teamState: (state, getters) => (teamName, stationName) => {
-      const output = []
-      state.dashboard.forEach(item => {
-        console.log(teamName, stationName, item)
-      })
-      return output
     }
   }
 
