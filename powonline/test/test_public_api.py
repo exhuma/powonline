@@ -9,7 +9,6 @@ from flask_testing import TestCase
 from powonline.model import DB
 from powonline.web import make_app
 import powonline.core as core
-import powonline.model as model
 
 from util import (
     make_dummy_route_dict,
