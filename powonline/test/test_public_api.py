@@ -5,6 +5,7 @@ import json
 import unittest
 
 from flask_testing import TestCase
+import jwt
 
 from powonline.model import DB
 from powonline.web import make_app
@@ -22,7 +23,38 @@ def here(localname):
     return join(dirname(__file__), localname)
 
 
-class TestPublicAPIAsManager(TestCase):
+class AuthClientWrapper:
+    '''
+    A class to wrap a flask test client and intercept calls injecting an auth
+    header into the request.
+    '''
+
+    def __init__(self, client, header):
+        self.client = client
+        self.header = header
+
+    def put(self, *args, **kwargs):
+        headers = kwargs.setdefault('headers', {})
+        headers['Authorization'] = self.header
+        return self.client.put(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        headers = kwargs.setdefault('headers', {})
+        headers['Authorization'] = self.header
+        return self.client.delete(*args, **kwargs)
+
+    def post(self, *args, **kwargs):
+        headers = kwargs.setdefault('headers', {})
+        headers['Authorization'] = self.header
+        return self.client.post(*args, **kwargs)
+
+    def get(self, *args, **kwargs):
+        headers = kwargs.setdefault('headers', {})
+        headers['Authorization'] = self.header
+        return self.client.get(*args, **kwargs)
+
+
+class TestPublicAPIAsAdmin(TestCase):
 
     SQLALCHEMY_DATABASE_URI = 'postgresql://exhuma@/powonline_testing'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -34,14 +66,23 @@ class TestPublicAPIAsManager(TestCase):
             '''\
             [db]
             dsn = %s
+
+            [security]
+            jwt_secret = testing
             ''' % (
-                TestPublicAPIAsManager.SQLALCHEMY_DATABASE_URI,
+                TestPublicAPIAsAdmin.SQLALCHEMY_DATABASE_URI,
             )))
         return make_app(config)
 
     def setUp(self):
-        self.app = self.client  # <-- avoiding unrelated diffs for now.
-                                #     Can be removed in a later commit
+        payload = {
+            'username': 'user-red',
+            'roles': ['admin']
+        }
+        auth_header = 'Bearer %s' % jwt.encode(
+            payload, 'testing').decode('ascii')
+        self.app = AuthClientWrapper(self.client, auth_header)
+
         DB.create_all()
 
         with open(here('seed.sql')) as seed:
