@@ -1,3 +1,6 @@
+from configparser import ConfigParser
+from textwrap import dedent
+
 from flask_testing import TestCase
 
 from powonline.web import make_app
@@ -17,7 +20,19 @@ class CommonTest(TestCase):
     TESTING = True
 
     def create_app(self):
-        return make_app(CommonTest.SQLALCHEMY_DATABASE_URI)
+        config = ConfigParser()
+        config.read_string(dedent(
+            '''\
+            [db]
+            dsn = %s
+
+            [security]
+            jwt_secret = %s
+            ''' % (
+                CommonTest.SQLALCHEMY_DATABASE_URI,
+                'testing'
+            )))
+        return make_app(config)
 
     def setUp(self):
         model.DB.create_all()

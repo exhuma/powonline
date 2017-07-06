@@ -1,3 +1,5 @@
+from configparser import ConfigParser
+from textwrap import dedent
 from unittest.mock import patch
 import json
 import unittest
@@ -28,7 +30,15 @@ class TestPublicAPIAsManager(TestCase):
     TESTING = True
 
     def create_app(self):
-        return make_app(TestPublicAPIAsManager.SQLALCHEMY_DATABASE_URI)
+        config = ConfigParser()
+        config.read_string(dedent(
+            '''\
+            [db]
+            dsn = %s
+            ''' % (
+                TestPublicAPIAsManager.SQLALCHEMY_DATABASE_URI,
+            )))
+        return make_app(config)
 
     def setUp(self):
         self.app = self.client  # <-- avoiding unrelated diffs for now.
