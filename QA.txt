@@ -1,0 +1,58 @@
+Hi /r/vuejs
+
+*tl;dr:* I would appreciate an audit of [my code][1] for everything concerning
+vuejs (and maybe JS).
+
+----
+
+I've recently written my first vue.js application and it currently implements
+the functional requirements and has become usable. There's still a lot of work
+o do, but I would be *really* interested in getting some feedback. Especially
+since I haven't written any substantial JS app since 1998, and a lot has
+changes since then!
+
+I've sprinklded the term `REDDIT` (in all caps) throughout the code-base with
+some specific questions (20 in total). I'm still unsure where/how certain
+things work, and am not quite sure if all questions are vuejs related, but I
+reckon that this is the right place to ask.
+
+The things I am *most* interested in are vuejs specifics. As I'm using vuejs, I
+want to do things the "vuejs way".
+
+Other stuff I use:
+
+* vuetify
+* axios
+* webpack (from the vuejs template)
+
+So apart from the questions inside the code, here are some additional notes &
+qusetions:
+
+* Some architectural smells:
+    * **The way "assignments" are structured.** This is a remnant of the first
+      prototype and will be improved on eventually. But for now it works and
+      does what it should. I'm not going to touch it for now!
+    * **Potential overusage of the vuex state (unsure about this one).** I see
+      the `vuex` state as state for the frontend UI. Right now I keep stuff in
+      the state which is not visible to the user. I wonder if it would not be
+      better to keep one state per route/"view" to avoid reproducing too much
+      application logic in the client state.
+* **Use the "baseUrl" configuration of axios instead of a global variable.**
+  I've found out about the `baseUrl` configuration in axios only after having
+  most of the stuff working. I'm aware of this and will change it whenever
+  possible. Not quite high on my list of priorities.
+* **Split up main.js** How do I go about this? I'm wildly guessing that I could
+  write modules which I can import and webpack does it's thing. But I'm not
+  quite sue how/where to start.
+* **Hardcoded colors all over the place.** In the vuetify exampes they assign
+  colors using `class` attributes. I could of course write my own classes and
+  add the colors there. But given that the palettes are well-defined in
+  Material Design, I was wondering if there's not something predefined
+  somewhere. I also found the `primary` and `secondary` attributes in vuetify,
+  but can't seem to find the area where you define your primary and secondary
+  colours.
+* There are several "<Foo>List" commponents all behaving the same way. I smell
+  a potential to merge them all into one custom component.
+
+
+[1]: https://github.com/exhuma/powonline
