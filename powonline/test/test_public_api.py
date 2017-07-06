@@ -343,7 +343,7 @@ class TestPublicAPIAsManager(TestCase):
         simplejob = {
             'action': 'advance',
             'args': {
-                'station_name': 'somestation',
+                'station_name': 'station-red',
                 'team_name': 'someteam',
             }
         }
