@@ -11,7 +11,7 @@
         v-for="station in stations"></mini-status>
     </v-card-text>
     <v-divider></v-divider>
-    <v-card-row actions>
+    <v-card-row actions v-if="hasRole('admin')">
       <confirmation-dialog buttonText="Delete" :actionArgument="name" actionName="deleteTeamRemote">
         <v-card-title slot="title">Do you want to delete the team "{{ name }}"?</v-card-title>
         <v-card-text slot="text">
@@ -33,6 +33,11 @@ export default {
       default: 'Unknown Team'
     }
   },
+  methods: {
+    hasRole (roleName) {
+      return this.$store.state.roles.indexOf(roleName) > -1
+    }
+  },
   computed: {
     stations () {
       return this.$store.state.stations
@@ -40,12 +45,3 @@ export default {
   }
 }
 </script>
-
-<!-- Add "scoped" attribute to limit CSS to this component only -->
-<style scoped>
-.team-block {
-  border: 1px solid black;
-  padding: 1em;
-}
-
-</style>

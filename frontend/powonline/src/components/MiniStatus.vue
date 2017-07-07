@@ -35,11 +35,6 @@ export default {
     .catch(e => {
       this.$store.commit('logError', e)
     })
-  },
-  computed: {
-    teamState () {
-      return this.$store.getters.teamState(this.team, this.station)
-    }
   }
 }
 </script>

@@ -1,3 +1,14 @@
+TRUNCATE 
+    "user",
+    role,
+    route,
+    route_station,
+    station,
+    team,
+    team_station_state,
+    user_role,
+    user_station
+;
 INSERT INTO "user" (name) VALUES
     ('user-red'),
     ('john'),

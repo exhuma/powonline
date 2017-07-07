@@ -2,6 +2,8 @@
 This module contains tests for features implemented mainly for helping the vuejs
 based frontens.
 """
+from configparser import ConfigParser
+from textwrap import dedent
 import json
 
 from flask_testing import TestCase
@@ -37,7 +39,19 @@ class TestFrontendHelpers(TestCase):
     TESTING = True
 
     def create_app(self):
-        return make_app(TestFrontendHelpers.SQLALCHEMY_DATABASE_URI)
+        config = ConfigParser()
+        config.read_string(dedent(
+            '''\
+            [db]
+            dsn = %s
+
+            [security]
+            jwt_secret = %s
+            ''' % (
+                TestFrontendHelpers.SQLALCHEMY_DATABASE_URI,
+                'testing'
+            )))
+        return make_app(config)
 
     def setUp(self):
         self.app = self.client  # <-- avoiding unrelated diffs for now.

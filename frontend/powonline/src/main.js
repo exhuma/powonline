@@ -1,5 +1,12 @@
-// The Vue build version to load with the `import` command
-// (runtime-only or standalone) has been set in webpack.base.conf with an alias.
+/**
+ *
+ * Main application code. Creates the main vuejs instance and attaches related
+ * objects (like vuex and router)
+ *
+ * NOTE: The Vue build version to load with the `import` command (runtime-only
+ *       or standalone) has been set in webpack.base.conf with an alias.
+ *
+ */
 import Vue from 'vue'
 import App from './App'
 import router from './router'
@@ -27,6 +34,9 @@ import 'vuetify/dist/vuetify.min.css'
 
 const BASE_URL = 'https://powonline.albert.lu/api'
 
+/**
+ * Inject the JWT token into each outgoing request if it's available
+ */
 axios.interceptors.request.use(config => {
   const jwt = localStorage.getItem('jwt') || ''
   if (jwt !== '') {
@@ -66,12 +76,26 @@ const store = new Vuex.Store({
     }
   },
   mutations: {
+    /**
+     * Sets a new JWT token
+     *
+     * :param data: An object with two keys:
+     *    * token - The JWT token (without "Bearer" prefix)
+     *    * roles - A list of role-names which the user has assigned to himself
+     */
     setToken (state, data) {
-      console.debug('Setting token to ' + data['token'])
       console.debug('Setting roles to ' + data['roles'])
       state.jwt = data['token']
       state.roles = data['roles']
     },
+
+    /**
+     * Flag the user as "logged in".
+     *
+     * :param data: An object with two keys:
+     *    * token - The JWT token (without "Bearer" prefix)
+     *    * roles - A list of role-names which the user has assigned to himself
+     */
     loginUser (state, data) {
       localStorage.setItem('roles', data['roles'])
       localStorage.setItem('jwt', data['token'])
@@ -79,48 +103,155 @@ const store = new Vuex.Store({
       state.roles = data['roles']
       console.debug('Set auth token in LS to ' + data['token'])
     },
-    logoutUser (state, data) {
+
+    /**
+     * Flag the user as "logged out"
+     */
+    logoutUser (state) {
       localStorage.removeItem('jwt')
       localStorage.removeItem('roles')
       state.jwt = ''
       state.roles = []
       console.debug('cleared LS')
     },
+
+    /**
+     * Change the page title
+     *
+     * :param title (str): The new page title
+     */
     changeTitle (state, title) {
       state.pageTitle = title
     },
+
+    /**
+     * Add a new user to the local state
+     *
+     * This is triggered by the completion of a corresponding remote call.
+     *
+     * :param user (object): The new user. Thas the same fields as the object
+     *     returned from the backend.
+     */
     addUser (state, user) {
       state.users.push(user)
     },
+
+    /**
+     * Add a new team to the local state
+     *
+     * This is triggered by the completion of a corresponding remote call.
+     *
+     * :param team (object): The new team. Thas the same fields as the object
+     *     returned from the backend.
+     */
     addTeam (state, team) {
       state.teams.push(team)
     },
+
+    /**
+     * Add a new route to the local state
+     *
+     * This is triggered by the completion of a corresponding remote call.
+     *
+     * :param route (object): The new route. Thas the same fields as the object
+     *     returned from the backend.
+     */
     addRoute (state, route) {
       state.routes.push(route)
     },
+
+    /**
+     * Add a new station to the local state
+     *
+     * This is triggered by the completion of a corresponding remote call.
+     *
+     * :param station (object): The new station. Thas the same fields as the
+     *     object returned from the backend.
+     */
     addStation (state, station) {
       state.stations.push(station)
     },
+
+    /**
+     * Replace the teams with a new list of teams
+     *
+     * This is triggered by the completion of a corresponding remote call.
+     *
+     * :param leams (array of object): A list containing the replacement teams.
+     *     Each list element has the same fields as the team objects returned
+     *     from the backend.
+     */
     replaceTeams (state, teams) {
       state.teams = teams
     },
+
+    /**
+     * Replace the users with a new list of users
+     *
+     * This is triggered by the completion of a corresponding remote call.
+     *
+     * :param leams (array of object): A list containing the replacement users.
+     *     Each list element has the same fields as the user objects returned
+     *     from the backend.
+     */
     replaceUsers (state, users) {
       state.users = users
     },
+
+    /**
+     * Replace the routes with a new list of routes
+     *
+     * This is triggered by the completion of a corresponding remote call.
+     *
+     * :param leams (array of object): A list containing the replacement routes.
+     *     Each list element has the same fields as the route objects returned
+     *     from the backend.
+     */
     replaceRoutes (state, routes) {
       state.routes = routes
     },
+
+    /**
+     * Replace the stations with a new list of stations
+     *
+     * This is triggered by the completion of a corresponding remote call.
+     *
+     * :param leams (array of object): A list containing the replacement
+     *     stations.  Each list element has the same fields as the station
+     *     objects returned from the backend.
+     */
     replaceStations (state, stations) {
       state.stations = stations
     },
+
+    /**
+     * Display an error to the user
+     *
+     * :param error (object): The error object. No keys are obligatory. If the
+     *     error comes from axios it will have specific fields which change the
+     *     layout a bit.
+     */
     logError (state, error) {
       state.errors.push(error)
     },
+
+    /**
+     * Replace the dashboard data with new data
+     *
+     * This is triggered by the completion of a corresponding remote call.
+     *
+     * :param data: The new dashboard data
+     */
     updateDashboard (state, data) {
       state.dashboard = data
     },
+
+    /**
+     * Replace team-to-route mapping
+     *
+     * :param assignments: An object as returned by the backend
+     */
     replaceAssignments (state, assignments) {
-      // Replace team-to-route mapping
       state.route_team_map = {}
       for (const routeName in assignments.teams) {
         if (assignments.teams.hasOwnProperty(routeName)) {
@@ -144,6 +275,14 @@ const store = new Vuex.Store({
         }
       }
     },
+
+    /**
+     * Assigns a team to a route
+     *
+     * :param payload (object): An object with the following keys:
+     *    * routeName: The name of the route
+     *    * team: Object with the key "name" representing the team name.
+     */
     assignTeamToRoute (state, payload) {
       const current = state.route_team_map[payload.routeName]
       if (current === undefined) {
@@ -152,6 +291,14 @@ const store = new Vuex.Store({
         state.route_team_map[payload.routeName].push(payload.team.name)
       }
     },
+
+    /**
+     * Unassigns a team from a route
+     *
+     * :param payload (object): An object with the following keys:
+     *    * routeName: The name of the route
+     *    * teamName: The name of the team to remove
+     */
     unassignTeamFromRoute (state, payload) {
       const current = state.route_team_map[payload.routeName]
       if (current === undefined) {
@@ -160,6 +307,15 @@ const store = new Vuex.Store({
         // XXX TODO implement
       }
     },
+
+    /**
+     * Assigns a station to a route
+     *
+     * :param payload (object): An object with the following keys:
+     *    * routeName: The name of the route
+     *    * station: An object with the key "name" representing the station
+     *      name
+     */
     assignStationToRoute (state, payload) {
       const current = state.route_station_map[payload.routeName]
       if (current === undefined) {
@@ -168,6 +324,14 @@ const store = new Vuex.Store({
         state.route_station_map[payload.routeName].push(payload.station.name)
       }
     },
+
+    /**
+     * Unassigns a station from a route
+     *
+     * :param payload (object): An object with the following keys:
+     *    * routeName: The name of the route
+     *    * stationName: The name of the station to remove
+     */
     unassignStationFromRoute (state, payload) {
       const current = state.route_station_map[payload.routeName]
       if (current === undefined) {
@@ -176,8 +340,14 @@ const store = new Vuex.Store({
         // XXX TODO implement
       }
     },
+
+    /**
+     * Removes a route
+     *
+     * :param routeName (str): The name of the route to remove.
+     */
     deleteRoute (state, routeName) {
-      let idx = -1  // TODO there must be a better way than the following loop
+      let idx = -1  // TODO REDDIT there must be a better way than the following loop
       state.routes.forEach(item => {
         if (item.name === routeName) {
           idx = state.routes.indexOf(item)
@@ -188,6 +358,12 @@ const store = new Vuex.Store({
         state.routes.splice(idx, 1)
       }
     },
+
+    /**
+     * Removes a station
+     *
+     * :param stationName (str): The name of the station to remove.
+     */
     deleteStation (state, stationName) {
       let idx = -1  // TODO there must be a better way than the following loop
       state.stations.forEach(item => {
@@ -200,6 +376,12 @@ const store = new Vuex.Store({
         state.stations.splice(idx, 1)
       }
     },
+
+    /**
+     * Removes a team
+     *
+     * :param teamName (str): The name of the team to remove.
+     */
     deleteTeam (state, teamName) {
       let idx = -1  // TODO there must be a better way than the following loop
       state.teams.forEach(item => {
@@ -212,6 +394,12 @@ const store = new Vuex.Store({
         state.teams.splice(idx, 1)
       }
     },
+
+    /**
+     * Removes a user
+     *
+     * :param userName (str): The name of the user to remove.
+     */
     deleteUser (state, userName) {
       let idx = -1  // TODO there must be a better way than the following loop
       state.users.forEach(item => {
@@ -224,22 +412,49 @@ const store = new Vuex.Store({
         state.users.splice(idx, 1)
       }
     },
+
+    /**
+     * Displays a block to add a new entity. Which block to show depends on the
+     * route.
+     *
+     * :param path (str): The "router" path (current URL) of the current page
+     */
     showAddBlock (state, path) {
       state.isAddBlockVisible[path] = true
     },
+
+    /**
+     * Hides the block which allows adding a new entity. Which block to hide
+     * depends on the route.
+     *
+     * :param path (str): The "router" path (current URL) of the current page
+     */
     closeAddBlock (state, path) {
       state.isAddBlockVisible[path] = false
     },
+
+    /**
+     * Show the bottom navigation panel
+     */
     showBottomNav (state) {
       state.isBottomNavVisible = true
     },
+
+    /**
+     * Hide the bottom navigation panel
+     */
     hideBottomNav (state) {
-      state.isBottomNavVisible = false
+      // this is disabled as it currently causes problems on iPhone
+      // state.isBottomNavVisible = false
     }
   },
   actions: {
     /**
      * Advance the state of a team on a station
+     *
+     * :param payload (object): An object with the following keys:
+     *     * stationName: The name of the station
+     *     * teamName: The name of the team
      */
     advanceState (context, payload) {
       axios.post(BASE_URL + '/job', {
@@ -343,8 +558,10 @@ const store = new Vuex.Store({
       context.dispatch('refreshUsers')
     },
 
-    refreshUsers (context, data) {
-      // --- Fetch Users from server
+    /**
+     * Refreshes the local users from the backend
+     */
+    refreshUsers (context) {
       if (context.state.roles.indexOf('admin') === -1) {
         return
       }
@@ -357,8 +574,10 @@ const store = new Vuex.Store({
       })
     },
 
-    refreshTeams (context, data) {
-      // --- Fetch Teams from server
+    /**
+     * Refreshes the local teams from the backend
+     */
+    refreshTeams (context) {
       axios.get(BASE_URL + '/team')
       .then(response => {
         context.commit('replaceTeams', response.data.items)
@@ -368,8 +587,10 @@ const store = new Vuex.Store({
       })
     },
 
-    refreshRoutes (context, data) {
-      // --- Fetch Routes from server
+    /**
+     * Refreshes the local routes from the backend
+     */
+    refreshRoutes (context) {
       axios.get(BASE_URL + '/route')
       .then(response => {
         context.commit('replaceRoutes', response.data.items)
@@ -380,9 +601,9 @@ const store = new Vuex.Store({
     },
 
     /**
-     * Refresh Stations from the server
+     * Refreshes the local stations from the backend
      */
-    refreshStations (context, data) {
+    refreshStations (context) {
       // --- Fetch Stations from server
       axios.get(BASE_URL + '/station')
       .then(response => {
@@ -394,9 +615,9 @@ const store = new Vuex.Store({
     },
 
     /**
-     * Refresh assignments from the backend
+     * Refreshes the local assignments from the backend
      */
-    refreshAssignments (context, data) {
+    refreshAssignments (context) {
       // --- Fetch team/route assignments from server
       axios.get(BASE_URL + '/assignments')
       .then(response => {
@@ -410,8 +631,9 @@ const store = new Vuex.Store({
     /**
      * Assign a team to a route
      *
-     * :param team: The team object to add to the route
-     * :param routeName: The name of the route the team should be assigned to
+     * :param data (object): An object with the following keys:
+     *     *  team: The team object to add to the route
+     *     *  routeName: The name of the route the team should be assigned to
      */
     assignTeamToRouteRemote (context, data) {
       // first, let's find the team object corresponding to this name (yes, I
@@ -435,8 +657,9 @@ const store = new Vuex.Store({
     /**
      * Unassign a team from a route
      *
-     * :param teamName: The name of the team
-     * :param routeName: The name of the route the team should be unassigned from
+     * :param data (object): An object with the following keys:
+     *     * teamName: The name of the team
+     *     * routeName: The name of the route the team should be unassigned from
      */
     unassignTeamFromRouteRemote (context, data) {
       axios.delete(BASE_URL + '/route/' + data.routeName + '/teams/' + data.teamName)
@@ -451,6 +674,10 @@ const store = new Vuex.Store({
 
     /**
      * Assign a station to a route
+     *
+     * :param data (object): An object with the following keys:
+     *     *  station: The station object to add to the route
+     *     *  routeName: The name of the route the station should be assigned to
      */
     assignStationToRouteRemote (context, data) {
       // first, let's find the station object corresponding to this name (yes, I
@@ -464,7 +691,7 @@ const store = new Vuex.Store({
       axios.post(BASE_URL + '/route/' + data.routeName + '/stations', station)
       .then(response => {
         context.commit('assignStationToRoute', {routeName: data.routeName, station: station})
-        context.dispatch('refreshRemote') // TODO Why is this not happening automatically?
+        context.dispatch('refreshRemote') // TODO Something causes a non-rective change which is why this is needed. Investigate!
       })
       .catch(e => {
         context.commit('logError', e)
@@ -473,12 +700,16 @@ const store = new Vuex.Store({
 
     /**
      * Unassign a station from a route
+     *
+     * :param data (object): An object with the following keys:
+     *     * stationName: The name of the station
+     *     * routeName: The name of the route the station should be unassigned from
      */
     unassignStationFromRouteRemote (context, data) {
       axios.delete(BASE_URL + '/route/' + data.routeName + '/stations/' + data.stationName)
       .then(response => {
         context.commit('unassignStationFromRoute', data)
-        context.dispatch('refreshRemote') // TODO Why is this not happening automatically?
+        context.dispatch('refreshRemote') // TODO Something causes a non-rective change which is why this is needed. Investigate!
       })
       .catch(e => {
         context.commit('logError', e)
@@ -487,6 +718,8 @@ const store = new Vuex.Store({
 
     /**
      * Delete a route
+     *
+     * :param routeName: The name of the route to delete
      */
     deleteRouteRemote (context, routeName) {
       axios.delete(BASE_URL + '/route/' + routeName)
@@ -503,6 +736,8 @@ const store = new Vuex.Store({
 
     /**
      * Delete a station
+     *
+     * :param stationName: The name of the station to delete
      */
     deleteStationRemote (context, stationName) {
       axios.delete(BASE_URL + '/station/' + stationName)
@@ -519,6 +754,8 @@ const store = new Vuex.Store({
 
     /**
      * Delete a user
+     *
+     * :param userName: The name of the user to delete
      */
     deleteUserRemote (context, userName) {
       axios.delete(BASE_URL + '/user/' + userName)
@@ -535,6 +772,8 @@ const store = new Vuex.Store({
 
     /**
      * Delete a team
+     *
+     * :param teamName: The name of the team to delete
      */
     deleteTeamRemote (context, teamName) {
       axios.delete(BASE_URL + '/team/' + teamName)
@@ -550,6 +789,12 @@ const store = new Vuex.Store({
     }
   },
   getters: {
+
+    /**
+     * Get a list of team names which are not assigned to any route
+     *
+     * :returns: a list of strings
+     */
     unassignedTeams (state, getters) {
       // fetch *all* assignments of teams
       const assignedTeams = []
@@ -567,6 +812,15 @@ const store = new Vuex.Store({
       })
       return output
     },
+
+    /**
+     * Given the name of a route, this returns all team names assigned to that
+     * route.
+     *
+     * :param routeName: The name of the route of which we want to find the
+     *     assigned users.
+     * :returns: A list of strings
+     */
     assignedTeams: (state, getters) => (routeName) => {
       const assignedTeams = []
       const map = state.route_team_map
@@ -577,6 +831,15 @@ const store = new Vuex.Store({
       }
       return assignedTeams
     },
+
+    /**
+     * Given the name of a route, this returns a list of station names which
+     * are not assigned to that route.
+     *
+     * :param routeName: The name of the route of which we want to list the
+     *     unassigned stations.
+     * :returns: a list of strings
+     */
     unassignedStations: (state, getters) => (routeName) => {
       const unassignedStations = []
       const tmp = state.route_station_map[routeName] || []
@@ -590,24 +853,20 @@ const store = new Vuex.Store({
       })
       return unassignedStations
     },
+
+    /**
+     * Given the name of a route, this returns all stations which are assigned
+     * to that route.
+     *
+     * :param routeName: The name of the route of which we want to list the
+     *     assigned stations.
+     * :returns: a list of strings
+     */
     assignedStations: (state, getters) => (routeName) => {
       const tmp = state.route_station_map[routeName] || []
       const assignedStations = []
       tmp.forEach(item => { assignedStations.push(item.name) })
       return assignedStations
-    },
-    stationTeams: (state, getters) => (routeName) => {
-      return [
-        {name: routeName},
-        {name: routeName}
-      ]
-    },
-    teamState: (state, getters) => (teamName, stationName) => {
-      const output = []
-      state.dashboard.forEach(item => {
-        console.log(teamName, stationName, item)
-      })
-      return output
     }
   }
 

@@ -9,7 +9,7 @@
       </v-card-row>
     </v-card-text>
     <v-divider></v-divider>
-    <v-card-row actions>
+    <v-card-row actions v-if="hasRole('admin')">
       <confirmation-dialog buttonText="Delete" :actionArgument="name" actionName="deleteStationRemote">
         <v-card-title slot="title">Do you want to delete the station "{{ name }}"?</v-card-title>
         <v-card-text slot="text">
@@ -30,15 +30,11 @@ export default {
       type: String,
       default: 'Unknown Station'
     }
+  },
+  methods: {
+    hasRole (roleName) {
+      return this.$store.state.roles.indexOf(roleName) > -1
+    }
   }
 }
 </script>
-
-<!-- Add "scoped" attribute to limit CSS to this component only -->
-<style scoped>
-.station-block {
-  border: 1px solid black;
-  padding: 1em;
-}
-
-</style>
