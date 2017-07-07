@@ -90,6 +90,7 @@ export default {
     },
     logoutUser () {
       this.$store.commit('logoutUser')
+      this.$router.push('/')
     },
     cancelLogin () {
       this.loginDialogVisible = false
