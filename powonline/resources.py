@@ -39,6 +39,44 @@ PERMISSION_MAP = {
 }
 
 
+class AccessDenied(Exception):
+    pass
+
+
+def get_user_permissions(request):
+    auth_header = request.headers.get('Authorization')
+    if not auth_header:
+        LOG.debug('No Authorization header present!')
+        raise AccessDenied('Access Denied (no "Authorization" header passed)!')
+    method, _, token = auth_header.partition(' ')
+    method = method.lower().strip()
+    token = token.strip()
+    if method != 'bearer' or not token:
+        LOG.debug('Authorization header does not provide '
+                  'a bearer token!')
+        raise AccessDenied('Access Denied (not a bearer token)!')
+    try:
+        jwt_secret = current_app.localconfig.get(
+            'security', 'jwt_secret')
+        auth_payload = jwt.decode(
+            token, jwt_secret, algorithms=['HS256'])
+    except jwt.exceptions.DecodeError:
+        LOG.info('Bearer token seems to have been tampered with!')
+        raise AccessDenied('Access Denied (invalid token)!')
+
+    # Expand the user roles to permissions, collecting them all in one
+    # big set.
+    user_roles = set(auth_payload.get('roles', []))
+    LOG.debug('Bearer token with the following roles: %r', user_roles)
+    all_permissions = set()
+    for role in user_roles:
+        all_permissions |= PERMISSION_MAP.get(role, set())
+
+    LOG.debug('Bearer token grants the following permissions: %r',
+              all_permissions)
+    return auth_payload, all_permissions
+
+
 class require_permissions:
     '''
     Decorator for routes.
@@ -52,36 +90,10 @@ class require_permissions:
     def __call__(self, f):
         @wraps(f)
         def fun(*args, **kwargs):
-            auth_header = request.headers.get('Authorization')
-            if not auth_header:
-                LOG.debug('No Authorization header present!')
-                return 'Access Denied (no "Authorization" header passed)!', 401
-            method, _, token = auth_header.partition(' ')
-            method = method.lower().strip()
-            token = token.strip()
-            if method != 'bearer' or not token:
-                LOG.debug('Authorization header does not provide '
-                          'a bearer token!')
-                return 'Access Denied (not a bearer token)!', 401
             try:
-                jwt_secret = current_app.localconfig.get(
-                    'security', 'jwt_secret')
-                auth_payload = jwt.decode(
-                    token, jwt_secret, algorithms=['HS256'])
-            except jwt.exceptions.DecodeError:
-                LOG.info('Bearer token seems to have been tampered with!')
-                return 'Access Denied (invalid token)!', 401
-
-            # Expand the user roles to permissions, collecting them all in one
-            # big set.
-            user_roles = set(auth_payload.get('roles', []))
-            LOG.debug('Bearer token with the following roles: %r', user_roles)
-            all_permissions = set()
-            for role in user_roles:
-                all_permissions |= PERMISSION_MAP.get(role, set())
-
-            LOG.debug('Bearer token grants the following permissions: %r',
-                      all_permissions)
+                auth_payload, all_permissions = get_user_permissions(request)
+            except AccessDenied as exc:
+                return str(exc), 401
 
             # by removing the users permissions from the required permissions,
             # we will end up with an empty set if the user is granted access.
@@ -639,19 +651,21 @@ class Dashboard(Resource):
 class Job(Resource):
 
     def _action_advance(self, station_name, team_name):
-        if not core.User.may_access_station(
+        _, permissions = get_user_permissions(request)
+        if 'admin_stations' in permissions or core.User.may_access_station(
                 DB.session,
                 g.jwt_payload['username'],
                 station_name):
-            return 'Access denied to this station!', 401
-        new_state = core.Team.advance_on_station(
-                DB.session, team_name, station_name)
-        output = {
-            'result': {
-                'state': new_state.value
+            new_state = core.Team.advance_on_station(
+                    DB.session, team_name, station_name)
+            output = {
+                'result': {
+                    'state': new_state.value
+                }
             }
-        }
-        return output, 200
+            return output, 200
+        else:
+            return 'Access denied to this station!', 401
 
     @require_permissions('manage_station')
     def post(self):
