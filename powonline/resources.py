@@ -585,7 +585,7 @@ class TeamStation(Resource):
         if station_name is None:
             items = core.Team.stations(DB.session, team_name)
             output = {
-                'items': items
+                'items': sorted(items, key=lambda x: x.name)
             }
 
             parsed_output, errors = STATION_LIST_SCHEMA.dumps(output)
