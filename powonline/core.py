@@ -311,7 +311,9 @@ class User:
     @staticmethod
     def may_access_station(session, user_name, station_name):
         user = session.query(model.User).filter_by(
-            name=user_name).one()
+            name=user_name).one_or_none()
+        if not user:
+            return False
         user_stations = {_.name for _ in user.stations}
         return station_name in user_stations
 
