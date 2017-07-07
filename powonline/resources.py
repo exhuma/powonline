@@ -24,9 +24,6 @@ from .schema import (
 
 
 LOG = logging.getLogger(__name__)
-STATE_FIELDS = {
-    'state': fields.String(attribute=lambda x: x.state.value)
-}
 
 PERMISSION_MAP = {
     'admin': {
@@ -572,10 +569,26 @@ class RouteStation(Resource):
 
 class TeamStation(Resource):
 
-    @marshal_with(STATE_FIELDS)
-    def get(self, team_name, station_name):
-        state = core.Team.get_station_data(DB.session, team_name, station_name)
-        return state, 200
+    def get(self, team_name, station_name=None):
+        if station_name is None:
+            items = core.Team.stations(DB.session, team_name)
+            output = {
+                'items': items
+            }
+
+            parsed_output, errors = STATION_LIST_SCHEMA.dumps(output)
+            if errors:
+                LOG.critical('Unable to process return value: %r', errors)
+                return 'Server was unable to process the response', 500
+
+            output = make_response(parsed_output, 200)
+            output.content_type = 'application/json'
+            return output
+        else:
+            state = core.Team.get_station_data(DB.session, team_name, station_name)
+            return {
+                'state': state.state.value
+            }, 200
 
 
 class Assignments(Resource):

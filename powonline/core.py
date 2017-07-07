@@ -86,6 +86,10 @@ class Team:
             state.state = TeamState.UNKNOWN
         return state.state
 
+    @staticmethod
+    def stations(session, team_name):
+        team = session.query(model.Team).filter_by(name=team_name).one()
+        return team.route.stations
 
 class Station:
 
