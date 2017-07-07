@@ -86,6 +86,11 @@ class Team:
             state.state = TeamState.UNKNOWN
         return state.state
 
+    @staticmethod
+    def stations(session, team_name):
+        team = session.query(model.Team).filter_by(name=team_name).one()
+        return team.route.stations
+
 
 class Station:
 
@@ -307,9 +312,12 @@ class User:
     @staticmethod
     def may_access_station(session, user_name, station_name):
         user = session.query(model.User).filter_by(
-            name=user_name).one()
+            name=user_name).one_or_none()
+        if not user:
+            return False
         user_stations = {_.name for _ in user.stations}
         return station_name in user_stations
+
 
 class Role:
 

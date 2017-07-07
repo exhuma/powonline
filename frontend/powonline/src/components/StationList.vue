@@ -61,6 +61,10 @@ export default {
 </script>
 
 <style scoped>
+#StationList {
+  padding-bottom: 5em;
+}
+
 .slide-enter-active, .slide-leave-active {
   transition: all .3s
 }

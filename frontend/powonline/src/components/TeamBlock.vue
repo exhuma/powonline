@@ -25,22 +25,30 @@
 </template>
 
 <script>
+import axios from 'axios'
 export default {
   name: 'team-block',
+  data () {
+    return {
+      stations: []
+    }
+  },
   props: {
     'name': {
       type: String,
       default: 'Unknown Team'
     }
   },
+  created () {
+    const baseUrl = this.$store.state.baseUrl
+    axios.get(baseUrl + '/team/' + this.name + '/stations')
+    .then(response => {
+      this.stations = response.data.items
+    })
+  },
   methods: {
     hasRole (roleName) {
       return this.$store.state.roles.indexOf(roleName) > -1
-    }
-  },
-  computed: {
-    stations () {
-      return this.$store.state.stations
     }
   }
 }

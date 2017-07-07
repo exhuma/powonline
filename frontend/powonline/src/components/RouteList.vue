@@ -66,6 +66,10 @@ export default {
 </script>
 
 <style scoped>
+#RouteList {
+  padding-bottom: 5em;
+}
+
 .slide-enter-active, .slide-leave-active {
   transition: all .3s
 }

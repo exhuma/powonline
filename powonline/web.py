@@ -61,6 +61,7 @@ def make_app(config):
                      '/route/<route_name>/stations/<station_name>')
     api.add_resource(TeamStation,
                      '/team/<team_name>/stations/<station_name>',
+                     '/team/<team_name>/stations',
                      '/station/<station_name>/teams/<team_name>',
                      )
     api.add_resource(Dashboard, '/station/<station_name>/dashboard')

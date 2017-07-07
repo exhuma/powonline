@@ -4,6 +4,7 @@
       <v-toolbar class="red darken-1">
         <v-toolbar-title class="white--text">{{ pageTitle }}</v-toolbar-title>
         <v-spacer></v-spacer>
+        <span class="white--text" v-if="tokenIsAvailable">Logged in as {{ appUserName }}</span>
         <v-btn @click.native="addElement" icon light v-if="hasRole('admin')"><v-icon>add</v-icon></v-btn>
         <v-btn v-tooltip:bottom="{html: 'Logout'}" v-if="tokenIsAvailable" @click.native.stop="logoutUser" icon light><v-icon>exit_to_app</v-icon></v-btn>
         <v-btn v-tooltip:bottom="{html: 'Login'}" v-else @click.native.stop="showLoginDialog" icon light><v-icon>perm_identity</v-icon></v-btn>
@@ -115,6 +116,9 @@ export default {
         output.push({ label: 'Users', to: '/user', icon: 'face' })
       }
       return output
+    },
+    appUserName () {
+      return this.$store.state.userName
     },
     tokenIsAvailable () {
       const token = this.$store.state.jwt

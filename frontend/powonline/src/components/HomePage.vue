@@ -1,5 +1,5 @@
 <template>
   <div id="HomePage">
-    <h3>PowWow 2017 Tracker - Version 1.1.0</h3>
+    <h5>PowWow 2017 Tracker - Version 1.1.1</h5>
   </div>
 </template>
