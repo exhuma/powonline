@@ -1,5 +1,6 @@
 <template>
   <div id="HomePage">
+    <center><img src="./venividiwisel.jpg"></img></center>
   </div>
 </template>
 <script>
