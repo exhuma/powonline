@@ -444,7 +444,8 @@ const store = new Vuex.Store({
      * Hide the bottom navigation panel
      */
     hideBottomNav (state) {
-      state.isBottomNavVisible = false
+      // this is disabled as it currently causes problems on iPhone
+      // state.isBottomNavVisible = false
     }
   },
   actions: {
