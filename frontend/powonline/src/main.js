@@ -65,6 +65,7 @@ const store = new Vuex.Store({
     teamStates: [],
     jwt: '',
     roles: [],
+    userName: '',
     baseUrl: BASE_URL,
     pageTitle: 'Powonline',
     isBottomNavVisible: true,
@@ -84,9 +85,9 @@ const store = new Vuex.Store({
      *    * roles - A list of role-names which the user has assigned to himself
      */
     setToken (state, data) {
-      console.debug('Setting roles to ' + data['roles'])
       state.jwt = data['token']
       state.roles = data['roles']
+      state.userName = data['userName']
     },
 
     /**
@@ -99,8 +100,10 @@ const store = new Vuex.Store({
     loginUser (state, data) {
       localStorage.setItem('roles', data['roles'])
       localStorage.setItem('jwt', data['token'])
+      localStorage.setItem('userName', data['user'])
       state.jwt = data['token']
       state.roles = data['roles']
+      state.userName = data['user']
       console.debug('Set auth token in LS to ' + data['token'])
     },
 
@@ -110,6 +113,7 @@ const store = new Vuex.Store({
     logoutUser (state) {
       localStorage.removeItem('jwt')
       localStorage.removeItem('roles')
+      localStorage.removeItem('userName')
       state.jwt = ''
       state.roles = []
       console.debug('cleared LS')
@@ -894,7 +898,8 @@ const vue = new Vue({
   created () {
     const savedToken = localStorage.getItem('jwt') || ''
     const savedRoles = localStorage.getItem('roles') || []
-    this.$store.commit('setToken', {token: savedToken, roles: savedRoles})
+    const savedUsername = localStorage.getItem('userName') || ''
+    this.$store.commit('setToken', {token: savedToken, roles: savedRoles, userName: savedUsername})
     this.$store.dispatch('refreshRemote')
   }
 })

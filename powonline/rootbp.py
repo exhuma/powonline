@@ -46,6 +46,7 @@ def login():
     jwt_secret = current_app.localconfig.get('security', 'jwt_secret')
     result = {
         'token': jwt.encode(payload, jwt_secret).decode('ascii'),
-        'roles': list(roles)  # convenience for the frontend
+        'roles': list(roles),  # convenience for the frontend
+        'user': data['username'],  # convenience for the frontend
     }
     return jsonify(result)
