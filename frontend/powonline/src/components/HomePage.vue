@@ -1,5 +1,12 @@
 <template>
   <div id="HomePage">
-    <h5>PowWow 2017 Tracker - Version 1.1.1</h5>
   </div>
 </template>
+<script>
+export default {
+  name: 'homepage',
+  created () {
+    this.$store.commit('changeTitle', 'PowOnline v1.1.1')
+  }
+}
+</script>
