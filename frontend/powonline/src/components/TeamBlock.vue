@@ -11,7 +11,7 @@
         v-for="station in stations"></mini-status>
     </v-card-text>
     <v-divider></v-divider>
-    <v-card-row actions>
+    <v-card-row actions v-if="hasRole('admin')">
       <confirmation-dialog buttonText="Delete" :actionArgument="name" actionName="deleteTeamRemote">
         <v-card-title slot="title">Do you want to delete the team "{{ name }}"?</v-card-title>
         <v-card-text slot="text">
@@ -31,6 +31,11 @@ export default {
     'name': {
       type: String,
       default: 'Unknown Team'
+    }
+  },
+  methods: {
+    hasRole (roleName) {
+      return this.$store.state.roles.indexOf(roleName) > -1
     }
   },
   computed: {

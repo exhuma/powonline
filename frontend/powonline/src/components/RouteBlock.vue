@@ -63,7 +63,7 @@
       </v-layout>
     </v-card-text>
     <v-divider></v-divider>
-    <v-card-row actions>
+    <v-card-row actions v-if="hasRole('admin')">
       <confirmation-dialog buttonText="Delete" :actionArgument="name" actionName="deleteRouteRemote">
         <v-card-title slot="title">Do you want to delete the route "{{ name }}"?</v-card-title>
         <v-card-text slot="text">
@@ -119,6 +119,9 @@ export default {
       const idx = event.target.getAttribute('data-idx')
       const station = this.unassignedStations[idx]
       this.$store.dispatch('assignStationToRouteRemote', {stationName: station, routeName: this.name})
+    },
+    hasRole (roleName) {
+      return this.$store.state.roles.indexOf(roleName) > -1
     }
   }
 }

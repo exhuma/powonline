@@ -20,7 +20,7 @@
         :station="station[0]"></user-station-checkbox>
     </v-card-text>
     <v-divider></v-divider>
-    <v-card-row actions>
+    <v-card-row actions v-if="hasRole('admin')">
       <confirmation-dialog buttonText="Delete" :actionArgument="name" actionName="deleteUserRemote">
         <v-card-title slot="title">Do you want to delete the user "{{ name }}"?</v-card-title>
         <v-card-text slot="text">
@@ -61,6 +61,9 @@ export default {
       .catch(e => {
         this.$store.commit('logError', e)
       })
+    },
+    hasRole (roleName) {
+      return this.$store.state.roles.indexOf(roleName) > -1
     }
   },
   created () {

@@ -4,7 +4,7 @@
       <v-toolbar class="red darken-1">
         <v-toolbar-title class="white--text">{{ pageTitle }}</v-toolbar-title>
         <v-spacer></v-spacer>
-        <v-btn @click.native="addElement" icon light><v-icon>add</v-icon></v-btn>
+        <v-btn @click.native="addElement" icon light v-if="hasRole('admin')"><v-icon>add</v-icon></v-btn>
         <v-btn v-tooltip:bottom="{html: 'Logout'}" v-if="tokenIsAvailable" @click.native.stop="logoutUser" icon light><v-icon>exit_to_app</v-icon></v-btn>
         <v-btn v-tooltip:bottom="{html: 'Login'}" v-else @click.native.stop="showLoginDialog" icon light><v-icon>perm_identity</v-icon></v-btn>
       </v-toolbar>
@@ -70,6 +70,9 @@ export default {
     go (e) {
       const destination = e.target.getAttribute('data-to')
       this.$router.push(destination)
+    },
+    hasRole (roleName) {
+      return this.$store.state.roles.indexOf(roleName) > -1
     },
     loginUser () {
       axios.post(this.$store.state.baseUrl + '/login', {
