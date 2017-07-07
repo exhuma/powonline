@@ -91,6 +91,7 @@ class Team:
         team = session.query(model.Team).filter_by(name=team_name).one()
         return team.route.stations
 
+
 class Station:
 
     @staticmethod
@@ -316,6 +317,7 @@ class User:
             return False
         user_stations = {_.name for _ in user.stations}
         return station_name in user_stations
+
 
 class Role:
 
