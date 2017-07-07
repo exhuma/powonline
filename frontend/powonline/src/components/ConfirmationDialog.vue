@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="isDialogVisible">
+  <v-dialog v-model="isDialogVisible" hide-overlay>
     <v-btn primary light slot="activator">{{ buttonText }}</v-btn>
     <v-card>
       <v-card-row>
