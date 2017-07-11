@@ -1,15 +1,14 @@
 <template>
-  <v-card class="mt-3">
-    <v-card-row class="brown darken-1">
-      <v-card-title><span class="white--text">Station: "{{ name }}"</span></v-card-title>
-    </v-card-row>
-    <v-card-text>
-      <v-card-row>
-        <a :href="'#/station/' + name">Dashboard</a>
-      </v-card-row>
-    </v-card-text>
-    <v-divider></v-divider>
-    <v-card-row actions v-if="hasRole('admin')">
+  <v-list-tile>
+    <v-list-tile-content>
+      <v-list-tile-title>{{ name }}</v-list-tile-title>
+    </v-list-tile-content>
+    <v-list-tile-action>
+      <v-btn icon ripple @click.native="openDashBoard(name)">
+        <v-icon class="grey--text text--lighten-1">info</v-icon>
+      </v-btn>
+    </v-list-tile-action>
+    <v-list-tile-action v-if="hasRole('admin')">
       <confirmation-dialog buttonText="Delete" :actionArgument="name" actionName="deleteStationRemote">
         <v-card-title slot="title">Do you want to delete the station "{{ name }}"?</v-card-title>
         <v-card-text slot="text">
@@ -18,8 +17,8 @@
           <p>Are you sure?</p>
         </v-card-text>
       </confirmation-dialog>
-    </v-card-row>
-  </v-card>
+    </v-list-tile-action>
+  </v-list-tile>
 </template>
 
 <script>
@@ -32,6 +31,9 @@ export default {
     }
   },
   methods: {
+    openDashBoard (name) {
+      this.$router.push('/station/' + name)
+    },
     hasRole (roleName) {
       return this.$store.state.roles.indexOf(roleName) > -1
     }

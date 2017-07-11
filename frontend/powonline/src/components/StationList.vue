@@ -23,7 +23,12 @@
         </v-card-row>
       </v-card>
     </transition>
-    <station-block v-for="station in stations" :name="station.name" :key="station.name"></station-block>
+    <v-list two-line>
+      <station-block
+        v-for="station in stations"
+        :name="station.name"
+        :key="station.name"></station-block>
+    </v-list>
   </div>
 </template>
 
