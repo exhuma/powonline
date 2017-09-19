@@ -1,4 +1,0 @@
-#!/bin/sh
-cd /data
-echo $(pwd)
-/usr/local/bin/vue $@

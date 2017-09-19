@@ -13,12 +13,8 @@ REMOTE_USER = 'powonline'
 def develop():
     l = fab.local
     cd = fab.lcd
-    with cd('frontend/docker-npm'):
-        l('docker build -t exhuma/npm .')
-    with cd('frontend/docker-vue'):
-        l('docker build -t exhuma/vue .')
     with cd('frontend'):
-        l('./npm install')
+        l('npm install')
     l('[ -d env ] || pyvenv env')
     l('./env/bin/pip install -e .[dev,test]')
 
@@ -27,7 +23,7 @@ def develop():
 @fab.roles('prod')
 def deploy_frontend():
     with fab.lcd('frontend'):
-        fab.local('./npm run build')
+        fab.local('npm run build')
         with fab.cd('www/htdocs'):
             fab.put('powonline/dist/*', '.')
 

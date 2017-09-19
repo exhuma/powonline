@@ -20,7 +20,7 @@ You need:
 * `git <https://git-scm.com>`_
 * `Python 3 <https://www.python.org>`_ (On debian & derivatives you also need
   the package ``python3-venv``).
-* `docker <https://www.docker.com>`_
+* `npm <https://www.npmjs.com>`_
 * `pip <https://pip.pypa.io/en/stable/>`_ (should be automatically available in
   Python 3 Virtual Environments).
 
@@ -40,7 +40,7 @@ After the above steps are run you should be able to run both the frontend and
 backend using the following two commands::
 
     $ ./env/bin/python autoapp.py     # Backend
-    $ (cd frontend && ./npm run dev)  # Frontend
+    $ (cd frontend && npm run dev)    # Frontend
 
 
 .. note::

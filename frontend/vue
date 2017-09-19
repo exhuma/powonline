@@ -1,6 +1,2 @@
 #!/bin/bash
-docker run \
-    -v $(pwd)/powonline:/data \
-    --rm \
-    -ti \
-    exhuma/vue $@
+/home/exhuma/work/pow/frontend/powonline/node_modules/.bin/vue $@
