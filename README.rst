@@ -21,6 +21,7 @@ You need:
 * `Python 3 <https://www.python.org>`_ (On debian & derivatives you also need
   the package ``python3-venv``).
 * `npm <https://www.npmjs.com>`_
+* `fabric <http://www.fabfile.org/>`_
 * `pip <https://pip.pypa.io/en/stable/>`_ (should be automatically available in
   Python 3 Virtual Environments).
 
@@ -32,15 +33,13 @@ Docker installed, run the following commands::
     git clone https://github.com/exhuma/powonline
     cd powonline
     git checkout develop
-    python3 -m venv env
-    ./env/bin/pip install fabric
-    ./env/bin/fab develop   # <-- This step will take a while!
+    fab develop   # <-- This step will take a while!
 
 After the above steps are run you should be able to run both the frontend and
 backend using the following two commands::
 
     $ ./env/bin/python autoapp.py     # Backend
-    $ (cd frontend && npm run dev)    # Frontend
+    $ (cd frontend/powonline && npm run dev)    # Frontend
 
 
 .. note::
