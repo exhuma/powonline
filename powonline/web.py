@@ -24,7 +24,7 @@ from .resources import (
     UserRoleList,
 )
 from .rootbp import rootbp
-from .model import DB, get_sessionmaker, User as DBUser
+from .model import DB, get_sessionmaker, User as DBUser, Role as DBRole
 
 
 class Powonline(Flask):
@@ -33,7 +33,7 @@ class Powonline(Flask):
         super().__init__(import_name)
         self.localconfig = config
 
-    def set_password(self, username, password):
+    def set_password(self, username, password, is_admin=False):
         '''
         Sets a password for a user in the database. If the user is missing, it
         will be added.
@@ -54,6 +54,11 @@ class Powonline(Flask):
         else:
             user = existing_user
         user.setpw(password)
+        admin_role = session.query(DBRole).filter_by(name='admin').one()
+        if is_admin:
+            user.roles.add(admin_role)
+        elif admin_role in user.roles:
+            user.roles.remove(admin_role)
         session.commit()
         return user
 

@@ -6,7 +6,7 @@ from config_resolver import Config
 from getpass import getpass
 
 from powonline.web import make_app
-from powonline.util import colorize_werkzeug
+from powonline.util import colorize_werkzeug, getch
 from gouge.colourcli import Simple
 
 
@@ -24,6 +24,19 @@ def get_args():
     return parser.parse_args()
 
 
+def set_password(app):
+    username = input('Username: ').strip()
+    password = getpass('Password: ')
+    if not username:
+        return
+
+    print('Should the user have admin-rights [y/N]? ')
+    char = getch()
+    is_admin = char.lower() == 'y'
+
+    app.set_password(username, password, is_admin)
+
+
 def main():
     '''
     The main entry-point
@@ -37,10 +50,7 @@ def main():
     APP = make_app(config)
 
     if args.set_password:
-        username = input('Username: ').strip()
-        password = getpass('Password: ')
-        if username:
-            APP.set_password(username, password)
+        set_password(APP)
     elif args.run:
         APP.run(debug=True, host='0.0.0.0')
 
