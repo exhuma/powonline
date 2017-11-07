@@ -1,5 +1,4 @@
 import fabric.api as fab
-from getpass import getpass
 
 fab.env.roledefs = {
     'prod': ['powonline@95.85.17.57'],
