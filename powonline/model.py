@@ -182,8 +182,8 @@ class Role(DB.Model):
                          back_populates='roles',
                          collection_class=set)
 
-    def __init__(self):
-        self.name = 'Example Station'
+    def __init__(self, name='example_role'):
+        self.name = name
 
 
 class TeamStation(DB.Model):
