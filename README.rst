@@ -41,7 +41,6 @@ backend using the following two commands::
     $ ./env/bin/python autoapp.py     # Backend
     $ (cd frontend/powonline && npm run dev)    # Frontend
 
-
 .. note::
 
     **IMPORTANT**
@@ -49,3 +48,23 @@ backend using the following two commands::
     You will need to set the variable ``BASE_URL`` in
     ``frontend/powonline/src/main.js`` so that the frontend connects to the
     proper backend!
+
+
+Adding a user to the database
+-----------------------------
+
+By default user passwords are stored hashed in the database.
+
+Adding a user (or replacing the user's password) can be done using the
+development helper script ``autoapp.py``::
+
+    ./env/bin/python autoapp.py --set-password
+
+
+.. note::
+
+    In order to simplify administrative tasks, the user table contains a flag
+    ``password_is_plaintext``. This indicates that a password is stored as
+    plain-text. If a user with a plain-text password logs in, it will
+    automatically be hashed. This is mainly used to help during development
+    without to much hassle, but should not be used during production!
