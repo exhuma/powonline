@@ -1,4 +1,5 @@
 import fabric.api as fab
+from getpass import getpass
 
 fab.env.roledefs = {
     'prod': ['powonline@95.85.17.57'],
@@ -48,3 +49,13 @@ def deploy_backend():
 def deploy():
     fab.execute(deploy_frontend)
     fab.execute(deploy_backend)
+
+
+@fab.task
+def set_password():
+    '''
+    Set password for a user (add user if missing)
+    '''
+    username = fab.prompt('Username:')
+    password = getpass('Password: ')
+    print(username, password)

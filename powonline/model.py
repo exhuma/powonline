@@ -23,6 +23,22 @@ LOG = logging.getLogger(__name__)
 DB = SQLAlchemy()
 
 
+def get_sessionmaker(config):
+    '''
+    Return a new sessionmake from the given config.
+
+    This should NOT be used in a web-context as that is handled by
+    flask_sqlalchemy. This should only be used for utility scripts.
+
+    TODO: Raise an exception if this is called from a web context.
+    '''
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    engine = create_engine(config.get('db', 'dsn'))
+    output = sessionmaker(bind=engine)
+    return output
+
+
 class TeamState(Enum):
     UNKNOWN = 'unknown'
     ARRIVED = 'arrived'

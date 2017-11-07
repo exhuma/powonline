@@ -24,17 +24,47 @@ from .resources import (
     UserRoleList,
 )
 from .rootbp import rootbp
-from .model import DB
+from .model import DB, get_sessionmaker, User as DBUser
+
+
+class Powonline(Flask):
+
+    def __init__(self, import_name, config, *args, **kwargs):
+        super().__init__(import_name)
+        self.localconfig = config
+
+    def set_password(self, username, password):
+        '''
+        Sets a password for a user in the database. If the user is missing, it
+        will be added.
+
+        This is intended as admin utility and should not be used from a
+        web-context!
+
+        TODO: raise an exception if this is called from a web context
+        '''
+        Session = get_sessionmaker(self.localconfig)
+        session = Session()
+
+        query = session.query(DBUser).filter_by(name=username)
+        existing_user = query.one_or_none()
+        if not existing_user:
+            user = DBUser(username, password)
+            session.add(user)
+        else:
+            user = existing_user
+        user.setpw(password)
+        session.commit()
+        return user
 
 
 def make_app(config):
     '''
     Application factory
     '''
-    app = Flask(__name__)
+    app = Powonline(__name__, config)
     api = Api(app)
 
-    app.localconfig = config
     app.register_blueprint(rootbp)
 
     api.add_resource(Assignments, '/assignments')
