@@ -38,7 +38,7 @@ Docker installed, run the following commands::
 After the above steps are run you should be able to run both the frontend and
 backend using the following two commands::
 
-    $ ./env/bin/python autoapp.py     # Backend
+    $ fab run                                   # Backend
     $ (cd frontend/powonline && npm run dev)    # Frontend
 
 .. note::

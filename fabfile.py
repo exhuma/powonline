@@ -57,3 +57,11 @@ def set_password():
     Set password for a user (add user if missing)
     '''
     fab.local('./env/bin/python autoapp.py --set-password')
+
+
+@fab.task
+def run():
+    '''
+    Run the backend server
+    '''
+    fab.local('./env/bin/python autoapp.py --run')
