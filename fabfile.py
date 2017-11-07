@@ -56,6 +56,4 @@ def set_password():
     '''
     Set password for a user (add user if missing)
     '''
-    username = fab.prompt('Username:')
-    password = getpass('Password: ')
-    print(username, password)
+    fab.local('./env/bin/python autoapp.py --set-password')

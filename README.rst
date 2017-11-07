@@ -56,9 +56,9 @@ Adding a user to the database
 By default user passwords are stored hashed in the database.
 
 Adding a user (or replacing the user's password) can be done using the
-development helper script ``autoapp.py``::
+fabric task ``set_password``::
 
-    ./env/bin/python autoapp.py --set-password
+    fab set_password
 
 
 .. note::
