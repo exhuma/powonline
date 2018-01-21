@@ -15,11 +15,9 @@
           <v-dialog v-model="loginDialogVisible">
 
             <v-card>
-              <v-card-row class="brown darken-4">
-                <v-card-title>
-                  <span class="white--text">Login</span>
-                </v-card-title>
-              </v-card-row>
+              <v-card-title>
+                <span class="white--text">Login</span>
+              </v-card-title>
               <v-card-text>
                 <v-text-field
                   type='text'
@@ -33,10 +31,10 @@
                   label='Password' />
               </v-card-text>
               <v-divider></v-divider>
-              <v-card-row actions>
+              <v-card-actions>
                 <v-btn class="green--text darken-1" flat="flat" @click.native="cancelLogin">Cancel</v-btn>
                 <v-btn class="green--text darken-1" flat="flat" @click.native="loginUser">Login</v-btn>
-              </v-card-row>
+              </v-card-actions>
             </v-card>
           </v-dialog>
 
