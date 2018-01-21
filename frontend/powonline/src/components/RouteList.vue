@@ -2,13 +2,11 @@
   <div id="RouteList">
     <transition name="slide">
       <v-card v-show="isAddBlockVisible">
-        <v-card-row class="brown darken-4">
-          <v-card-title>
-            <span class="white--text">Add New Route</span>
-            <v-spacer></v-spacer>
-            <v-btn @click.native="closeAddBlock" icon light><v-icon>close</v-icon></v-btn>
-          </v-card-title>
-        </v-card-row>
+        <v-card-title>
+          <span class="white--text">Add New Route</span>
+          <v-spacer></v-spacer>
+          <v-btn @click.native="closeAddBlock" icon light><v-icon>close</v-icon></v-btn>
+        </v-card-title>
         <v-card-text>
           <v-text-field
             name="route-input"
@@ -19,9 +17,9 @@
             label='Enter a new routename' />
         </v-card-text>
         <v-divider></v-divider>
-        <v-card-row actions>
+        <v-card-actions>
           <v-btn @click.native="addRoute" flat>Add</v-btn>
-        </v-card-row>
+        </v-card-actions>
       </v-card>
     </transition>
 

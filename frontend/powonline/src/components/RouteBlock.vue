@@ -1,69 +1,59 @@
 <template>
   <v-card class="mt-3">
-    <v-card-row class="brown darken-1">
-      <v-card-title><span class="white--text">Route: "{{ name }}"</span></v-card-title>
-    </v-card-row>
+    <v-card-title><span class="white--text">Route: "{{ name }}"</span></v-card-title>
     <v-card-text>
       <v-layout row wrap>
         <!-- Assigned Items -->
         <v-flex xs6>
           <v-card class="mx-3">
-            <v-card-row class="brown lighten-2">
-              <v-card-title>Assigned Teams</v-card-title>
-            </v-card-row>
-            <v-card-row v-for="(team, idx) in assignedTeams" :key="idx">
+            <v-card-title>Assigned Teams</v-card-title>
+            <div v-for="(team, idx) in assignedTeams" :key="idx">
               <v-flex xs6>{{ team }}</v-flex>
               <v-flex xs6>
                 <v-btn @click.native="unassignTeam" :data-idx="idx" flat><v-icon>arrow_downward</v-icon></v-btn>
               </v-flex>
-            </v-card-row>
+            </div>
           </v-card>
         </v-flex>
         <v-flex xs6>
           <v-card class="mx-3">
-            <v-card-row class="brown lighten-2">
-              <v-card-title>Assigned Stations</v-card-title>
-            </v-card-row>
-            <v-card-row v-for="(station, idx) in assignedStations" :key="idx">
+            <v-card-title>Assigned Stations</v-card-title>
+            <div v-for="(station, idx) in assignedStations" :key="idx">
               <v-flex xs6>{{ station }}</v-flex>
               <v-flex xs6>
                 <v-btn @click.native="unassignStation" :data-idx="idx" flat><v-icon>arrow_downward</v-icon></v-btn>
               </v-flex>
-            </v-card-row>
+            </div>
           </v-card>
         </v-flex>
 
         <!-- Unassigned Items -->
         <v-flex xs6 class="mt-4"> 
           <v-card class="mx-3">
-            <v-card-row class="brown lighten-2">
-              <v-card-title>Unassigned Teams</v-card-title>
-            </v-card-row>
-            <v-card-row v-for="(team, idx) in unassignedTeams" :key="idx">
+            <v-card-title>Unassigned Teams</v-card-title>
+            <div v-for="(team, idx) in unassignedTeams" :key="idx">
               <v-flex xs6>{{ team }}</v-flex>
               <v-flex xs6>
                 <v-btn @click.native="assignTeam" :data-idx="idx" flat><v-icon>arrow_upward</v-icon></v-btn>
               </v-flex>
-            </v-card-row>
+            </div>
           </v-card>
         </v-flex>
         <v-flex xs6 class="mt-4">
           <v-card class="mx-3">
-            <v-card-row class="brown lighten-2">
-              <v-card-title>Unassigned Stations</v-card-title>
-            </v-card-row>
-            <v-card-row v-for="(station, idx) in unassignedStations" :key="idx">
+            <v-card-title>Unassigned Stations</v-card-title>
+            <div v-for="(station, idx) in unassignedStations" :key="idx">
               <v-flex xs6>{{ station }}</v-flex>
               <v-flex xs6>
                 <v-btn @click.native="assignStation" :data-idx="idx" flat><v-icon>arrow_upward</v-icon></v-btn>
               </v-flex>
-            </v-card-row>
+            </div>
           </v-card>
         </v-flex>
       </v-layout>
     </v-card-text>
     <v-divider></v-divider>
-    <v-card-row actions v-if="hasRole('admin')">
+    <v-card-actions v-if="hasRole('admin')">
       <confirmation-dialog buttonText="Delete" :actionArgument="name" actionName="deleteRouteRemote">
         <v-card-title slot="title">Do you want to delete the route "{{ name }}"?</v-card-title>
         <v-card-text slot="text">
@@ -72,7 +62,7 @@
           <p>Are you sure?</p>
         </v-card-text>
       </confirmation-dialog>
-    </v-card-row>
+    </v-card-actions>
   </v-card>
 </template>
 

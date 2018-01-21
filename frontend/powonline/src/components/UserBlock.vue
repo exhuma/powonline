@@ -1,8 +1,6 @@
 <template>
   <v-card class="mt-3">
-    <v-card-row class="brown darken-1">
-      <v-card-title><span class="white--text">User: "{{ name }}"</span></v-card-title>
-    </v-card-row>
+    <v-card-title><span class="white--text">User: "{{ name }}"</span></v-card-title>
     <v-card-text>
       <h6>Roles</h6>
       <user-role-checkbox
@@ -20,7 +18,7 @@
         :station="station[0]"></user-station-checkbox>
     </v-card-text>
     <v-divider></v-divider>
-    <v-card-row actions v-if="hasRole('admin')">
+    <v-card-actions v-if="hasRole('admin')">
       <confirmation-dialog buttonText="Delete" :actionArgument="name" actionName="deleteUserRemote">
         <v-card-title slot="title">Do you want to delete the user "{{ name }}"?</v-card-title>
         <v-card-text slot="text">
@@ -29,7 +27,7 @@
           <p>Are you sure?</p>
         </v-card-text>
       </confirmation-dialog>
-    </v-card-row>
+    </v-card-actions>
   </v-card>
 </template>
 
