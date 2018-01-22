@@ -54,7 +54,7 @@ class AuthClientWrapper:
         return self.client.get(*args, **kwargs)
 
 
-class TestPublicAPIAsAdmin(TestCase):
+class BaseAuthTestCase(TestCase):
 
     SQLALCHEMY_DATABASE_URI = 'postgresql://exhuma@/powonline_testing'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -76,8 +76,8 @@ class TestPublicAPIAsAdmin(TestCase):
 
     def setUp(self):
         payload = {
-            'username': 'user-red',
-            'roles': ['admin']
+            'username': self.USERNAME,
+            'roles': self.ROLES,
         }
         auth_header = 'Bearer %s' % jwt.encode(
             payload, 'testing').decode('ascii')
@@ -94,6 +94,12 @@ class TestPublicAPIAsAdmin(TestCase):
     def tearDown(self):
         DB.session.remove()
         DB.drop_all()
+
+
+class TestPublicAPIAsAdmin(BaseAuthTestCase):
+
+    USERNAME = 'user-red'
+    ROLES = ['admin']
 
     def test_fetch_list_of_teams_all(self):
         with patch('powonline.resources.core') as _core:
@@ -416,7 +422,10 @@ class TestPublicAPIAsAdmin(TestCase):
             self.assertEqual(testable, expected)
 
 
-class TestPublicAPIAsStationManager(unittest.TestCase):
+class TestPublicAPIAsStationManager(BaseAuthTestCase):
+
+    USERNAME = 'user-station-manager'
+    ROLES = ['station_manager']
 
     def test_fetch_list_of_teams(self):
         self.skipTest('TODO')

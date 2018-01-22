@@ -10,7 +10,7 @@
             <div v-for="(team, idx) in assignedTeams" :key="idx">
               <v-flex xs6>{{ team }}</v-flex>
               <v-flex xs6>
-                <v-btn @click.native="unassignTeam" :data-idx="idx" flat><v-icon>arrow_downward</v-icon></v-btn>
+                <v-btn @click="unassignTeam(team)" flat><v-icon>arrow_downward</v-icon></v-btn>
               </v-flex>
             </div>
           </v-card>
@@ -21,7 +21,7 @@
             <div v-for="(station, idx) in assignedStations" :key="idx">
               <v-flex xs6>{{ station }}</v-flex>
               <v-flex xs6>
-                <v-btn @click.native="unassignStation" :data-idx="idx" flat><v-icon>arrow_downward</v-icon></v-btn>
+                <v-btn @click="unassignStation(station)" flat><v-icon>arrow_downward</v-icon></v-btn>
               </v-flex>
             </div>
           </v-card>
@@ -34,7 +34,7 @@
             <div v-for="(team, idx) in unassignedTeams" :key="idx">
               <v-flex xs6>{{ team }}</v-flex>
               <v-flex xs6>
-                <v-btn @click.native="assignTeam" :data-idx="idx" flat><v-icon>arrow_upward</v-icon></v-btn>
+                <v-btn @click="assignTeam(team)" flat><v-icon>arrow_upward</v-icon></v-btn>
               </v-flex>
             </div>
           </v-card>
@@ -45,7 +45,7 @@
             <div v-for="(station, idx) in unassignedStations" :key="idx">
               <v-flex xs6>{{ station }}</v-flex>
               <v-flex xs6>
-                <v-btn @click.native="assignStation" :data-idx="idx" flat><v-icon>arrow_upward</v-icon></v-btn>
+                <v-btn @click="assignStation(station)" flat><v-icon>arrow_upward</v-icon></v-btn>
               </v-flex>
             </div>
           </v-card>
@@ -90,24 +90,16 @@ export default {
     }
   },
   methods: {
-    unassignTeam: function (event) {
-      const idx = event.target.getAttribute('data-idx')
-      const team = this.assignedTeams[idx]
+    unassignTeam: function (team) {
       this.$store.dispatch('unassignTeamFromRouteRemote', {teamName: team, routeName: this.name})
     },
-    assignTeam: function (event) {
-      const idx = event.target.getAttribute('data-idx')
-      const team = this.unassignedTeams[idx]
+    assignTeam: function (team) {
       this.$store.dispatch('assignTeamToRouteRemote', {teamName: team, routeName: this.name})
     },
-    unassignStation: function (event) {
-      const idx = event.target.getAttribute('data-idx')
-      const station = this.assignedStations[idx]
+    unassignStation: function (station) {
       this.$store.dispatch('unassignStationFromRouteRemote', {stationName: station, routeName: this.name})
     },
-    assignStation: function (event) {
-      const idx = event.target.getAttribute('data-idx')
-      const station = this.unassignedStations[idx]
+    assignStation: function (station) {
       this.$store.dispatch('assignStationToRouteRemote', {stationName: station, routeName: this.name})
     },
     hasRole (roleName) {

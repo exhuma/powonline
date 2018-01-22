@@ -44,7 +44,7 @@
           </div>
         </v-container>
         <v-bottom-nav :value="isBottomNavVisible" class="red darken-1">
-          <v-btn v-for="route in routes" @click.native="go" :data-to="route.to" :key="route.to" flat light :value="here === route.to">
+          <v-btn v-for="route in routes" :to="route.to" :key="route.to" flat light :value="here === route.to">
             <span>{{ route.label }}</span>
             <v-icon>{{route.icon}}</v-icon>
           </v-btn>
@@ -66,10 +66,6 @@ export default {
     }
   },
   methods: {
-    go (e) {
-      const destination = e.target.getAttribute('data-to')
-      this.$router.push(destination)
-    },
     hasRole (roleName) {
       return this.$store.state.roles.indexOf(roleName) > -1
     },
