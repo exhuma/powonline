@@ -2,7 +2,7 @@
   <div id="Dashboard">
     <v-card v-for="(state, idx) in states" class="mb-2" :key="idx">
       <v-card-title>
-        <span class="white--text">{{ state.team }}</span>
+        <span>{{ state.team }}</span>
       </v-card-title>
       <v-card-text v-ripple>
         <state-icon class="clickable" @click.native="advanceState" :data-idx="idx" :state="state.state"></state-icon> <span class="clickable" @click="advanceState" :data-idx="idx">{{ state.state }}</span>

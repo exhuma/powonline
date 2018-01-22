@@ -1,6 +1,6 @@
 <template>
   <v-card class="mt-3">
-    <v-card-title><span class="white--text">User: "{{ name }}"</span></v-card-title>
+    <v-card-title><span>User: "{{ name }}"</span></v-card-title>
     <v-card-text>
       <h6>Roles</h6>
       <user-role-checkbox

@@ -1,6 +1,6 @@
 <template>
   <v-card class="mt-3">
-    <v-card-title><span class="white--text">Team: "{{ name }}"</span></v-card-title>
+    <v-card-title><span>Team: "{{ name }}"</span></v-card-title>
     <v-card-text>
       <mini-status
         :station="station.name"

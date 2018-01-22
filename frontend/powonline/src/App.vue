@@ -1,10 +1,10 @@
 <template>
   <div id="app">
-    <v-app>
-      <v-toolbar class="red darken-1">
-        <v-toolbar-title class="white--text">{{ pageTitle }}</v-toolbar-title>
+    <v-app dark>
+      <v-toolbar>
+        <v-toolbar-title>{{ pageTitle }}</v-toolbar-title>
         <v-spacer></v-spacer>
-        <span class="white--text" v-if="tokenIsAvailable">Logged in as {{ appUserName }}</span>
+        <span v-if="tokenIsAvailable">Logged in as {{ appUserName }}</span>
         <v-btn @click.native="addElement" icon light v-if="hasRole('admin')"><v-icon>add</v-icon></v-btn>
         <v-btn v-tooltip:bottom="{html: 'Logout'}" v-if="tokenIsAvailable" @click.native.stop="logoutUser" icon light><v-icon>exit_to_app</v-icon></v-btn>
         <v-btn v-tooltip:bottom="{html: 'Login'}" v-else @click.native.stop="showLoginDialog" icon light><v-icon>perm_identity</v-icon></v-btn>
@@ -16,7 +16,7 @@
 
             <v-card>
               <v-card-title>
-                <span class="white--text">Login</span>
+                <span>Login</span>
               </v-card-title>
               <v-card-text>
                 <v-text-field
@@ -32,8 +32,8 @@
               </v-card-text>
               <v-divider></v-divider>
               <v-card-actions>
-                <v-btn class="green--text darken-1" flat="flat" @click.native="cancelLogin">Cancel</v-btn>
-                <v-btn class="green--text darken-1" flat="flat" @click.native="loginUser">Login</v-btn>
+                <v-btn flat="flat" @click.native="cancelLogin">Cancel</v-btn>
+                <v-btn flat="flat" @click.native="loginUser">Login</v-btn>
               </v-card-actions>
             </v-card>
           </v-dialog>
@@ -43,7 +43,7 @@
             <error-block :error="error" v-for="(error, idx) in errors" :key="'error-' + idx"></error-block>
           </div>
         </v-container>
-        <v-bottom-nav :value="isBottomNavVisible" class="red darken-1">
+        <v-bottom-nav :value="isBottomNavVisible">
           <v-btn v-for="route in routes" :to="route.to" :key="route.to" flat light :value="here === route.to">
             <span>{{ route.label }}</span>
             <v-icon>{{route.icon}}</v-icon>

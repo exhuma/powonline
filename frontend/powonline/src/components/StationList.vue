@@ -3,7 +3,7 @@
     <transition name="slide">
       <v-card v-show="isAddBlockVisible">
         <v-card-title>
-          <span class="white--text">Add New Station</span>
+          <span>Add New Station</span>
           <v-spacer></v-spacer>
           <v-btn @click.native="closeAddBlock" icon light><v-icon>close</v-icon></v-btn>
         </v-card-title>

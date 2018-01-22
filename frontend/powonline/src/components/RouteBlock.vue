@@ -1,6 +1,6 @@
 <template>
   <v-card class="mt-3">
-    <v-card-title><span class="white--text">Route: "{{ name }}"</span></v-card-title>
+    <v-card-title><span>Route: "{{ name }}"</span></v-card-title>
     <v-card-text>
       <v-layout row wrap>
         <!-- Assigned Items -->
