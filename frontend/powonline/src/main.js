@@ -26,6 +26,8 @@ import UserBlock from './components/UserBlock'
 import UserRoleCheckbox from './components/UserRoleCheckbox'
 import UserStationCheckbox from './components/UserStationCheckbox'
 
+require('./stylus/main.styl')
+
 Vue.config.productionTip = false
 Vue.use(Vuex)
 Vue.use(Vuetify)
