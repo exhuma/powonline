@@ -19,7 +19,9 @@ export default {
   },
   computed: {
     title () {
-      if (this.error && this.error.config && this.error.config.method) {
+      if (this.error.message && this.error.response === undefined) {
+        return this.error.message
+      } else if (this.error && this.error.config && this.error.config.method) {
         if (this.error.response.status === 401) {
           return this.error.response.data
         } else {
