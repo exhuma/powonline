@@ -8,7 +8,7 @@
         <v-icon>info</v-icon>
       </v-btn>
     </v-list-tile-action>
-    <v-list-tile-action v-if="hasRole('admin')">
+    <v-list-tile-action class="ml-3" v-if="hasRole('admin')">
       <confirmation-dialog buttonText="Delete" :actionArgument="name" actionName="deleteStationRemote">
         <v-card-title slot="title">Do you want to delete the station "{{ name }}"?</v-card-title>
         <v-card-text slot="text">
