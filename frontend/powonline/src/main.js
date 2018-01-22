@@ -34,7 +34,7 @@ Vue.use(Vuetify)
 
 import 'vuetify/dist/vuetify.min.css'
 
-const BASE_URL = 'https://powonline.albert.lu/api'
+const BASE_URL = 'http://192.168.1.2:5000'
 
 /**
  * Inject the JWT token into each outgoing request if it's available

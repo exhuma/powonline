@@ -2,55 +2,34 @@
   <v-card class="mt-3">
     <v-card-title><span>Route: "{{ name }}"</span></v-card-title>
     <v-card-text>
-      <v-layout row wrap>
-        <!-- Assigned Items -->
-        <v-flex xs6>
-          <v-card class="mx-3">
-            <v-card-title>Assigned Teams</v-card-title>
-            <div v-for="(team, idx) in assignedTeams" :key="idx">
-              <v-flex xs6>{{ team }}</v-flex>
-              <v-flex xs6>
-                <v-btn @click="unassignTeam(team)" flat><v-icon>arrow_downward</v-icon></v-btn>
-              </v-flex>
-            </div>
-          </v-card>
-        </v-flex>
-        <v-flex xs6>
-          <v-card class="mx-3">
-            <v-card-title>Assigned Stations</v-card-title>
-            <div v-for="(station, idx) in assignedStations" :key="idx">
-              <v-flex xs6>{{ station }}</v-flex>
-              <v-flex xs6>
-                <v-btn @click="unassignStation(station)" flat><v-icon>arrow_downward</v-icon></v-btn>
-              </v-flex>
-            </div>
-          </v-card>
-        </v-flex>
-
-        <!-- Unassigned Items -->
-        <v-flex xs6 class="mt-4"> 
-          <v-card class="mx-3">
-            <v-card-title>Unassigned Teams</v-card-title>
-            <div v-for="(team, idx) in unassignedTeams" :key="idx">
-              <v-flex xs6>{{ team }}</v-flex>
-              <v-flex xs6>
-                <v-btn @click="assignTeam(team)" flat><v-icon>arrow_upward</v-icon></v-btn>
-              </v-flex>
-            </div>
-          </v-card>
-        </v-flex>
-        <v-flex xs6 class="mt-4">
-          <v-card class="mx-3">
-            <v-card-title>Unassigned Stations</v-card-title>
-            <div v-for="(station, idx) in unassignedStations" :key="idx">
-              <v-flex xs6>{{ station }}</v-flex>
-              <v-flex xs6>
-                <v-btn @click="assignStation(station)" flat><v-icon>arrow_upward</v-icon></v-btn>
-              </v-flex>
-            </div>
-          </v-card>
-        </v-flex>
-      </v-layout>
+      <v-container fluid grid-list-md class="mb-4" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(0, 0, 0, 0.2)">
+        <v-layout row wrap>
+          <v-flex d-flex xs-6>
+            <v-card class="mx-3">
+              <v-card-title>Assigned Teams</v-card-title>
+              <div v-for="(team, idx) in assignedTeams" :key="idx">
+                <v-flex xs6>{{ team }}</v-flex>
+                <v-flex xs6>
+                  <v-btn @click="unassignTeam(team)" flat><v-icon>arrow_downward</v-icon></v-btn>
+                </v-flex>
+              </div>
+            </v-card>
+          </v-flex>
+          <v-flex d-flex xs-6>
+            <v-card class="mx-3">
+              <v-card-title>Assigned Stations</v-card-title>
+              <v-card-text>
+                <div v-for="(station, idx) in assignedStations" :key="idx">
+                  <v-flex xs6>{{ station }}</v-flex>
+                  <v-flex xs6>
+                    <v-btn @click="unassignStation(station)" flat><v-icon>arrow_downward</v-icon></v-btn>
+                  </v-flex>
+                </div>
+              </v-card-text>
+            </v-card>
+          </v-flex>
+        </v-layout>
+      </v-container>
     </v-card-text>
     <v-divider></v-divider>
     <v-card-actions v-if="hasRole('admin')">
@@ -64,7 +43,63 @@
       </confirmation-dialog>
     </v-card-actions>
   </v-card>
+
+
+  <!--
+  <v-container fluid grid-list-md class="mb-4" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(0, 0, 0, 0.2)">
+    <v-layout row wrap>
+      <v-flex d-flex xs-12>
+        <h6>route-name</h6>
+      </v-flex>
+    </v-layout>
+    <v-layout row wrap v-if="hasRole('admin')" style="border-top: 1px solid rgba(0, 0, 0, 0.2)">
+      <v-flex d-flex xs-12>
+        confirmation-dialog
+      </v-flex>
+    </v-layout>
+  </v-container>
+  -->
+
+  <!--
+  -->
 </template>
+
+
+<!--
+      <v-container>
+        <v-layout row wrap>
+          <!-- Assigned Items -->
+          <v-flex xs6>
+          </v-flex>
+          <v-flex xs6>
+          </v-flex>
+
+          <!-- Unassigned Items -->
+          <v-flex xs6 class="mt-4"> 
+            <v-card class="mx-3">
+              <v-card-title>Unassigned Teams</v-card-title>
+              <div v-for="(team, idx) in unassignedTeams" :key="idx">
+                <v-flex xs6>{{ team }}</v-flex>
+                <v-flex xs6>
+                  <v-btn @click="assignTeam(team)" flat><v-icon>arrow_upward</v-icon></v-btn>
+                </v-flex>
+              </div>
+            </v-card>
+          </v-flex>
+          <v-flex xs6 class="mt-4">
+            <v-card class="mx-3">
+              <v-card-title>Unassigned Stations</v-card-title>
+              <div v-for="(station, idx) in unassignedStations" :key="idx">
+                <v-flex xs6>{{ station }}</v-flex>
+                <v-flex xs6>
+                  <v-btn @click="assignStation(station)" flat><v-icon>arrow_upward</v-icon></v-btn>
+                </v-flex>
+              </div>
+            </v-card>
+          </v-flex>
+        </v-layout>
+      </v-container>
+-->
 
 <script>
 export default {
