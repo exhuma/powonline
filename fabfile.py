@@ -13,7 +13,7 @@ REMOTE_USER = 'powonline'
 def develop():
     l = fab.local
     cd = fab.lcd
-    with cd('frontend'):
+    with cd('frontend/powonline'):
         l('npm install')
     l('[ -d env ] || pyvenv env')
     l('./env/bin/pip install -e .[dev,test]')
@@ -22,10 +22,10 @@ def develop():
 @fab.task
 @fab.roles('prod')
 def deploy_frontend():
-    with fab.lcd('frontend'):
+    with fab.lcd('frontend/powonline'):
         fab.local('npm run build')
         with fab.cd('www/htdocs'):
-            fab.put('powonline/dist/*', '.')
+            fab.put('dist/*', '.')
 
 
 @fab.task
