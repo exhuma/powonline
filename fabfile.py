@@ -5,32 +5,16 @@ fab.env.roledefs = {
 }
 
 
-REMOTE_FOLDER = '/var/www/powonline/www'
-REMOTE_USER = 'powonline'
-
-
 @fab.task
 def develop():
     l = fab.local
-    cd = fab.lcd
-    with cd('frontend'):
-        l('npm install')
     l('[ -d env ] || pyvenv env')
     l('./env/bin/pip install -e .[dev,test]')
 
 
-@fab.task
 @fab.roles('prod')
-def deploy_frontend():
-    with fab.lcd('frontend'):
-        fab.local('npm run build')
-        with fab.cd('www/htdocs'):
-            fab.put('powonline/dist/*', '.')
-
-
 @fab.task
-@fab.roles('prod')
-def deploy_backend():
+def deploy():
     fab.local('python setup.py sdist')
     fullname = fab.local('python setup.py --fullname', capture=True)
     fab.put('dist/%s.tar.gz' % fullname, '/tmp')
@@ -42,9 +26,3 @@ def deploy_backend():
         fab.run('./env/bin/pip install /tmp/%s.tar.gz' % fullname)
         fab.run('./env/bin/alembic upgrade head')
         fab.run('touch wsgi/powonline.wsgi')
-
-
-@fab.task
-def deploy():
-    fab.execute(deploy_frontend)
-    fab.execute(deploy_backend)

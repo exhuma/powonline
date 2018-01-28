@@ -1,2 +1,0 @@
-#!/bin/bash
-/home/exhuma/work/pow/frontend/powonline/node_modules/.bin/vue $@
