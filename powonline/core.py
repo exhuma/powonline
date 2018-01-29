@@ -88,7 +88,9 @@ class Team:
 
     @staticmethod
     def stations(session, team_name):
-        team = session.query(model.Team).filter_by(name=team_name).one()
+        team = session.query(model.Team).filter_by(name=team_name).one_or_none()
+        if not team:
+            return []
         return team.route.stations
 
 
