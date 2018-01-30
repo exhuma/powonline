@@ -173,7 +173,9 @@ class Station:
 
     @staticmethod
     def accessible_by(session, username):
-        user = session.query(model.User).filter_by(name=username).one()
+        user = session.query(model.User).filter_by(name=username).one_or_none()
+        if not user:
+            return set()
         return {station.name for station in user.stations}
 
 
