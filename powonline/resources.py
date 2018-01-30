@@ -306,8 +306,14 @@ class Station(Resource):
         response.content_type = 'application/json'
         return response
 
-    @require_permissions('admin_stations')
+    @require_permissions('manage_station')
     def put(self, name):
+        auth, permissions = get_user_permissions(request)
+
+        if 'admin' not in auth['roles'] and not core.User.may_access_station(
+                DB.session, auth['username'], name):
+            return 'Access denied to this station!', 401
+
         data = request.get_json()
 
         parsed_data, errors = STATION_SCHEMA.load(data)
@@ -653,10 +659,10 @@ class Dashboard(Resource):
 class Job(Resource):
 
     def _action_advance(self, station_name, team_name):
-        _, permissions = get_user_permissions(request)
-        if 'admin_stations' in permissions or core.User.may_access_station(
+        auth, permissions = get_user_permissions(request)
+        if 'manage_station' in permissions or core.User.may_access_station(
                 DB.session,
-                g.jwt_payload['username'],
+                auth['username'],
                 station_name):
             new_state = core.Team.advance_on_station(
                     DB.session, team_name, station_name)

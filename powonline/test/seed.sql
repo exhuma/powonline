@@ -17,6 +17,7 @@ INSERT INTO route (name) VALUES
     ('route-red'),
     ('route-blue');
 INSERT INTO role (name) VALUES
+    ('station-manager'),
     ('a-role');
 INSERT INTO station (name) VALUES
     ('station-start'),
@@ -28,8 +29,10 @@ INSERT INTO team (name, email, route_name) VALUES
     ('team-blue', 'email-blue', 'route-blue'),
     ('team-without-route', 'email-wr', NULL);
 INSERT INTO user_role (user_name, role_name) VALUES
+    ('user-station-manager', 'station-manager'),
     ('john', 'a-role');
 INSERT INTO user_station (user_name, station_name) VALUES
+    ('user-station-manager', 'station-red'),
     ('user-red', 'station-red');
 INSERT INTO team_station_state (team_name, station_name, state) VALUES
     ('team-red', 'station-start', 'finished');
