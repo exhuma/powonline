@@ -432,13 +432,22 @@ class TestPublicAPIAsStationManager(BaseAuthTestCase):
     ROLES = ['station_manager']
 
     def test_fetch_list_of_teams(self):
-        self.skipTest('TODO')
+        with patch('powonline.resources.core') as _core:
+            _core.Team.all.return_value = []
+            response = self.app.get('/team')
+            self.assertLess(response.status_code, 400)
 
     def test_fetch_list_of_stations(self):
-        self.skipTest('TODO')
+        with patch('powonline.resources.core') as _core:
+            _core.Station.all.return_value = []
+            response = self.app.get('/station')
+        self.assertLess(response.status_code, 400)
 
     def test_fetch_list_of_routes(self):
-        self.skipTest('TODO')
+        with patch('powonline.resources.core') as _core:
+            _core.Route.all.return_value = []
+            response = self.app.get('/route')
+            self.assertLess(response.status_code, 400)
 
     def test_update_team(self):
         replacement_team = make_dummy_team_dict(
@@ -449,26 +458,68 @@ class TestPublicAPIAsStationManager(BaseAuthTestCase):
                                 headers={'Content-Type': 'application/json'},
                                 data=json.dumps(replacement_team))
         # should fail: access denied
-        self.skipTest('TODO')
+        self.assertEqual(response.status_code, 401, response.data)
 
     def test_update_own_station(self):
-        self.skipTest('TODO')
+        replacement_station = make_dummy_station_dict(
+            name='foo',
+            contact='new-contact')
+
+        response = self.app.put('/station/station-red',
+                                headers={'Content-Type': 'application/json'},
+                                data=json.dumps(replacement_station))
+        self.assertLess(response.status_code, 400, response.data)
 
     def test_update_other_station(self):
         # should fail: access denied
-        self.skipTest('TODO')
+        replacement_station = make_dummy_station_dict(
+            name='foo',
+            contact='new-contact')
+
+        response = self.app.put('/station/old-blue',
+                                headers={'Content-Type': 'application/json'},
+                                data=json.dumps(replacement_station))
+        self.assertEqual(response.status_code, 401, response.data)
 
     def test_update_route(self):
         # should fail: access denied
-        self.skipTest('TODO')
+        replacement_route = make_dummy_route_dict(
+            name='foo',
+            contact='new-contact')
+
+        with patch('powonline.resources.core') as _core:
+            mocked_route = make_dummy_route_dict(
+                as_mock=True,
+                name='foo',
+                contact='new-contact')
+            _core.Route.upsert.return_value = mocked_route
+            response = self.app.put(
+                '/route/old-route',
+                headers={'Content-Type': 'application/json'},
+                data=json.dumps(replacement_route))
+        self.assertEqual(response.status_code, 401, response.data)
 
     def test_create_team(self):
         # should fail: access denied
-        self.skipTest('TODO')
+        new_team = make_dummy_team_dict(
+            name='foo',
+            contact='new-contact')
+
+        response = self.app.post('/team',
+                                 headers={'Content-Type': 'application/json'},
+                                 data=json.dumps(new_team))
+        self.assertEqual(response.status_code, 401, response.data)
 
     def test_create_station(self):
         # should fail: access denied
-        self.skipTest('TODO')
+        new_station = make_dummy_station_dict(
+            name='foo',
+            contact='new-contact')
+
+        response = self.app.post('/station',
+                                 headers={'Content-Type': 'application/json'},
+                                 data=json.dumps(new_station))
+        self.assertEqual(response.status_code, 401, response.data)
 
     def test_create_route(self):
         # should fail: access denied
