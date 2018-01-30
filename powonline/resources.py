@@ -660,10 +660,10 @@ class Job(Resource):
 
     def _action_advance(self, station_name, team_name):
         auth, permissions = get_user_permissions(request)
-        if 'manage_station' in permissions or core.User.may_access_station(
-                DB.session,
-                auth['username'],
-                station_name):
+        if 'admin_stations' in permissions or (
+                'manage_station' in permissions and
+                core.User.may_access_station(
+                    DB.session, auth['username'], station_name)):
             new_state = core.Team.advance_on_station(
                     DB.session, team_name, station_name)
             output = {
