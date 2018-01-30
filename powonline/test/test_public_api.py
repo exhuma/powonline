@@ -383,12 +383,10 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
         '''
         Team and Station should be interchangeable in the URL
         '''
-        response = self.app.get('/station/station-start/teams/team-red')
-        self.assertEqual(response.status_code, 200, response.data)
-        self.assertEqual(response.content_type, 'application/json')
-        response_text = response.data.decode(response.charset)
-        data = json.loads(response_text)
-        self.assertEqual(data['state'], 'finished')
+        response_a = self.app.get('/station/station-start/teams/team-red')
+        response_b = self.app.get('/team/team-red/stations/station-start')
+        self.assertEqual(response_a.status_code, response_b.status_code)
+        self.assertEqual(response_a.data, response_b.data)
 
     def test_advance_team_state(self):
         simplejob = {
