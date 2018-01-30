@@ -23,6 +23,7 @@ setup(
             'gouge',
         ],
         'test': [
+            'flask-testing',
             'pytest',
             'pytest-catchlog',
             'pytest-coverage',

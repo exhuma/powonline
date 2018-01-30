@@ -9,10 +9,11 @@ TRUNCATE
     user_role,
     user_station
 ;
-INSERT INTO "user" (name) VALUES
-    ('user-red'),
-    ('john'),
-    ('jane');
+INSERT INTO "user" (name, password) VALUES
+    ('user-station-manager', 'user-station-manager'),
+    ('user-red', 'user-red'),
+    ('john', 'john'),
+    ('jane', 'jane');
 INSERT INTO route (name) VALUES
     ('route-red'),
     ('route-blue');

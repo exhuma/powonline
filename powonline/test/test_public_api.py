@@ -181,7 +181,7 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
             name='foo',
             contact='new-contact')
 
-        response = self.app.put('/station/old-station',
+        response = self.app.put('/station/station-red',
                                 headers={'Content-Type': 'application/json'},
                                 data=json.dumps(replacement_station))
         self.assertEqual(response.status_code, 200, response.data)
@@ -372,26 +372,30 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
         self.assertEqual(response.status_code, 204, response.data)
 
     def test_show_team_station_state(self):
-        response = self.app.get('/team/example-team/stations/somestation')
+        response = self.app.get('/team/team-red/stations/station-start')
         self.assertEqual(response.status_code, 200, response.data)
         self.assertEqual(response.content_type, 'application/json')
         response_text = response.data.decode(response.charset)
         data = json.loads(response_text)
-        self.assertEqual(data['state'], 'unknown')
+        self.assertEqual(data['state'], 'finished')
 
     def test_show_team_station_state_inverse(self):
         '''
         Team and Station should be interchangeable in the URL
         '''
-        response = self.app.get('/station/example-station/teams/someteam')
+        response = self.app.get('/station/station-start/teams/team-red')
         self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.content_type, 'application/json')
+        response_text = response.data.decode(response.charset)
+        data = json.loads(response_text)
+        self.assertEqual(data['state'], 'finished')
 
     def test_advance_team_state(self):
         simplejob = {
             'action': 'advance',
             'args': {
-                'station_name': 'station-red',
-                'team_name': 'someteam',
+                'station_name': 'station-start',
+                'team_name': 'team-red',
             }
         }
         response = self.app.post('/job',
@@ -401,7 +405,7 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
         response_text = response.data.decode(response.charset)
         data = json.loads(response_text)
         result = data['result']
-        self.assertEqual(result, {'state': 'arrived'})
+        self.assertEqual(result, {'state': 'unknown'})
 
     def test_dashboard(self):
         with patch('powonline.resources.core') as _core:
@@ -437,6 +441,13 @@ class TestPublicAPIAsStationManager(BaseAuthTestCase):
         self.skipTest('TODO')
 
     def test_update_team(self):
+        replacement_team = make_dummy_team_dict(
+            name='foo',
+            contact='new-contact')
+
+        response = self.app.put('/team/old-team',
+                                headers={'Content-Type': 'application/json'},
+                                data=json.dumps(replacement_team))
         # should fail: access denied
         self.skipTest('TODO')
 
