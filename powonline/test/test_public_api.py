@@ -75,13 +75,16 @@ class BaseAuthTestCase(TestCase):
         return make_app(config)
 
     def setUp(self):
-        payload = {
-            'username': self.USERNAME,
-            'roles': self.ROLES,
-        }
-        auth_header = 'Bearer %s' % jwt.encode(
-            payload, 'testing').decode('ascii')
-        self.app = AuthClientWrapper(self.client, auth_header)
+        if self.USERNAME:
+            payload = {
+                'username': self.USERNAME,
+                'roles': self.ROLES,
+            }
+            auth_header = 'Bearer %s' % jwt.encode(
+                payload, 'testing').decode('ascii')
+            self.app = AuthClientWrapper(self.client, auth_header)
+        else:
+            self.app = self.client
 
         DB.create_all()
 
@@ -630,105 +633,204 @@ class TestPublicAPIAsStationManager(BaseAuthTestCase):
         self.assertEqual(response.status_code, 401, response.data)
 
 
-class TestPublicAPIAsAnonymous(unittest.TestCase):
+class TestPublicAPIAsAnonymous(BaseAuthTestCase):
+
+    USERNAME = ''
+    ROLES = []
 
     def test_fetch_list_of_teams(self):
-        self.skipTest('TODO')
+        with patch('powonline.resources.core') as _core:
+            _core.Team.all.return_value = []
+            response = self.app.get('/team')
+            self.assertLess(response.status_code, 400)
 
     def test_fetch_list_of_stations(self):
-        self.skipTest('TODO')
+        with patch('powonline.resources.core') as _core:
+            _core.Station.all.return_value = []
+            response = self.app.get('/station')
+        self.assertLess(response.status_code, 400, response.data)
 
     def test_fetch_list_of_routes(self):
-        self.skipTest('TODO')
+        with patch('powonline.resources.core') as _core:
+            _core.Route.all.return_value = []
+            response = self.app.get('/route')
+        self.assertLess(response.status_code, 400, response.data)
 
     def test_update_team(self):
         # should fail: access denied
-        self.skipTest('TODO')
+        replacement_team = make_dummy_team_dict(
+            name='foo',
+            contact='new-contact')
+
+        response = self.app.put('/team/old-team',
+                                headers={'Content-Type': 'application/json'},
+                                data=json.dumps(replacement_team))
+        self.assertEqual(response.status_code, 401, response.data)
 
     def test_update_own_station(self):
         # should fail: access denied
-        self.skipTest('TODO')
+        replacement_station = make_dummy_station_dict(
+            name='foo',
+            contact='new-contact')
+
+        response = self.app.put('/station/station-red',
+                                headers={'Content-Type': 'application/json'},
+                                data=json.dumps(replacement_station))
+        self.assertEqual(response.status_code, 401, response.data)
 
     def test_update_other_station(self):
         # should fail: access denied
-        self.skipTest('TODO')
+        replacement_station = make_dummy_station_dict(
+            name='foo',
+            contact='new-contact')
+
+        response = self.app.put('/station/not-my-station',
+                                headers={'Content-Type': 'application/json'},
+                                data=json.dumps(replacement_station))
+        self.assertEqual(response.status_code, 401, response.data)
 
     def test_update_route(self):
         # should fail: access denied
-        self.skipTest('TODO')
+        replacement_route = make_dummy_route_dict(
+            name='foo',
+            contact='new-contact')
+
+        with patch('powonline.resources.core') as _core:
+            mocked_route = make_dummy_route_dict(
+                as_mock=True,
+                name='foo',
+                contact='new-contact')
+            _core.Route.upsert.return_value = mocked_route
+            response = self.app.put(
+                '/route/old-route',
+                headers={'Content-Type': 'application/json'},
+                data=json.dumps(replacement_route))
+        self.assertEqual(response.status_code, 401, response.data)
 
     def test_create_team(self):
         # should fail: access denied
-        self.skipTest('TODO')
+        new_team = make_dummy_team_dict(
+            name='foo',
+            contact='new-contact')
+
+        response = self.app.post('/team',
+                                 headers={'Content-Type': 'application/json'},
+                                 data=json.dumps(new_team))
+        self.assertEqual(response.status_code, 401, response.data)
 
     def test_create_station(self):
         # should fail: access denied
-        self.skipTest('TODO')
+        new_station = make_dummy_station_dict(
+            name='foo',
+            contact='new-contact')
+
+        response = self.app.post('/station',
+                                 headers={'Content-Type': 'application/json'},
+                                 data=json.dumps(new_station))
+        self.assertEqual(response.status_code, 401, response.data)
 
     def test_create_route(self):
         # should fail: access denied
-        self.skipTest('TODO')
+        new_route = make_dummy_route_dict(
+            name='foo',
+            contact='new-contact')
+
+        response = self.app.post('/route',
+                                 headers={'Content-Type': 'application/json'},
+                                 data=json.dumps(new_route))
+        self.assertEqual(response.status_code, 401, response.data)
 
     def test_delete_team(self):
         # should fail
-        self.skipTest('TODO')
+        response = self.app.delete('/team/example-team')
+        self.assertEqual(response.status_code, 401, response.data)
 
     def test_delete_station(self):
         # should fail: access denied
-        self.skipTest('TODO')
+        response = self.app.delete('/station/example-station')
+        self.assertEqual(response.status_code, 401, response.data)
 
     def test_delete_route(self):
         # should fail: access denied
-        self.skipTest('TODO')
+        response = self.app.delete('/route/example-route')
+        self.assertEqual(response.status_code, 401, response.data)
 
     def test_assign_user_to_station(self):
         # should fail: access denied
-        self.skipTest('TODO')
-
-    def test_assign_user_to_two_stations(self):
-        # should fail: access denied
-        self.skipTest('TODO')
+        simpleuser = {'name': 'john'}
+        response = self.app.post('/station/station-red/users',
+                                 headers={'Content-Type': 'application/json'},
+                                 data=json.dumps(simpleuser))
+        self.assertEqual(response.status_code, 401, response.data)
 
     def test_unassign_user_from_station(self):
         # should fail: access denied
-        self.skipTest('TODO')
+        response = self.app.delete('/station/station-red/users/user-red')
+        self.assertEqual(response.status_code, 401, response.data)
 
     def test_assign_team_to_route(self):
         # should fail: access denied
-        self.skipTest('TODO')
-
-    def test_assign_team_to_two_routes(self):
-        # should fail: access denied
-        self.skipTest('TODO')
+        simpleteam = {'name': 'team-without-route'}
+        response = self.app.post('/route/route-red/teams',
+                                 headers={'Content-Type': 'application/json'},
+                                 data=json.dumps(simpleteam))
+        self.assertEqual(response.status_code, 401, response.data)
 
     def test_unassign_team_from_route(self):
         # should fail: access denied
-        self.skipTest('TODO')
+        response = self.app.delete('/route/route-red/teams/team-red')
+        self.assertEqual(response.status_code, 401, response.data)
 
     def test_assign_role_to_user(self):
         # should fail: access denied
-        self.skipTest('TODO')
+        simplerole = {'name': 'a-role'}
+        response = self.app.post('/user/jane/roles',
+                                 headers={'Content-Type': 'application/json'},
+                                 data=json.dumps(simplerole))
+        self.assertEqual(response.status_code, 401, response.data)
 
     def test_unassign_role_from_user(self):
         # should fail: access denied
-        self.skipTest('TODO')
+        response = self.app.delete('/user/john/roles/a-role')
+        self.assertEqual(response.status_code, 401, response.data)
 
     def test_assign_station_to_route(self):
         # should fail: access denied
-        self.skipTest('TODO')
-
-    def test_assign_station_to_two_routes(self):
-        # should fail: access denied
-        self.skipTest('TODO')
+        simplestation = {'name': 'station-red'}
+        response = self.app.post('/route/route-red/stations',
+                                 headers={'Content-Type': 'application/json'},
+                                 data=json.dumps(simplestation))
+        self.assertEqual(response.status_code, 401, response.data)
 
     def test_unassign_station_from_route(self):
         # should fail: access denied
-        self.skipTest('TODO')
+        response = self.app.delete('/route/route-red/stations/station-red')
+        self.assertEqual(response.status_code, 401, response.data)
 
     def test_advance_team_state(self):
         # should fail: access denied
-        self.skipTest('TODO')
+        simplejob = {
+            'action': 'advance',
+            'args': {
+                'station_name': 'station-start',
+                'team_name': 'team-red',
+            }
+        }
+        response = self.app.post('/job',
+                                 headers={'Content-Type': 'application/json'},
+                                 data=json.dumps(simplejob))
+        self.assertEqual(response.status_code, 401, response.data)
 
     def test_advance_team_state_on_other_stations(self):
         # should fail: access denied
-        self.skipTest('TODO')
+        simplejob = {
+            'action': 'advance',
+            'args': {
+                'station_name': 'station-start',
+                'team_name': 'team-red',
+            }
+        }
+        response = self.app.post('/job',
+                                 headers={'Content-Type': 'application/json'},
+                                 data=json.dumps(simplejob))
+        self.assertEqual(response.status_code, 401, response.data)
