@@ -1,5 +1,8 @@
 from . import model
 from .model import TeamState
+import logging
+
+LOG = logging.getLogger(__name__)
 
 
 def get_assignments(session):
@@ -101,6 +104,7 @@ class Team:
     def stations(session, team_name):
         team = session.query(model.Team).filter_by(name=team_name).one_or_none()
         if not team:
+            LOG.debug('Team %r not found!', team_name)
             return []
         return team.route.stations
 
