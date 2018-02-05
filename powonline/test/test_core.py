@@ -178,8 +178,8 @@ class TestStation(CommonTest):
 
     def test_team_states(self):
         result = set(core.Station.team_states(self.session, 'station-start'))
-        expected = {('team-blue', core.TeamState.UNKNOWN),
-                    ('team-red', core.TeamState.FINISHED)}
+        expected = {('team-blue', core.TeamState.UNKNOWN, None),
+                    ('team-red', core.TeamState.FINISHED, 10)}
         self.assertEqual(result, expected)
 
 

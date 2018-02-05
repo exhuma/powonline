@@ -411,8 +411,8 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
     def test_dashboard(self):
         with patch('powonline.resources.core') as _core:
             _core.Station.team_states.return_value = [
-                ('team1', core.TeamState.ARRIVED),
-                ('team2', core.TeamState.UNKNOWN),
+                ('team1', core.TeamState.ARRIVED, 10),
+                ('team2', core.TeamState.UNKNOWN, None),
             ]
             result = self.app.get('/station/station-1/dashboard')
             data = json.loads(result.data.decode(result.charset))
@@ -421,8 +421,8 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
                 for row in data
             }
             expected = {
-                (0, 'team1', 'arrived'),
-                (0, 'team2', 'unknown'),
+                (10, 'team1', 'arrived'),
+                (None, 'team2', 'unknown'),
             }
             self.assertEqual(testable, expected)
 
