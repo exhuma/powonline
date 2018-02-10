@@ -643,12 +643,12 @@ class Dashboard(Resource):
 
     def get(self, station_name):
         output = []
-        for team_name, state in core.Station.team_states(
+        for team_name, state, score in core.Station.team_states(
                 DB.session, station_name):
             output.append({
                 'team': team_name,
                 'state': state.value,
-                'score': 0
+                'score': score
             })
 
         output = make_response(dumps(output), 200)
@@ -675,6 +675,24 @@ class Job(Resource):
         else:
             return 'Access denied to this station!', 401
 
+    def _action_set_score(self, station_name, team_name, score):
+        auth, permissions = get_user_permissions(request)
+        if 'admin_stations' in permissions or (
+                'manage_station' in permissions and
+                core.User.may_access_station(
+                    DB.session, auth['username'], station_name)):
+            LOG.info('Setting score of %s on %s to %s (by user: %s)',
+                     team_name, station_name, score, auth['username'])
+            new_score = core.Team.set_station_score(
+                DB.session, team_name, station_name, score)
+            output = {
+                'old_score': score,
+                'new_score': new_score,
+            }
+            return output, 200
+        else:
+            return 'Access denied to this station!', 401
+
     @require_permissions('manage_station')
     def post(self):
         data = request.get_json()
@@ -685,5 +703,6 @@ class Job(Resource):
         action = parsed_data['action']
         func = getattr(self, '_action_%s' % action, None)
         if not func:
+            LOG.debug('Unknown job %r requested!', parsed_data['action'])
             return '%r is an unknown job action' % action, 400
         return func(**parsed_data['args'])

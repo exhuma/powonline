@@ -1,4 +1,5 @@
 import logging
+from time import time
 
 from flask import Blueprint, request, jsonify, current_app
 import jwt
@@ -39,9 +40,12 @@ def login():
 
     roles = {role.name for role in user.roles}
 
+    now = int(time())
     payload = {
         'username': username,
-        'roles': list(roles)
+        'roles': list(roles),
+        'iat': now,
+        'exp': now + (2 * 60 * 60)  # Expire token after 2h
     }
     jwt_secret = current_app.localconfig.get('security', 'jwt_secret')
     result = {
@@ -50,3 +54,25 @@ def login():
         'user': data['username'],  # convenience for the frontend
     }
     return jsonify(result)
+
+
+@rootbp.route('/login/renew', methods=['POST'])
+def renew_token():
+    data = request.get_json()
+    current_token = data['token']
+    jwt_secret = current_app.localconfig.get('security', 'jwt_secret')
+    try:
+        token_info = jwt.decode(current_token, jwt_secret)
+    except jwt.InvalidTokenError as exc:
+        LOG.debug('Renewal of invalid token: %s', exc)
+        return 'Invalid Token!', 400
+
+    now = int(time())
+    new_payload = {
+        'username': token_info['username'],
+        'roles': token_info['roles'],
+        'iat': now,
+        'exp': now + (2 * 60 * 60)  # Expire token after 2h
+    }
+    new_token = jwt.encode(new_payload, jwt_secret).decode('ascii')
+    return jsonify({'token': new_token})

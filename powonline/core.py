@@ -86,6 +86,17 @@ class Team:
             state.state = TeamState.UNKNOWN
         return state.state
 
+    def set_station_score(session, team_name, station_name, score):
+        state = session.query(model.TeamStation).filter_by(
+            team_name=team_name, station_name=station_name).one_or_none()
+        if not state:
+            state = model.TeamStation(team_name=team_name,
+                                      station_name=station_name)
+            state = session.merge(state)
+
+        state.score = score
+        return state.score
+
     @staticmethod
     def stations(session, team_name):
         team = session.query(model.Team).filter_by(name=team_name).one_or_none()
@@ -169,7 +180,7 @@ class Station:
                     team_name=team.name,
                     station_name=station_name,
                     state=TeamState.UNKNOWN))
-                yield (team.name, state.state)
+                yield (team.name, state.state, state.score)
 
     @staticmethod
     def accessible_by(session, username):
