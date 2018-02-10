@@ -1,5 +1,6 @@
 from . import model
 from .model import TeamState
+from sqlalchemy import and_
 import logging
 
 LOG = logging.getLogger(__name__)
@@ -25,6 +26,49 @@ def make_default_team_state():
     return {
         'state': TeamState.UNKNOWN
     }
+
+
+def global_dashboard(session):
+    teams = session.query(model.Team).order_by(model.Team.name)
+    stations = session.query(model.Station).order_by(model.Station.name)
+    team_names = set()
+    station_names = set()
+    output = []
+    for team in teams:
+        team_names.add(team.name)
+        team_data = {
+            'stations': [],
+            'team': team.name
+        }
+        if team.route:
+            reachable_stations = {station.name
+                                  for station in team.route.stations}
+        else:
+            reachable_stations = set()
+        for station in stations:
+            station_names.add(station.name)
+            if station.name in reachable_stations:
+                team_states = session.query(model.TeamStation).filter(and_(
+                    model.TeamStation.team == team,
+                    model.TeamStation.station == station
+                ))
+                dbstate = team_states.one_or_none()
+                if dbstate:
+                    cell_state = dbstate.state
+                    cell_score = dbstate.score
+                else:
+                    cell_state = TeamState.UNKNOWN
+                    cell_score = 0
+            else:
+                cell_state = TeamState.UNREACHABLE
+                cell_score = 0
+            team_data['stations'].append({
+                'name': station.name,
+                'score': cell_score,
+                'state': cell_state
+            })
+        output.append(team_data)
+    return output
 
 
 class Team:

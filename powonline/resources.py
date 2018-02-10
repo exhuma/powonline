@@ -1,3 +1,4 @@
+from enum import Enum
 from functools import wraps
 from json import dumps, JSONEncoder
 import logging
@@ -118,6 +119,8 @@ class MyJsonEncoder(JSONEncoder):
     def default(self, value):
         if isinstance(value, set):
             return list(value)
+        elif isinstance(value, Enum):
+            return value.value
         super().default(value)
 
 
@@ -651,7 +654,19 @@ class Dashboard(Resource):
                 'score': score
             })
 
-        output = make_response(dumps(output), 200)
+        output = make_response(dumps(output, cls=MyJsonEncoder), 200)
+        output.content_type = 'application/json'
+        return output
+
+
+class GlobalDashboard(Resource):
+    '''
+    The global state of each team on each station of the event.
+    '''
+
+    def get(self):
+        output = core.global_dashboard(DB.session)
+        output = make_response(dumps(output, cls=MyJsonEncoder), 200)
         output.content_type = 'application/json'
         return output
 

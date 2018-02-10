@@ -4,6 +4,7 @@ from flask_restful import Api
 from .resources import (
     Assignments,
     Dashboard,
+    GlobalDashboard,
     Job,
     Route,
     RouteList,
@@ -65,6 +66,7 @@ def make_app(config):
                      '/station/<station_name>/teams/<team_name>',
                      )
     api.add_resource(Dashboard, '/station/<station_name>/dashboard')
+    api.add_resource(GlobalDashboard, '/dashboard')
     api.add_resource(Job, '/job')
 
     app.config['SQLALCHEMY_DATABASE_URI'] = config.get('db', 'dsn')

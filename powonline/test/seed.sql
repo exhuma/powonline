@@ -36,6 +36,7 @@ INSERT INTO user_station (user_name, station_name) VALUES
     ('user-station-manager', 'station-red'),
     ('user-red', 'station-red');
 INSERT INTO team_station_state (team_name, station_name, state, score) VALUES
+    ('team-red', 'station-end', 'arrived', 0),
     ('team-red', 'station-start', 'finished', 10);
 INSERT INTO route_station (route_name, station_name) VALUES
     ('route-red', 'station-start'),

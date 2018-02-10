@@ -426,6 +426,71 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
             }
             self.assertEqual(testable, expected)
 
+    def test_global_dashboard(self):
+        with patch('powonline.resources.core') as _core:
+            _core.global_dashboard.return_value = [{
+                'team': 'team-red',
+                'stations': [
+                    {
+                        'name': 'station-start',
+                        'score': 10,
+                        'state': 'finished'
+                    },
+                    {
+                        'name': 'station-2',
+                        'score': None,
+                        'state': 'unknown'
+                    }
+                ]
+            }, {
+                'team': 'team-2',
+                'stations': [
+                    {
+                        'name': 'station-start',
+                        'score': None,
+                        'state': 'unknown'
+                    },
+                    {
+                        'name': 'station-2',
+                        'score': None,
+                        'state': 'unknown'
+                    }
+                ]
+            }]
+            result = self.app.get('/dashboard')
+            data = json.loads(result.data.decode(result.charset))
+
+            expected = [{
+                'team': 'team-red',
+                'stations': [
+                    {
+                        'name': 'station-start',
+                        'score': 10,
+                        'state': 'finished'
+                    },
+                    {
+                        'name': 'station-2',
+                        'score': None,
+                        'state': 'unknown'
+                    }
+                ]
+            }, {
+                'team': 'team-2',
+                'stations': [
+                    {
+                        'name': 'station-start',
+                        'score': None,
+                        'state': 'unknown'
+                    },
+                    {
+                        'name': 'station-2',
+                        'score': None,
+                        'state': 'unknown'
+                    }
+                ]
+            }]
+            self.assertEqual(data, expected)
+
 
 class TestPublicAPIAsStationManager(BaseAuthTestCase):
 
