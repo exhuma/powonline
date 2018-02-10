@@ -68,6 +68,70 @@ class TestCore(CommonTest):
         self.assertEqual(result_stations_a, expected_stations_a)
         self.assertEqual(result_stations_b, expected_stations_b)
 
+    def test_global_dashboard(self):
+        result = core.global_dashboard(self.session)
+        expected = [
+            {
+                'team': 'team-blue',
+                'stations': [{
+                    'name': 'station-blue',
+                    'score': 0,
+                    'state': core.TeamState.UNKNOWN
+                }, {
+                    'name': 'station-end',
+                    'score': 0,
+                    'state': core.TeamState.UNKNOWN
+                }, {
+                    'name': 'station-red',
+                    'score': 0,
+                    'state': core.TeamState.UNREACHABLE
+                }, {
+                    'name': 'station-start',
+                    'score': 0,
+                    'state': core.TeamState.UNKNOWN
+                }]
+            }, {
+                'team': 'team-red',
+                'stations': [{
+                    'name': 'station-blue',
+                    'score': 0,
+                    'state': core.TeamState.UNREACHABLE
+                }, {
+                    'name': 'station-end',
+                    'score': 0,
+                    'state': core.TeamState.ARRIVED
+                }, {
+                    'name': 'station-red',
+                    'score': 0,
+                    'state': core.TeamState.UNKNOWN
+                }, {
+                    'name': 'station-start',
+                    'score': 10,
+                    'state': core.TeamState.FINISHED
+                }]
+            }, {
+                'team': 'team-without-route',
+                'stations': [{
+                    'name': 'station-blue',
+                    'score': 0,
+                    'state': core.TeamState.UNREACHABLE
+                }, {
+                    'name': 'station-end',
+                    'score': 0,
+                    'state': core.TeamState.UNREACHABLE
+                }, {
+                    'name': 'station-red',
+                    'score': 0,
+                    'state': core.TeamState.UNREACHABLE
+                }, {
+                    'name': 'station-start',
+                    'score': 0,
+                    'state': core.TeamState.UNREACHABLE
+                }]
+            }
+        ]
+        self.assertEqual(result, expected)
+
 
 class TestTeam(CommonTest):
 
@@ -178,8 +242,8 @@ class TestStation(CommonTest):
 
     def test_team_states(self):
         result = set(core.Station.team_states(self.session, 'station-start'))
-        expected = {('team-blue', core.TeamState.UNKNOWN),
-                    ('team-red', core.TeamState.FINISHED)}
+        expected = {('team-blue', core.TeamState.UNKNOWN, None),
+                    ('team-red', core.TeamState.FINISHED, 10)}
         self.assertEqual(result, expected)
 
 

@@ -411,8 +411,8 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
     def test_dashboard(self):
         with patch('powonline.resources.core') as _core:
             _core.Station.team_states.return_value = [
-                ('team1', core.TeamState.ARRIVED),
-                ('team2', core.TeamState.UNKNOWN),
+                ('team1', core.TeamState.ARRIVED, 10),
+                ('team2', core.TeamState.UNKNOWN, None),
             ]
             result = self.app.get('/station/station-1/dashboard')
             data = json.loads(result.data.decode(result.charset))
@@ -421,10 +421,75 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
                 for row in data
             }
             expected = {
-                (0, 'team1', 'arrived'),
-                (0, 'team2', 'unknown'),
+                (10, 'team1', 'arrived'),
+                (None, 'team2', 'unknown'),
             }
             self.assertEqual(testable, expected)
+
+    def test_global_dashboard(self):
+        with patch('powonline.resources.core') as _core:
+            _core.global_dashboard.return_value = [{
+                'team': 'team-red',
+                'stations': [
+                    {
+                        'name': 'station-start',
+                        'score': 10,
+                        'state': 'finished'
+                    },
+                    {
+                        'name': 'station-2',
+                        'score': None,
+                        'state': 'unknown'
+                    }
+                ]
+            }, {
+                'team': 'team-2',
+                'stations': [
+                    {
+                        'name': 'station-start',
+                        'score': None,
+                        'state': 'unknown'
+                    },
+                    {
+                        'name': 'station-2',
+                        'score': None,
+                        'state': 'unknown'
+                    }
+                ]
+            }]
+            result = self.app.get('/dashboard')
+            data = json.loads(result.data.decode(result.charset))
+
+            expected = [{
+                'team': 'team-red',
+                'stations': [
+                    {
+                        'name': 'station-start',
+                        'score': 10,
+                        'state': 'finished'
+                    },
+                    {
+                        'name': 'station-2',
+                        'score': None,
+                        'state': 'unknown'
+                    }
+                ]
+            }, {
+                'team': 'team-2',
+                'stations': [
+                    {
+                        'name': 'station-start',
+                        'score': None,
+                        'state': 'unknown'
+                    },
+                    {
+                        'name': 'station-2',
+                        'score': None,
+                        'state': 'unknown'
+                    }
+                ]
+            }]
+            self.assertEqual(data, expected)
 
 
 class TestPublicAPIAsStationManager(BaseAuthTestCase):

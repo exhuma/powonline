@@ -27,6 +27,7 @@ class TeamState(Enum):
     UNKNOWN = 'unknown'
     ARRIVED = 'arrived'
     FINISHED = 'finished'
+    UNREACHABLE = 'unreachable'
 
 
 class TeamStateType(types.TypeDecorator):
