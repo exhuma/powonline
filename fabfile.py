@@ -26,3 +26,8 @@ def deploy():
         fab.run('./env/bin/pip install /tmp/%s.tar.gz' % fullname)
         fab.run('./env/bin/alembic upgrade head')
         fab.run('touch wsgi/powonline.wsgi')
+
+
+@fab.task
+def run():
+    fab.local('./env/bin/python autoapp.py')
