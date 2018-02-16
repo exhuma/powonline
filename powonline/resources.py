@@ -700,6 +700,7 @@ class Job(Resource):
             return 'Access denied to this station!', 401
 
     def _action_set_score(self, station_name, team_name, score):
+        score = int(score, 10)
         auth, permissions = get_user_permissions(request)
         if 'admin_stations' in permissions or (
                 'manage_station' in permissions and
