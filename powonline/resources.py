@@ -686,6 +686,15 @@ class Job(Resource):
                     'state': new_state.value
                 }
             }
+            current_app.pusher.trigger(
+                'team-station-state',
+                'state-change',
+                {
+                    'station': station_name,
+                    'team': team_name,
+                    'new_state': new_state.value
+                }
+            )
             return output, 200
         else:
             return 'Access denied to this station!', 401
@@ -701,9 +710,17 @@ class Job(Resource):
             new_score = core.Team.set_station_score(
                 DB.session, team_name, station_name, score)
             output = {
-                'old_score': score,
                 'new_score': new_score,
             }
+            current_app.pusher.trigger(
+                'team-station-state',
+                'score-change',
+                {
+                    'station': station_name,
+                    'team': team_name,
+                    'new_score': new_score,
+                }
+            )
             return output, 200
         else:
             return 'Access denied to this station!', 401

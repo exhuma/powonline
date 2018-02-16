@@ -13,6 +13,7 @@ setup(
         'gouge >= 1.1, <2.0',
         'marshmallow',
         'psycopg2',
+        'pusher',
         'pyjwt',
         'sqlalchemy',
     ],

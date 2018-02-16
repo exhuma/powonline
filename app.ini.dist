@@ -1,6 +1,7 @@
 ; Version History of the config file
 ; ----------------------------------
 ;
+;  1.2: Added [pusher] section
 ;  1.1: Added "security.jwt_secret"
 ;  1.0: Initial version
 ;
@@ -14,3 +15,8 @@ dsn = postgresql://exhuma@/powonline
 
 [security]
 jwt_secret = foobar
+
+[pusher]
+app_id = 123456
+key = 1234567890abcdef
+secret = 1234567890abcdef
