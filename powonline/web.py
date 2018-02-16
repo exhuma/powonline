@@ -43,9 +43,9 @@ def make_app(config):
     app.localconfig = config
     app.register_blueprint(rootbp)
     app.pusher = PusherWrapper.create(
-        config.get('pusher', 'app_id'),
-        config.get('pusher', 'key'),
-        config.get('pusher', 'secret'),
+        config.get('pusher', 'app_id', default=''),
+        config.get('pusher', 'key', default=''),
+        config.get('pusher', 'secret', default=''),
     )
 
     api.add_resource(Assignments, '/assignments')
