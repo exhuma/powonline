@@ -1,5 +1,6 @@
 from flask import Flask
 from flask_restful import Api
+import logging
 
 from .resources import (
     Assignments,
@@ -24,8 +25,12 @@ from .resources import (
     UserRole,
     UserRoleList,
 )
-from .rootbp import rootbp
 from .model import DB
+from .pusher import PusherWrapper
+from .rootbp import rootbp
+
+
+LOG = logging.getLogger(__name__)
 
 
 def make_app(config):
@@ -37,6 +42,11 @@ def make_app(config):
 
     app.localconfig = config
     app.register_blueprint(rootbp)
+    app.pusher = PusherWrapper.create(
+        config.get('pusher', 'app_id'),
+        config.get('pusher', 'key'),
+        config.get('pusher', 'secret'),
+    )
 
     api.add_resource(Assignments, '/assignments')
     api.add_resource(TeamList, '/team')
