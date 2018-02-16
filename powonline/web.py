@@ -25,50 +25,12 @@ from .resources import (
     UserRole,
     UserRoleList,
 )
-from .rootbp import rootbp
 from .model import DB
+from .pusher import PusherWrapper
+from .rootbp import rootbp
 
 
 LOG = logging.getLogger(__name__)
-
-
-class NullPusher:
-
-    def __init__(self):
-        LOG.warning('NullPusher instantiated (not all values found in app.ini!')
-
-    def trigger(self, channel, event, payload):
-        LOG.debug('NullPusher triggered with %r, %r, %r',
-                  channel, event, payload)
-
-
-class PusherWrapper:
-
-    def __init__(self, client):
-        self._pusher = client
-
-    def trigger(self, channel, event, payload):
-        try:
-            self._pusher.trigger(channel, event, payload)
-        except:
-            LOG.exception('Unable to contact pusher!')
-
-
-def make_pusher_client(app_id, key, secret):
-    import pusher
-
-    if not all([app_id, key, secret]):
-        return NullPusher()
-
-    pusher_client = pusher.Pusher(
-          app_id=app_id,
-          key=key,
-          secret=secret,
-          cluster='eu',
-          ssl=True
-    )
-    LOG.debug('Successfully created pusher client for app-id %r', app_id)
-    return PusherWrapper(pusher_client)
 
 
 def make_app(config):
@@ -80,7 +42,7 @@ def make_app(config):
 
     app.localconfig = config
     app.register_blueprint(rootbp)
-    app.pusher = make_pusher_client(
+    app.pusher = PusherWrapper.create(
         config.get('pusher', 'app_id'),
         config.get('pusher', 'key'),
         config.get('pusher', 'secret'),
