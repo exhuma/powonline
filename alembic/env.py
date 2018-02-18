@@ -27,7 +27,7 @@ target_metadata = None
 
 def get_url():
     config = Config('mamerwiselen', 'powonline',
-                    version='1.0', require_load=True)
+                    version='1.3', require_load=True)
     return config.get('db', 'dsn')
 
 def run_migrations_offline():
