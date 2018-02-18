@@ -9,4 +9,4 @@ services:
     build: .
     depends_on:
       - db
-    ports: [443]
+    ports: [80]
