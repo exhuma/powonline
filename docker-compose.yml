@@ -1,0 +1,12 @@
+version: '2'
+
+services:
+  db:
+    build: database
+    container_name: powonline-db
+
+  backend:
+    build: .
+    depends_on:
+      - db
+    ports: [443]
