@@ -1,7 +1,7 @@
 import logging
 from time import time
 
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, render_template
 import jwt
 
 from .model import DB
@@ -54,6 +54,11 @@ def login():
         'user': data['username'],  # convenience for the frontend
     }
     return jsonify(result)
+
+
+@rootbp.route('/')
+def index():
+    return render_template('index.html')
 
 
 @rootbp.route('/login/renew', methods=['POST'])

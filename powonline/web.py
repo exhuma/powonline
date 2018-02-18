@@ -40,6 +40,31 @@ def make_app(config):
     app = Flask(__name__)
     api = Api(app)
 
+    static_folder = config.get('app', 'static_folder', default='')
+    if not static_folder:
+        LOG.warning('No app.static_folder specified in config! '
+                    'Instance will have no working frontend!')
+    else:
+        from flask import send_from_directory
+        from jinja2 import ChoiceLoader, FileSystemLoader
+        from os.path import join, dirname
+        loader = ChoiceLoader([
+            FileSystemLoader(join(static_folder)),
+            FileSystemLoader(join(dirname(__file__), 'templates'))
+        ])
+        app.jinja_loader = loader
+        app.static_folder = static_folder
+
+        @app.route('/static/js/<path:path>')
+        def js(path):
+            js_folder = join(static_folder, 'static', 'js')
+            return send_from_directory(js_folder, path)
+
+        @app.route('/static/css/<path:path>')
+        def css(path):
+            css_folder = join(static_folder, 'static', 'css')
+            return send_from_directory(css_folder, path)
+
     app.localconfig = config
     app.register_blueprint(rootbp)
     app.pusher = PusherWrapper.create(
