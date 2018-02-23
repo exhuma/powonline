@@ -1,13 +1,23 @@
 version: '2'
 
+networks:
+    nginxproxy_default:
+        external: true
+
 services:
+
   db:
     build: database
     container_name: powonline-db
+    networks:
+      - nginxproxy_default
 
   backend:
     build: .
+    networks:
+      - nginxproxy_default
     depends_on:
       - db
-    ports:
-      - "80:80"
+    environment:
+      - VIRTUAL_HOST=powonline.albert.lu
+      - VIRTUAL_PROTO=uwsgi
