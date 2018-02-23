@@ -1,11 +1,8 @@
 #!/bin/bash
-CONFIG=/etc/mamerwiselen/powonline
 cd /opt && git clone https://github.com/vishnubob/wait-for-it.git
 chmod +x /opt/wait-for-it/wait-for-it.sh
 /opt/wait-for-it/wait-for-it.sh powonline-db:5432 || exit 1
 
-#     --certfile=${CONFIG}/server.crt \
-#     --keyfile=${CONFIG}/server.key \
 cd /tmp/powonline && /opt/powonline/bin/alembic upgrade head
 
 cd /opt/powonline && /opt/powonline/bin/uwsgi \
