@@ -19,5 +19,7 @@ services:
     depends_on:
       - db
     environment:
-      - VIRTUAL_HOST=powonline.albert.lu
+      - VIRTUAL_HOST=api.powonline.albert.lu
       - VIRTUAL_PROTO=uwsgi
+      - LETSENCRYPT_HOST=api.powonline.albert.lu
+      - LETSENCRYPT_EMAIL=michel@albert.lu
