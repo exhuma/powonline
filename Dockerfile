@@ -11,5 +11,4 @@ ADD docker-entrypoint /
 RUN chmod +x /docker-entrypoint
 RUN useradd -ms /bin/bash powonline
 VOLUME ["/etc/mamerwiselen/powonline"]
-VOLUME ["/templates"]
 CMD ["/docker-entrypoint"]
