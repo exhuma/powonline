@@ -3,8 +3,6 @@ from alembic import context
 from sqlalchemy import create_engine
 from logging.config import fileConfig
 
-from config_resolver import Config
-
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -26,9 +24,8 @@ target_metadata = None
 
 
 def get_url():
-    config = Config('mamerwiselen', 'powonline',
-                    version='1.3', require_load=True)
-    return config.get('db', 'dsn')
+    return 'postgresql://powonline@/powonline'
+
 
 def run_migrations_offline():
     """Run migrations in 'offline' mode.
