@@ -4,6 +4,10 @@ networks:
     nginxproxy_default:
         external: true
 
+volumes:
+    pgdata:
+    backenddata:
+
 services:
 
   db:
@@ -11,9 +15,13 @@ services:
     container_name: powonline-db
     networks:
       - nginxproxy_default
+    volumes:
+      - pgdata:/var/lib/postgresql/data
 
   backend:
     build: .
+    volumes:
+      - backenddata:/etc/mamerwiselen/powonline
     networks:
       - nginxproxy_default
     depends_on:
