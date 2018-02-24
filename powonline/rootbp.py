@@ -39,13 +39,16 @@ def login():
         return 'Access Denied', 401
 
     roles = {role.name for role in user.roles}
+    # JWT token expiration time (in seconds). Default: 2 hours
+    jwt_lifetime = int(current_app.localconfig.get(
+        'security', 'jwt_secret', default=(2 * 60 * 60)))
 
     now = int(time())
     payload = {
         'username': username,
         'roles': list(roles),
         'iat': now,
-        'exp': now + (2 * 60 * 60)  # Expire token after 2h
+        'exp': now + jwt_lifetime
     }
     jwt_secret = current_app.localconfig.get('security', 'jwt_secret')
     result = {
@@ -66,6 +69,9 @@ def renew_token():
     data = request.get_json()
     current_token = data['token']
     jwt_secret = current_app.localconfig.get('security', 'jwt_secret')
+    # JWT token expiration time (in seconds). Default: 2 hours
+    jwt_lifetime = int(current_app.localconfig.get(
+        'security', 'jwt_secret', default=(2 * 60 * 60)))
     try:
         token_info = jwt.decode(current_token, jwt_secret)
     except jwt.InvalidTokenError as exc:
@@ -77,7 +83,7 @@ def renew_token():
         'username': token_info['username'],
         'roles': token_info['roles'],
         'iat': now,
-        'exp': now + (2 * 60 * 60)  # Expire token after 2h
+        'exp': now + jwt_lifetime
     }
     new_token = jwt.encode(new_payload, jwt_secret).decode('ascii')
     return jsonify({'token': new_token})

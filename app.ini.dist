@@ -1,6 +1,7 @@
 ; Version History of the config file
 ; ----------------------------------
 ;
+;  1.4: Added "section.jwt_lifetime"
 ;  1.3: Added [app] section
 ;  1.2: Added [pusher] section
 ;  1.1: Added "security.jwt_secret"
@@ -9,7 +10,7 @@
 ; ----------------------------------
 
 [meta]
-version = 1.3
+version = 1.4
 
 [app]
 static_folder = /home/exhuma/work/powonline-frontend/dist
@@ -19,6 +20,9 @@ dsn = postgresql://powonline@powonline-db/powonline
 
 [security]
 jwt_secret = foobar
+
+; How long a JWT token will be accepted (in seconds)
+jwt_lifetime = 3600
 
 [pusher]
 ;app_id = 123456
