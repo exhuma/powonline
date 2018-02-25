@@ -66,8 +66,16 @@ def deploy():
     finally:
         fab.run('rm -rf %s' % tmpdir)
 
-    fab.sudo('install -o %s -d %s' % (fab.env.user, DEPLOY_DIR))
-    fab.put('run-prod.sh', '%s/run-frontend.sh.dist' % DEPLOY_DIR)
+    exists = fab.run('[ -d %s ] && echo 1 || echo 0' % DEPLOY_DIR).strip()
+    if exists == '0':
+        fab.sudo('install -o %s -d %s' % (fab.env.user, DEPLOY_DIR))
+
+    fab.put('run-api.sh', '%s/run-api.sh.dist' % DEPLOY_DIR)
+
+    fab.run('docker stop powonline-api')
+    fab.run('docker rm powonline-api')
+    with fab.cd(DEPLOY_DIR):
+        fab.run('bash run-api.sh')
 
 
 @fab.task

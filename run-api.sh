@@ -2,6 +2,7 @@
 docker run \
     -d \
     --expose \
+    --name powonline-api
     --volume powonline-api-config:/etc/mamerwiselen/powonline \
     --env DSN=postgresql://powonline@powonline-db/powonline \
     --env VIRTUAL_HOST=powonline-api.albert.lu \
