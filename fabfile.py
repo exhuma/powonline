@@ -31,6 +31,21 @@ def build(with_docker_image=True):
 
 
 @fab.task
+def deploy_database():
+    version = fab.local('python setup.py --version', capture=True)
+    tmpdir = fab.run('mktemp -d')
+    fab.put('database', tmpdir)
+    try:
+        with fab.cd('%s/database' % tmpdir):
+            fab.run('docker build '
+                    '-t exhuma/powonline-db:latest '
+                    '-t exhuma/powonline-db:%s '
+                    '.' % version)
+    finally:
+        fab.run('rm -rf %s' % tmpdir)
+
+
+@fab.task
 def deploy():
     fab.execute(build, with_docker_image=False)
     fullname = fab.local('python setup.py --fullname', capture=True)
@@ -53,17 +68,6 @@ def deploy():
 
     fab.sudo('install -o %s -d %s' % (fab.env.user, DEPLOY_DIR))
     fab.put('run-prod.sh', '%s/run-frontend.sh.dist' % DEPLOY_DIR)
-
-    tmpdir = fab.run('mktemp -d')
-    fab.put('database', tmpdir)
-    try:
-        with fab.cd('%s/database' % tmpdir):
-            fab.run('docker build '
-                    '-t exhuma/powonline-db:latest '
-                    '-t exhuma/powonline-db:%s '
-                    '.' % version)
-    finally:
-        fab.run('rm -rf %s' % tmpdir)
 
 
 @fab.task
