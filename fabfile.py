@@ -1,7 +1,7 @@
 import fabric.api as fab
 
 fab.env.roledefs = {
-    'prod': ['powonline@95.85.17.57'],
+    'prod': ['178.62.219.167'],
     'staging': ['192.168.1.2'],
 }
 
@@ -45,14 +45,25 @@ def deploy():
     try:
         with fab.cd(tmpdir):
             fab.run('docker build '
-                    '-t exhuma/powonline:latest '
-                    '-t exhuma/powonline:%s '
+                    '-t exhuma/powonline-api:latest '
+                    '-t exhuma/powonline-api:%s '
                     '.' % version)
     finally:
         fab.run('rm -rf %s' % tmpdir)
 
     fab.sudo('install -o %s -d %s' % (fab.env.user, DEPLOY_DIR))
     fab.put('run-prod.sh', DEPLOY_DIR)
+
+    tmpdir = fab.run('mktemp -d')
+    fab.put('database', tmpdir)
+    try:
+        with fab.cd('%s/database' % tmpdir):
+            fab.run('docker build '
+                    '-t exhuma/powonline-db:latest '
+                    '-t exhuma/powonline-db:%s '
+                    '.' % version)
+    finally:
+        fab.run('rm -rf %s' % tmpdir)
 
 
 @fab.task
