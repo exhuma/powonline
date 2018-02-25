@@ -15,6 +15,7 @@ setup(
         'psycopg2',
         'pusher',
         'pyjwt',
+        'python-dateutil',
         'sqlalchemy',
     ],
     extras_require={

@@ -1,4 +1,23 @@
 from marshmallow import Schema, fields
+from dateutil.parser import parse
+
+
+class FuzzyDate(fields.Field):
+    def _serialize(self, value, attr, obj):
+        '''
+        Convert a Python object into an outside-world object
+        '''
+        if not value:
+            return None
+        return value.isoformat()
+
+    def _deserialize(self, value, attr, obj):
+        '''
+        Convert a outside-world value into a Python object
+        '''
+        if not value:
+            return None
+        return parse(value)
 
 
 class TeamSchema(Schema):
@@ -15,10 +34,10 @@ class TeamSchema(Schema):
     completed = fields.Boolean(default=False)
     inserted = fields.LocalDateTime()
     updated = fields.LocalDateTime(allow_none=True)
-    num_vegetarians = fields.Int()
-    num_participants = fields.Int()
-    planned_start_time = fields.LocalDateTime(allow_none=True)
-    effective_start_time = fields.LocalDateTime(allow_none=True)
+    num_vegetarians = fields.Int(allow_none=True)
+    num_participants = fields.Int(allow_none=True)
+    planned_start_time = FuzzyDate(allow_none=True)
+    effective_start_time = FuzzyDate(allow_none=True)
     finish_time = fields.LocalDateTime(allow_none=True)
 
 
