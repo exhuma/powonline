@@ -52,7 +52,7 @@ def deploy():
         fab.run('rm -rf %s' % tmpdir)
 
     fab.sudo('install -o %s -d %s' % (fab.env.user, DEPLOY_DIR))
-    fab.put('run-prod.sh', DEPLOY_DIR)
+    fab.put('run-prod.sh', '%s/run-frontend.sh.dist' % DEPLOY_DIR)
 
     tmpdir = fab.run('mktemp -d')
     fab.put('database', tmpdir)
