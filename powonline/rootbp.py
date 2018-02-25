@@ -41,7 +41,7 @@ def login():
     roles = {role.name for role in user.roles}
     # JWT token expiration time (in seconds). Default: 2 hours
     jwt_lifetime = int(current_app.localconfig.get(
-        'security', 'jwt_secret', default=(2 * 60 * 60)))
+        'security', 'jwt_lifetime', default=(2 * 60 * 60)))
 
     now = int(time())
     payload = {
@@ -71,7 +71,7 @@ def renew_token():
     jwt_secret = current_app.localconfig.get('security', 'jwt_secret')
     # JWT token expiration time (in seconds). Default: 2 hours
     jwt_lifetime = int(current_app.localconfig.get(
-        'security', 'jwt_secret', default=(2 * 60 * 60)))
+        'security', 'jwt_lifetime', default=(2 * 60 * 60)))
     try:
         token_info = jwt.decode(current_token, jwt_secret)
     except jwt.InvalidTokenError as exc:
