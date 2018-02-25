@@ -10,8 +10,6 @@ else
     echo ">> Using default DSN"
 fi
 
-cd /tmp/powonline && /opt/powonline/bin/alembic upgrade head
-
 
 if [[ "${PROTO}" == "uwsgi" ]]; then
     echo ">> Using uWSGI binary protocol"

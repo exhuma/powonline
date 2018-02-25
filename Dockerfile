@@ -10,7 +10,7 @@ RUN chmod +x /docker-entrypoint
 RUN useradd -ms /bin/bash powonline
 VOLUME ["/etc/mamerwiselen/powonline"]
 
-ADD . /tmp/powonline
+COPY dist.tar.gz /tmp/
 ADD powonline.wsgi /opt/powonline
-RUN /opt/powonline/bin/pip install /tmp/powonline
+RUN /opt/powonline/bin/pip install /tmp/dist.tar.gz
 CMD ["/docker-entrypoint"]
