@@ -52,6 +52,7 @@ class StationSchema(Schema):
 
 class RouteSchema(Schema):
     name = fields.String(required=True)
+    color = fields.String(missing=None)
 
 
 class UserSchema(Schema):
