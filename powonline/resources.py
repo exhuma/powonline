@@ -40,6 +40,10 @@ PERMISSION_MAP = {
 }
 
 
+class ErrorType(Enum):
+    INVALID_SCHEMA = 'invalid-schema'
+
+
 class AccessDenied(Exception):
     pass
 
@@ -148,7 +152,8 @@ class UserList(Resource):
 
         parsed_data, errors = USER_SCHEMA.load(data)
         if errors:
-            return errors, 400
+            return {'error': ErrorType.INVALID_SCHEMA.value,
+                    'errors': errors}, 400
 
         output = core.User.create_new(DB.session, parsed_data)
         return User._single_response(output, 201)
@@ -182,7 +187,8 @@ class User(Resource):
 
         parsed_data, errors = USER_SCHEMA.load(data)
         if errors:
-            return errors, 400
+            return {'error': ErrorType.INVALID_SCHEMA.value,
+                    'errors': errors}, 400
 
         output = core.User.upsert(DB.session, name, parsed_data)
         return User._single_response(output, 200)
@@ -229,7 +235,8 @@ class TeamList(Resource):
 
         parsed_data, errors = TEAM_SCHEMA.load(data)
         if errors:
-            return errors, 400
+            return {'error': ErrorType.INVALID_SCHEMA.value,
+                    'errors': errors}, 400
 
         output = core.Team.create_new(DB.session, parsed_data)
         return Team._single_response(output, 201)
@@ -255,7 +262,8 @@ class Team(Resource):
 
         parsed_data, errors = TEAM_SCHEMA.load(data)
         if errors:
-            return errors, 400
+            return {'error': ErrorType.INVALID_SCHEMA.value,
+                    'errors': errors}, 400
 
         output = core.Team.upsert(DB.session, name, parsed_data)
         return Team._single_response(output, 200)
@@ -289,7 +297,8 @@ class StationList(Resource):
 
         parsed_data, errors = STATION_SCHEMA.load(data)
         if errors:
-            return errors, 400
+            return {'error': ErrorType.INVALID_SCHEMA.value,
+                    'errors': errors}, 400
 
         output = core.Station.create_new(DB.session, parsed_data)
         return Station._single_response(output, 201)
@@ -321,7 +330,8 @@ class Station(Resource):
 
         parsed_data, errors = STATION_SCHEMA.load(data)
         if errors:
-            return errors, 400
+            return {'error': ErrorType.INVALID_SCHEMA.value,
+                    'errors': errors}, 400
 
         output = core.Station.upsert(DB.session, name, parsed_data)
         return Station._single_response(output, 200)
@@ -355,7 +365,8 @@ class RouteList(Resource):
 
         parsed_data, errors = ROUTE_SCHEMA.load(data)
         if errors:
-            return errors, 400
+            return {'error': ErrorType.INVALID_SCHEMA.value,
+                    'errors': errors}, 400
 
         output = core.Route.create_new(DB.session, parsed_data)
         return Route._single_response(output, 201)
@@ -380,7 +391,8 @@ class Route(Resource):
         data = request.get_json()
         parsed_data, errors = ROUTE_SCHEMA.load(data)
         if errors:
-            return errors, 400
+            return {'error': ErrorType.INVALID_SCHEMA.value,
+                    'errors': errors}, 400
 
         output = core.Route.upsert(DB.session, name, parsed_data)
         return Route._single_response(output, 200)
@@ -397,7 +409,8 @@ class StationUserList(Resource):
         data = request.get_json()
         user, errors = USER_SCHEMA.load(data)
         if errors:
-            return errors, 400
+            return {'error': ErrorType.INVALID_SCHEMA.value,
+                    'errors': errors}, 400
         success = core.Station.assign_user(
             DB.session, station_name, user['name'])
         if success:
@@ -409,7 +422,8 @@ class StationUserList(Resource):
         data = request.get_json()
         station, errors = STATION_SCHEMA.load(data)
         if errors:
-            return errors, 400
+            return {'error': ErrorType.INVALID_SCHEMA.value,
+                    'errors': errors}, 400
         success = core.User.assign_station(
             DB.session, user_name, station['name'])
         if success:
@@ -526,7 +540,8 @@ class UserRoleList(Resource):
         data = request.get_json()
         parsed_data, errors = ROLE_SCHEMA.load(data)
         if errors:
-            return errors, 400
+            return {'error': ErrorType.INVALID_SCHEMA.value,
+                    'errors': errors}, 400
         role_name = data['name']
 
         success = core.User.assign_role(DB.session, user_name, role_name)
@@ -741,7 +756,8 @@ class Job(Resource):
         data = request.get_json()
         parsed_data, errors = JOB_SCHEMA.load(data)
         if errors:
-            return errors, 400
+            return {'error': ErrorType.INVALID_SCHEMA.value,
+                    'errors': errors}, 400
 
         action = parsed_data['action']
         func = getattr(self, '_action_%s' % action, None)
