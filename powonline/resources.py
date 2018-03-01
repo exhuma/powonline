@@ -675,6 +675,11 @@ class Job(Resource):
 
     def _action_advance(self, station_name, team_name):
         auth, permissions = get_user_permissions(request)
+
+        pusher_channel = current_app.localconfig.get(
+            'pusher_channels', 'team_station_state',
+            default='team_station_state_dev')
+
         if 'admin_stations' in permissions or (
                 'manage_station' in permissions and
                 core.User.may_access_station(
@@ -687,7 +692,7 @@ class Job(Resource):
                 }
             }
             current_app.pusher.trigger(
-                'team-station-state',
+                pusher_channel,
                 'state-change',
                 {
                     'station': station_name,
@@ -702,6 +707,11 @@ class Job(Resource):
     def _action_set_score(self, station_name, team_name, score):
         score = int(score, 10)
         auth, permissions = get_user_permissions(request)
+
+        pusher_channel = current_app.localconfig.get(
+            'pusher_channels', 'team_station_state',
+            default='team_station_state_dev')
+
         if 'admin_stations' in permissions or (
                 'manage_station' in permissions and
                 core.User.may_access_station(
@@ -714,7 +724,7 @@ class Job(Resource):
                 'new_score': new_score,
             }
             current_app.pusher.trigger(
-                'team-station-state',
+                pusher_channel,
                 'score-change',
                 {
                     'station': station_name,
