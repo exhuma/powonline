@@ -32,7 +32,7 @@ class TeamSchema(Schema):
     confirmation_key = fields.String()
     accepted = fields.Boolean(default=False)
     completed = fields.Boolean(default=False)
-    inserted = fields.LocalDateTime()
+    inserted = fields.LocalDateTime(missing=None)
     updated = fields.LocalDateTime(allow_none=True)
     num_vegetarians = fields.Int(allow_none=True)
     num_participants = fields.Int(allow_none=True)
