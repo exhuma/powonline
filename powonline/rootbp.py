@@ -19,12 +19,7 @@ def after_app_request(response):
                          'Content-Type,Authorization')
     response.headers.add('Access-Control-Allow-Methods',
                          'GET,PUT,POST,DELETE')
-    try:
-        DB.session.commit()
-    except:
-        LOG.exception('Error when committing to DB')
-        DB.session.rollback()
-
+    DB.session.commit()
     return response
 
 
