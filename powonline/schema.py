@@ -48,6 +48,7 @@ class StationSchema(Schema):
     phone = fields.String()
     is_start = fields.Boolean(default=False)
     is_end = fields.Boolean(default=False)
+    order = fields.Int(missing=500, default=500)
 
 
 class RouteSchema(Schema):
