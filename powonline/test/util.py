@@ -36,6 +36,7 @@ def make_dummy_team_dict(as_mock=False, **overlay):
         'planned_start_time': None,
         'effective_start_time': None,
         'finish_time': None,
+        'route_name': None,
     }
     output.update(**overlay)
     if as_mock:
@@ -60,6 +61,7 @@ def make_dummy_station_dict(as_mock=False, **overlay):
         'phone': '12345',
         'is_start': False,
         'is_end': False,
+        'order': 500,
     }
     output.update(**overlay)
     if as_mock:
@@ -80,6 +82,7 @@ def make_dummy_route_dict(as_mock=False, **overlay):
     '''
     output = {
         'name': 'Example Route',
+        'color': '#000000',
     }
     output.update(**overlay)
     if as_mock:

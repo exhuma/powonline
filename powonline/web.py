@@ -1,9 +1,11 @@
 from flask import Flask
 from flask_restful import Api
+import logging
 
 from .resources import (
     Assignments,
     Dashboard,
+    GlobalDashboard,
     Job,
     Route,
     RouteList,
@@ -23,8 +25,12 @@ from .resources import (
     UserRole,
     UserRoleList,
 )
-from .rootbp import rootbp
 from .model import DB
+from .pusher import PusherWrapper
+from .rootbp import rootbp
+
+
+LOG = logging.getLogger(__name__)
 
 
 def make_app(config):
@@ -36,6 +42,11 @@ def make_app(config):
 
     app.localconfig = config
     app.register_blueprint(rootbp)
+    app.pusher = PusherWrapper.create(
+        config.get('pusher', 'app_id', default=''),
+        config.get('pusher', 'key', default=''),
+        config.get('pusher', 'secret', default=''),
+    )
 
     api.add_resource(Assignments, '/assignments')
     api.add_resource(TeamList, '/team')
@@ -65,6 +76,7 @@ def make_app(config):
                      '/station/<station_name>/teams/<team_name>',
                      )
     api.add_resource(Dashboard, '/station/<station_name>/dashboard')
+    api.add_resource(GlobalDashboard, '/dashboard')
     api.add_resource(Job, '/job')
 
     app.config['SQLALCHEMY_DATABASE_URI'] = config.get('db', 'dsn')

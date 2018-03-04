@@ -27,6 +27,7 @@ class TeamState(Enum):
     UNKNOWN = 'unknown'
     ARRIVED = 'arrived'
     FINISHED = 'finished'
+    UNREACHABLE = 'unreachable'
 
 
 class TeamStateType(types.TypeDecorator):
@@ -111,6 +112,7 @@ class Route(DB.Model):
     __tablename__ = 'route'
 
     name = Column(Unicode, primary_key=True)
+    color = Column(Unicode)
 
     teams = relationship('Team', back_populates='route', collection_class=set)
     stations = relationship('Station',

@@ -1,6 +1,7 @@
 import logging
+from time import time
 
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, render_template
 import jwt
 
 from .model import DB
@@ -18,12 +19,7 @@ def after_app_request(response):
                          'Content-Type,Authorization')
     response.headers.add('Access-Control-Allow-Methods',
                          'GET,PUT,POST,DELETE')
-    try:
-        DB.session.commit()
-    except:
-        LOG.exception('Error when committing to DB')
-        DB.session.rollback()
-
+    DB.session.commit()
     return response
 
 
@@ -38,10 +34,16 @@ def login():
         return 'Access Denied', 401
 
     roles = {role.name for role in user.roles}
+    # JWT token expiration time (in seconds). Default: 2 hours
+    jwt_lifetime = int(current_app.localconfig.get(
+        'security', 'jwt_lifetime', default=(2 * 60 * 60)))
 
+    now = int(time())
     payload = {
         'username': username,
-        'roles': list(roles)
+        'roles': list(roles),
+        'iat': now,
+        'exp': now + jwt_lifetime
     }
     jwt_secret = current_app.localconfig.get('security', 'jwt_secret')
     result = {
@@ -50,3 +52,33 @@ def login():
         'user': data['username'],  # convenience for the frontend
     }
     return jsonify(result)
+
+
+@rootbp.route('/')
+def index():
+    return render_template('index.html')
+
+
+@rootbp.route('/login/renew', methods=['POST'])
+def renew_token():
+    data = request.get_json()
+    current_token = data['token']
+    jwt_secret = current_app.localconfig.get('security', 'jwt_secret')
+    # JWT token expiration time (in seconds). Default: 2 hours
+    jwt_lifetime = int(current_app.localconfig.get(
+        'security', 'jwt_lifetime', default=(2 * 60 * 60)))
+    try:
+        token_info = jwt.decode(current_token, jwt_secret)
+    except jwt.InvalidTokenError as exc:
+        LOG.debug('Renewal of invalid token: %s', exc)
+        return 'Invalid Token!', 400
+
+    now = int(time())
+    new_payload = {
+        'username': token_info['username'],
+        'roles': token_info['roles'],
+        'iat': now,
+        'exp': now + jwt_lifetime
+    }
+    new_token = jwt.encode(new_payload, jwt_secret).decode('ascii')
+    return jsonify({'token': new_token})

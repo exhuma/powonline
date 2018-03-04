@@ -1,3 +1,4 @@
+from enum import Enum
 from functools import wraps
 from json import dumps, JSONEncoder
 import logging
@@ -37,6 +38,10 @@ PERMISSION_MAP = {
         'manage_station'
     },
 }
+
+
+class ErrorType(Enum):
+    INVALID_SCHEMA = 'invalid-schema'
 
 
 class AccessDenied(Exception):
@@ -118,6 +123,8 @@ class MyJsonEncoder(JSONEncoder):
     def default(self, value):
         if isinstance(value, set):
             return list(value)
+        elif isinstance(value, Enum):
+            return value.value
         super().default(value)
 
 
@@ -145,7 +152,8 @@ class UserList(Resource):
 
         parsed_data, errors = USER_SCHEMA.load(data)
         if errors:
-            return errors, 400
+            return {'error': ErrorType.INVALID_SCHEMA.value,
+                    'errors': errors}, 400
 
         output = core.User.create_new(DB.session, parsed_data)
         return User._single_response(output, 201)
@@ -179,7 +187,8 @@ class User(Resource):
 
         parsed_data, errors = USER_SCHEMA.load(data)
         if errors:
-            return errors, 400
+            return {'error': ErrorType.INVALID_SCHEMA.value,
+                    'errors': errors}, 400
 
         output = core.User.upsert(DB.session, name, parsed_data)
         return User._single_response(output, 200)
@@ -205,7 +214,7 @@ class TeamList(Resource):
             teams = core.Team.assigned_to_route(
                 DB.session, assigned_to_route)
         else:
-            teams = list(core.Team.all(DB.session))
+            teams = core.Team.all(DB.session)
 
         output = {
             'items': teams
@@ -226,7 +235,8 @@ class TeamList(Resource):
 
         parsed_data, errors = TEAM_SCHEMA.load(data)
         if errors:
-            return errors, 400
+            return {'error': ErrorType.INVALID_SCHEMA.value,
+                    'errors': errors}, 400
 
         output = core.Team.create_new(DB.session, parsed_data)
         return Team._single_response(output, 201)
@@ -252,7 +262,8 @@ class Team(Resource):
 
         parsed_data, errors = TEAM_SCHEMA.load(data)
         if errors:
-            return errors, 400
+            return {'error': ErrorType.INVALID_SCHEMA.value,
+                    'errors': errors}, 400
 
         output = core.Team.upsert(DB.session, name, parsed_data)
         return Team._single_response(output, 200)
@@ -286,7 +297,8 @@ class StationList(Resource):
 
         parsed_data, errors = STATION_SCHEMA.load(data)
         if errors:
-            return errors, 400
+            return {'error': ErrorType.INVALID_SCHEMA.value,
+                    'errors': errors}, 400
 
         output = core.Station.create_new(DB.session, parsed_data)
         return Station._single_response(output, 201)
@@ -306,13 +318,20 @@ class Station(Resource):
         response.content_type = 'application/json'
         return response
 
-    @require_permissions('admin_stations')
+    @require_permissions('manage_station')
     def put(self, name):
+        auth, permissions = get_user_permissions(request)
+
+        if 'admin' not in auth['roles'] and not core.User.may_access_station(
+                DB.session, auth['username'], name):
+            return 'Access denied to this station!', 401
+
         data = request.get_json()
 
         parsed_data, errors = STATION_SCHEMA.load(data)
         if errors:
-            return errors, 400
+            return {'error': ErrorType.INVALID_SCHEMA.value,
+                    'errors': errors}, 400
 
         output = core.Station.upsert(DB.session, name, parsed_data)
         return Station._single_response(output, 200)
@@ -346,7 +365,8 @@ class RouteList(Resource):
 
         parsed_data, errors = ROUTE_SCHEMA.load(data)
         if errors:
-            return errors, 400
+            return {'error': ErrorType.INVALID_SCHEMA.value,
+                    'errors': errors}, 400
 
         output = core.Route.create_new(DB.session, parsed_data)
         return Route._single_response(output, 201)
@@ -371,7 +391,8 @@ class Route(Resource):
         data = request.get_json()
         parsed_data, errors = ROUTE_SCHEMA.load(data)
         if errors:
-            return errors, 400
+            return {'error': ErrorType.INVALID_SCHEMA.value,
+                    'errors': errors}, 400
 
         output = core.Route.upsert(DB.session, name, parsed_data)
         return Route._single_response(output, 200)
@@ -388,7 +409,8 @@ class StationUserList(Resource):
         data = request.get_json()
         user, errors = USER_SCHEMA.load(data)
         if errors:
-            return errors, 400
+            return {'error': ErrorType.INVALID_SCHEMA.value,
+                    'errors': errors}, 400
         success = core.Station.assign_user(
             DB.session, station_name, user['name'])
         if success:
@@ -400,7 +422,8 @@ class StationUserList(Resource):
         data = request.get_json()
         station, errors = STATION_SCHEMA.load(data)
         if errors:
-            return errors, 400
+            return {'error': ErrorType.INVALID_SCHEMA.value,
+                    'errors': errors}, 400
         success = core.User.assign_station(
             DB.session, user_name, station['name'])
         if success:
@@ -473,6 +496,8 @@ class RouteTeamList(Resource):
         Assign a team to a route
         '''
         data = request.get_json()
+        if not data:
+            return 'Payload required!', 400
         team_name = data['name']
 
         success = core.Route.assign_team(DB.session, route_name, team_name)
@@ -515,7 +540,8 @@ class UserRoleList(Resource):
         data = request.get_json()
         parsed_data, errors = ROLE_SCHEMA.load(data)
         if errors:
-            return errors, 400
+            return {'error': ErrorType.INVALID_SCHEMA.value,
+                    'errors': errors}, 400
         role_name = data['name']
 
         success = core.User.assign_role(DB.session, user_name, role_name)
@@ -635,15 +661,27 @@ class Dashboard(Resource):
 
     def get(self, station_name):
         output = []
-        for team_name, state in core.Station.team_states(
+        for team_name, state, score in core.Station.team_states(
                 DB.session, station_name):
             output.append({
                 'team': team_name,
                 'state': state.value,
-                'score': 0
+                'score': score
             })
 
-        output = make_response(dumps(output), 200)
+        output = make_response(dumps(output, cls=MyJsonEncoder), 200)
+        output.content_type = 'application/json'
+        return output
+
+
+class GlobalDashboard(Resource):
+    '''
+    The global state of each team on each station of the event.
+    '''
+
+    def get(self):
+        output = core.global_dashboard(DB.session)
+        output = make_response(dumps(output, cls=MyJsonEncoder), 200)
         output.content_type = 'application/json'
         return output
 
@@ -651,11 +689,16 @@ class Dashboard(Resource):
 class Job(Resource):
 
     def _action_advance(self, station_name, team_name):
-        _, permissions = get_user_permissions(request)
-        if 'admin_stations' in permissions or core.User.may_access_station(
-                DB.session,
-                g.jwt_payload['username'],
-                station_name):
+        auth, permissions = get_user_permissions(request)
+
+        pusher_channel = current_app.localconfig.get(
+            'pusher_channels', 'team_station_state',
+            default='team_station_state_dev')
+
+        if 'admin_stations' in permissions or (
+                'manage_station' in permissions and
+                core.User.may_access_station(
+                    DB.session, auth['username'], station_name)):
             new_state = core.Team.advance_on_station(
                     DB.session, team_name, station_name)
             output = {
@@ -663,6 +706,47 @@ class Job(Resource):
                     'state': new_state.value
                 }
             }
+            current_app.pusher.trigger(
+                pusher_channel,
+                'state-change',
+                {
+                    'station': station_name,
+                    'team': team_name,
+                    'new_state': new_state.value
+                }
+            )
+            return output, 200
+        else:
+            return 'Access denied to this station!', 401
+
+    def _action_set_score(self, station_name, team_name, score):
+        score = int(score, 10)
+        auth, permissions = get_user_permissions(request)
+
+        pusher_channel = current_app.localconfig.get(
+            'pusher_channels', 'team_station_state',
+            default='team_station_state_dev')
+
+        if 'admin_stations' in permissions or (
+                'manage_station' in permissions and
+                core.User.may_access_station(
+                    DB.session, auth['username'], station_name)):
+            LOG.info('Setting score of %s on %s to %s (by user: %s)',
+                     team_name, station_name, score, auth['username'])
+            new_score = core.Team.set_station_score(
+                DB.session, team_name, station_name, score)
+            output = {
+                'new_score': new_score,
+            }
+            current_app.pusher.trigger(
+                pusher_channel,
+                'score-change',
+                {
+                    'station': station_name,
+                    'team': team_name,
+                    'new_score': new_score,
+                }
+            )
             return output, 200
         else:
             return 'Access denied to this station!', 401
@@ -672,10 +756,12 @@ class Job(Resource):
         data = request.get_json()
         parsed_data, errors = JOB_SCHEMA.load(data)
         if errors:
-            return errors, 400
+            return {'error': ErrorType.INVALID_SCHEMA.value,
+                    'errors': errors}, 400
 
         action = parsed_data['action']
         func = getattr(self, '_action_%s' % action, None)
         if not func:
+            LOG.debug('Unknown job %r requested!', parsed_data['action'])
             return '%r is an unknown job action' % action, 400
         return func(**parsed_data['args'])

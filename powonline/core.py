@@ -1,5 +1,9 @@
 from . import model
 from .model import TeamState
+from sqlalchemy import and_
+import logging
+
+LOG = logging.getLogger(__name__)
 
 
 def get_assignments(session):
@@ -24,11 +28,55 @@ def make_default_team_state():
     }
 
 
+def global_dashboard(session):
+    teams = session.query(model.Team).order_by(model.Team.name)
+    stations = session.query(model.Station).order_by(model.Station.name)
+    team_names = set()
+    station_names = set()
+    output = []
+    for team in teams:
+        team_names.add(team.name)
+        team_data = {
+            'stations': [],
+            'team': team.name
+        }
+        if team.route:
+            reachable_stations = {station.name
+                                  for station in team.route.stations}
+        else:
+            reachable_stations = set()
+        for station in stations:
+            station_names.add(station.name)
+            if station.name in reachable_stations:
+                team_states = session.query(model.TeamStation).filter(and_(
+                    model.TeamStation.team == team,
+                    model.TeamStation.station == station
+                ))
+                dbstate = team_states.one_or_none()
+                if dbstate:
+                    cell_state = dbstate.state
+                    cell_score = dbstate.score
+                else:
+                    cell_state = TeamState.UNKNOWN
+                    cell_score = 0
+            else:
+                cell_state = TeamState.UNREACHABLE
+                cell_score = 0
+            team_data['stations'].append({
+                'name': station.name,
+                'score': cell_score,
+                'state': cell_state
+            })
+        output.append(team_data)
+    return output
+
+
 class Team:
 
     @staticmethod
     def all(session):
-        return session.query(model.Team)
+        return session.query(model.Team).order_by(
+            model.Team.effective_start_time)
 
     @staticmethod
     def quickfilter_without_route(session):
@@ -86,9 +134,25 @@ class Team:
             state.state = TeamState.UNKNOWN
         return state.state
 
+    def set_station_score(session, team_name, station_name, score):
+        state = session.query(model.TeamStation).filter_by(
+            team_name=team_name, station_name=station_name).one_or_none()
+        if not state:
+            state = model.TeamStation(team_name=team_name,
+                                      station_name=station_name)
+            state = session.merge(state)
+
+        state.score = score
+        return state.score
+
     @staticmethod
     def stations(session, team_name):
-        team = session.query(model.Team).filter_by(name=team_name).one()
+        team = session.query(model.Team).filter_by(name=team_name).one_or_none()
+        if not team:
+            LOG.debug('Team %r not found!', team_name)
+            return []
+        if not team.route:
+            return []
         return team.route.stations
 
 
@@ -167,11 +231,13 @@ class Station:
                     team_name=team.name,
                     station_name=station_name,
                     state=TeamState.UNKNOWN))
-                yield (team.name, state.state)
+                yield (team.name, state.state, state.score)
 
     @staticmethod
     def accessible_by(session, username):
-        user = session.query(model.User).filter_by(name=username).one()
+        user = session.query(model.User).filter_by(name=username).one_or_none()
+        if not user:
+            return set()
         return {station.name for station in user.stations}
 
 

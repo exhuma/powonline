@@ -20,33 +20,22 @@ You need:
 * `git <https://git-scm.com>`_
 * `Python 3 <https://www.python.org>`_ (On debian & derivatives you also need
   the package ``python3-venv``).
-* `docker <https://www.docker.com>`_
+* `npm <https://www.npmjs.com>`_
+* `fabric <http://www.fabfile.org/>`_
 * `pip <https://pip.pypa.io/en/stable/>`_ (should be automatically available in
   Python 3 Virtual Environments).
 
 Bootstrapping a development environment:
 
-Once you have at least git, Python (including ``python-venv`` on debian) and
-Docker installed, run the following commands::
+Once you have at least git and Python (including ``python-venv`` on debian)
+installed, run the following commands::
 
     git clone https://github.com/exhuma/powonline
     cd powonline
     git checkout develop
-    python3 -m venv env
-    ./env/bin/pip install fabric
-    ./env/bin/fab develop   # <-- This step will take a while!
+    fab develop
 
-After the above steps are run you should be able to run both the frontend and
-backend using the following two commands::
+After the above steps are run you should be able to run the backend using the
+following command::
 
-    $ ./env/bin/python autoapp.py     # Backend
-    $ (cd frontend && ./npm run dev)  # Frontend
-
-
-.. note::
-
-    **IMPORTANT**
-
-    You will need to set the variable ``BASE_URL`` in
-    ``frontend/powonline/src/main.js`` so that the frontend connects to the
-    proper backend!
+    $ ./env/bin/python autoapp.py

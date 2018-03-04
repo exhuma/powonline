@@ -1,1 +1,2 @@
 include powonline/version.txt
+recursive-include lost_tracker/templates *.html

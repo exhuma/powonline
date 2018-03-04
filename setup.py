@@ -1,5 +1,8 @@
 from setuptools import setup, find_packages
-VERSION = open('powonline/version.txt').read()
+
+with open('powonline/version.txt') as fptr:
+    VERSION = fptr.read()
+
 setup(
     name="powonline",
     version=VERSION.strip(),
@@ -13,7 +16,9 @@ setup(
         'gouge >= 1.1, <2.0',
         'marshmallow',
         'psycopg2',
+        'pusher',
         'pyjwt',
+        'python-dateutil',
         'sqlalchemy',
     ],
     extras_require={
@@ -23,6 +28,7 @@ setup(
             'gouge',
         ],
         'test': [
+            'flask-testing',
             'pytest',
             'pytest-catchlog',
             'pytest-coverage',
