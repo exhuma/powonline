@@ -26,7 +26,7 @@ class PusherWrapper(metaclass=ABCMeta):
         raise NotImplementedError('Not yet implemented')
 
 
-class NullPusher:
+class NullPusher(PusherWrapper):
     '''
     A fake pusher implementation which does nothing but logging.
     '''
@@ -35,7 +35,7 @@ class NullPusher:
                   channel, event, payload)
 
 
-class DefaultPusher:
+class DefaultPusher(PusherWrapper):
 
     def __init__(self, app_id, key, secret):
         super().__init__()

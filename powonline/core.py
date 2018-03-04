@@ -150,6 +150,8 @@ class Team:
         if not team:
             LOG.debug('Team %r not found!', team_name)
             return []
+        if not team.route:
+            return []
         return team.route.stations
 
 

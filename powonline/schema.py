@@ -1,4 +1,23 @@
 from marshmallow import Schema, fields
+from dateutil.parser import parse
+
+
+class FuzzyDate(fields.Field):
+    def _serialize(self, value, attr, obj):
+        '''
+        Convert a Python object into an outside-world object
+        '''
+        if not value:
+            return None
+        return value.isoformat()
+
+    def _deserialize(self, value, attr, obj):
+        '''
+        Convert a outside-world value into a Python object
+        '''
+        if not value:
+            return None
+        return parse(value)
 
 
 class TeamSchema(Schema):
@@ -13,13 +32,14 @@ class TeamSchema(Schema):
     confirmation_key = fields.String()
     accepted = fields.Boolean(default=False)
     completed = fields.Boolean(default=False)
-    inserted = fields.LocalDateTime()
+    inserted = fields.LocalDateTime(missing=None)
     updated = fields.LocalDateTime(allow_none=True)
-    num_vegetarians = fields.Int()
-    num_participants = fields.Int()
-    planned_start_time = fields.LocalDateTime(allow_none=True)
-    effective_start_time = fields.LocalDateTime(allow_none=True)
+    num_vegetarians = fields.Int(allow_none=True)
+    num_participants = fields.Int(allow_none=True)
+    planned_start_time = FuzzyDate(allow_none=True)
+    effective_start_time = FuzzyDate(allow_none=True)
     finish_time = fields.LocalDateTime(allow_none=True)
+    route_name = fields.String(missing=None)
 
 
 class StationSchema(Schema):
@@ -28,10 +48,12 @@ class StationSchema(Schema):
     phone = fields.String()
     is_start = fields.Boolean(default=False)
     is_end = fields.Boolean(default=False)
+    order = fields.Int(missing=500, default=500)
 
 
 class RouteSchema(Schema):
     name = fields.String(required=True)
+    color = fields.String(missing=None)
 
 
 class UserSchema(Schema):
