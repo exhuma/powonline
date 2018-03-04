@@ -1,10 +1,10 @@
-from configparser import ConfigParser
 from textwrap import dedent
 from unittest.mock import patch
 import json
 import unittest
 
 from flask_testing import TestCase
+from config_resolver import Config
 import jwt
 
 from powonline.model import DB
@@ -61,7 +61,7 @@ class BaseAuthTestCase(TestCase):
     TESTING = True
 
     def create_app(self):
-        config = ConfigParser()
+        config = Config('mamerwiselen', 'powonline', filename='test.ini')
         config.read_string(dedent(
             '''\
             [db]

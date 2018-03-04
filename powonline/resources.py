@@ -8,7 +8,7 @@ from flask_restful import Resource, marshal_with, fields
 import jwt
 
 from . import core
-from .model import DB, Team as DBTeam
+from .model import DB
 from .schema import (
     JOB_SCHEMA,
     ROLE_SCHEMA,
@@ -215,8 +215,6 @@ class TeamList(Resource):
                 DB.session, assigned_to_route)
         else:
             teams = core.Team.all(DB.session)
-
-        teams = teams.order_by(DBTeam.effective_start_time)
 
         output = {
             'items': teams

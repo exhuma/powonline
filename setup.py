@@ -1,5 +1,8 @@
 from setuptools import setup, find_packages
-VERSION = open('powonline/version.txt').read()
+
+with open('powonline/version.txt') as fptr:
+    VERSION = fptr.read()
+
 setup(
     name="powonline",
     version=VERSION.strip(),

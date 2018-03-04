@@ -75,7 +75,8 @@ class Team:
 
     @staticmethod
     def all(session):
-        return session.query(model.Team)
+        return session.query(model.Team).order_by(
+            model.Team.effective_start_time)
 
     @staticmethod
     def quickfilter_without_route(session):

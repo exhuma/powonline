@@ -16,7 +16,7 @@ class PusherWrapper(metaclass=ABCMeta):
 
         if not all([app_id, key, secret]):
             LOG.warning('Instantiating NullPusher '
-                        '(not all values found in app.ini!')
+                        '(not all values found in application config!')
             return NullPusher()
         else:
             return DefaultPusher(app_id, key, secret)
