@@ -2,10 +2,10 @@
 This module contains tests for features implemented mainly for helping the vuejs
 based frontens.
 """
-from configparser import ConfigParser
 from textwrap import dedent
 import json
 
+from config_resolver import Config
 from flask_testing import TestCase
 
 from powonline.web import make_app
@@ -39,7 +39,7 @@ class TestFrontendHelpers(TestCase):
     TESTING = True
 
     def create_app(self):
-        config = ConfigParser()
+        config = Config('mamerwiselen', 'powonline', filename='test.ini')
         config.read_string(dedent(
             '''\
             [db]
