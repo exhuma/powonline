@@ -79,6 +79,10 @@ class Team:
             model.Team.effective_start_time)
 
     @staticmethod
+    def get(session, name):
+        return session.query(model.Team).filter_by(name=name).one_or_none()
+
+    @staticmethod
     def quickfilter_without_route(session):
         return session.query(model.Team).filter(model.Team.route == None)
 

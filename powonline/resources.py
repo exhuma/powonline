@@ -273,6 +273,13 @@ class Team(Resource):
         core.Team.delete(DB.session, name)
         return '', 204
 
+    def get(self, name):
+        team = core.Team.get(DB.session, name)
+        if not team:
+            return 'No such team', 404
+
+        return Team._single_response(team, 200)
+
 
 class StationList(Resource):
 
