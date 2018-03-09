@@ -391,6 +391,70 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
         self.assertEqual(response_a.status_code, response_b.status_code)
         self.assertEqual(response_a.data, response_b.data)
 
+    def test_advance_team_state_auto_start(self):
+        '''
+        Advancing on a station flagged as "start" station should set the
+        "effective start time" when the new state is "finished". This means the
+        team left the start station and have effectively begun the route.
+        '''
+        job = {
+            'action': 'advance',
+            'args': {
+                'station_name': 'station-start',
+                'team_name': 'team-red',
+            }
+        }
+        headers = {'Content-Type': 'application/json'}
+
+        # advance 6 times (cycles at least twice over the trigger state). We
+        # expect the call to happen only once though!
+        with patch('powonline.core.func') as _func:
+            _func.now.return_value = '2018-01-01 01:02:03'
+            for _ in range(6):
+                self.app.post('/job', headers=headers, data=json.dumps(job))
+            _func.now.assert_called_once()
+
+        state_response = self.app.get('/station/station-start/teams/team-red')
+        state = json.loads(state_response.data.decode(state_response.charset))
+        self.assertEqual(state['state'], 'finished')
+        detail_response = self.app.get('/team/team-red')
+        details = json.loads(detail_response.data.decode(
+            detail_response.charset))
+        self.assertEqual(details['effective_start_time'], '2018-01-01T01:02:03')
+        self.assertEqual(details['finish_time'], None)
+
+    def test_advance_team_state_auto_finish(self):
+        '''
+        Advancing on a station flagged as "end" station should set the
+        "finish time" when the new state is "finished". This means the
+        team arrived at the end station and have handed in their questionnaire.
+        '''
+        job = {
+            'action': 'advance',
+            'args': {
+                'station_name': 'station-end',
+                'team_name': 'team-red',
+            }
+        }
+        headers = {'Content-Type': 'application/json'}
+
+        # advance 6 times (cycles at least twice over the trigger state). We
+        # expect the call to happen only once though!
+        with patch('powonline.core.func') as _func:
+            _func.now.return_value = '2018-02-03 01:02:03'
+            for _ in range(6):
+                self.app.post('/job', headers=headers, data=json.dumps(job))
+            _func.now.assert_called_once()
+
+        state_response = self.app.get('/station/station-end/teams/team-red')
+        state = json.loads(state_response.data.decode(state_response.charset))
+        self.assertEqual(state['state'], 'arrived')
+        detail_response = self.app.get('/team/team-red')
+        details = json.loads(detail_response.data.decode(
+            detail_response.charset))
+        self.assertEqual(details['effective_start_time'], None)
+        self.assertEqual(details['finish_time'], '2018-02-03T01:02:03+00:00')
+
     def test_advance_team_state(self):
         simplejob = {
             'action': 'advance',

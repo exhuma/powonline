@@ -20,15 +20,15 @@ INSERT INTO route (name) VALUES
 INSERT INTO role (name) VALUES
     ('station-manager'),
     ('a-role');
-INSERT INTO station (name) VALUES
-    ('station-start'),
-    ('station-end'),
-    ('station-red'),
-    ('station-blue');
+INSERT INTO station (name, is_start, is_end) VALUES
+    ('station-start', true, false),
+    ('station-end', false, true),
+    ('station-red', false, false),
+    ('station-blue', false, false);
 INSERT INTO team (name, email, route_name) VALUES
-    ('team-red', 'email-red', 'route-red'),
-    ('team-blue', 'email-blue', 'route-blue'),
-    ('team-without-route', 'email-wr', NULL);
+    ('team-red', 'email-red@example.com', 'route-red'),
+    ('team-blue', 'email-blue@example.com', 'route-blue'),
+    ('team-without-route', 'email-wr@example.com', NULL);
 INSERT INTO user_role (user_name, role_name) VALUES
     ('user-station-manager', 'station-manager'),
     ('john', 'a-role');

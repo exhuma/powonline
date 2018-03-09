@@ -1,6 +1,6 @@
 from . import model
 from .model import TeamState
-from sqlalchemy import and_
+from sqlalchemy import and_, func
 import logging
 
 LOG = logging.getLogger(__name__)
@@ -129,10 +129,19 @@ class Team:
             state = model.TeamStation(team_name=team_name,
                                       station_name=station_name)
             state = session.merge(state)
+            session.flush()
 
         if state.state == TeamState.UNKNOWN:
             state.state = TeamState.ARRIVED
+            # Teams which arrive at the finish station will have their
+            # finish-time set
+            if not state.team.finish_time and state.station.is_end:
+                state.team.finish_time = func.now()
         elif state.state == TeamState.ARRIVED:
+            # Teams which leave the departure station will have their
+            # start-time set
+            if not state.team.effective_start_time and state.station.is_start:
+                state.team.effective_start_time = func.now()
             state.state = TeamState.FINISHED
         else:
             state.state = TeamState.UNKNOWN
