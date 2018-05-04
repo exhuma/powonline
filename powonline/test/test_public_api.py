@@ -472,6 +472,22 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
         result = data['result']
         self.assertEqual(result, {'state': 'unknown'})
 
+    def test_scoreboard(self):
+        with patch('powonline.resources.core') as _core:
+            _core.scoreboard.return_value = [
+                ('team1', 40),
+                ('team2', 20),
+                ('team3', 0),
+            ]
+            result = self.app.get('/scoreboard')
+            data = json.loads(result.data.decode(result.charset))
+            expected = [
+                ['team1', 40],
+                ['team2', 20],
+                ['team3', 0],
+            ]
+            self.assertEqual(data, expected)
+
     def test_dashboard(self):
         with patch('powonline.resources.core') as _core:
             _core.Station.team_states.return_value = [

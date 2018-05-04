@@ -661,6 +661,18 @@ class Assignments(Resource):
         return output
 
 
+class Scoreboard(Resource):
+    '''
+    Helper resource for the frontend
+    '''
+
+    def get(self):
+        output = list(core.scoreboard(DB.session))
+        output = make_response(dumps(output, cls=MyJsonEncoder), 200)
+        output.content_type = 'application/json'
+        return output
+
+
 class Dashboard(Resource):
     '''
     Helper resource for the frontend
