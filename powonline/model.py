@@ -69,6 +69,9 @@ class Team(DB.Model):
     route = relationship('Route', back_populates='teams')
     stations = relationship('Station', secondary='team_station_state',
                             viewonly=True)  # uses an AssociationObject
+    questionnaires = relationship('Questionnaire',
+                                  secondary='questionnaire_score',
+                                  viewonly=True)  # uses an AssociationObject
 
     def update(self, **kwargs):
         for k, v in kwargs.items():
@@ -193,6 +196,47 @@ class TeamStation(DB.Model):
         self.team_name = team_name
         self.station_name = station_name
         self.state = state
+
+
+class Questionnaire(DB.Model):
+    __tablename__ = 'questionnaire'
+
+    name = Column(Unicode, nullable=False, primary_key=True)
+    max_score = Column(Integer)
+    order = Column(Integer, server_default='0')
+    updated = Column(DateTime(timezone=True), nullable=False,
+                     default=datetime.now(), server_default=func.now())
+
+    teams = relationship('Team', secondary='questionnaire_score',
+                         viewonly=True)  # uses an AssociationObject
+
+
+    def __init__(self, name):
+        self.name = name
+
+
+class TeamQuestionnaire(DB.Model):
+    __tablename__ = 'questionnaire_score'
+
+    team_name = Column(Unicode, ForeignKey(
+        'team.name', onupdate='CASCADE', ondelete='CASCADE'),
+        primary_key=True,
+        name='team')
+    questionnaire_name = Column(Unicode, ForeignKey(
+        'questionnaire.name', onupdate='CASCADE', ondelete='CASCADE'),
+        primary_key=True,
+        name='questionnaire')
+    score = Column(Integer, nullable=True, default=None)
+    updated = Column(DateTime(timezone=True), nullable=False,
+                     default=datetime.now(), server_default=func.now())
+
+    team = relationship("Team")
+    questionnaire = relationship("Questionnaire")
+
+    def __init__(self, team_name, questionnaire_name, score=0):
+        self.team_name = team_name
+        self.station_name = station_name
+        self.score = score
 
 
 route_station_table = Table(
