@@ -68,6 +68,15 @@ class TestCore(CommonTest):
         self.assertEqual(result_stations_a, expected_stations_a)
         self.assertEqual(result_stations_b, expected_stations_b)
 
+    def test_scoreboard(self):
+        result = list(core.scoreboard(self.session))
+        expected = [
+            ('team-red', 40),
+            ('team-blue', 30),
+            ('team-without-route', 0),
+        ]
+        self.assertEqual(result, expected)
+
     def test_global_dashboard(self):
         result = core.global_dashboard(self.session)
         expected = [

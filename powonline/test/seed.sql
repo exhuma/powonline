@@ -53,5 +53,6 @@ INSERT INTO questionnaire (name) VALUES
 ;
 INSERT INTO questionnaire_score (questionnaire, team, score) VALUES
     ('questionnaire_1', 'team-red', 10),
-    ('questionnaire_2', 'team-red', 20)
+    ('questionnaire_2', 'team-red', 20),
+    ('questionnaire_1', 'team-blue', 30)
 ;

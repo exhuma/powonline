@@ -69,6 +69,8 @@ class Team(DB.Model):
     route = relationship('Route', back_populates='teams')
     stations = relationship('Station', secondary='team_station_state',
                             viewonly=True)  # uses an AssociationObject
+    station_states = relationship('TeamStation')
+    questionnaire_scores = relationship('TeamQuestionnaire')
     questionnaires = relationship('Questionnaire',
                                   secondary='questionnaire_score',
                                   viewonly=True)  # uses an AssociationObject

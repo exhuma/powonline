@@ -28,6 +28,17 @@ def make_default_team_state():
     }
 
 
+def scoreboard(session):
+    teams = session.query(model.Team)
+    scores = {}
+    for row in teams:
+        station_score = sum(state.score for state in row.station_states)
+        quest_score = sum(quest.score for quest in row.questionnaire_scores)
+        scores[row.name] = sum([station_score, quest_score])
+    output = reversed(sorted(scores.items(), key=lambda x: x[1]))
+    return output
+
+
 def global_dashboard(session):
     teams = session.query(model.Team).order_by(model.Team.name)
     stations = session.query(model.Station).order_by(model.Station.name)
