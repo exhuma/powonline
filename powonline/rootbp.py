@@ -1,11 +1,14 @@
 import logging
 from time import time
 
-from flask import Blueprint, request, jsonify, current_app, render_template
 import jwt
+from flask import (Blueprint, current_app, jsonify, redirect, render_template,
+                   request, session)
+from requests_oauthlib import OAuth2Session
 
-from .model import DB
 from .core import User, questionnaire_scores
+from .model import DB
+from .social import Social
 
 rootbp = Blueprint('rootbp', __name__)
 
@@ -31,6 +34,26 @@ def get_team_station_questionnaire():
     #      the questionnaire by users.
     output = questionnaire_scores(current_app.localconfig, DB.session)
     return jsonify(output)
+
+
+@rootbp.route("/social-login/<provider>")
+def social_login(provider):
+    client = Social.create(current_app.localconfig, provider)
+    if not client:
+        return '%s is not supported for login!' % provider
+    authorization_url, state = client.process_login()
+    # State is used to prevent CSRF, keep this for later.
+    session['oauth_state'] = state
+    return redirect(authorization_url)
+
+
+@rootbp.route("/connect/<provider>")
+def callback(provider):
+    client = Social.create(current_app.localconfig, provider)
+    if not client:
+        return '%s is not supported for login!' % provider
+    user_info = client.get_user_info(session['oauth_state'], request.url)
+    return jsonify(user_info)
 
 
 @rootbp.route('/login', methods=['POST'])
