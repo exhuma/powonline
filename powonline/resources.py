@@ -739,7 +739,10 @@ class Job(Resource):
             return 'Access denied to this station!', 401
 
     def _action_set_score(self, station_name, team_name, score):
-        score = int(score, 10)
+        if isinstance(score, str):
+            score = int(score, 10) if score else 0
+        else:
+            score = score if score else 0
         auth, permissions = get_user_permissions(request)
 
         pusher_channel = current_app.localconfig.get(
