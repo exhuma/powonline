@@ -237,7 +237,7 @@ class TeamQuestionnaire(DB.Model):
 
     def __init__(self, team_name, questionnaire_name, score=0):
         self.team_name = team_name
-        self.station_name = station_name
+        self.questionnaire_name = questionnaire_name
         self.score = score
 
 

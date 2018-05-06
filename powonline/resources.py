@@ -770,6 +770,43 @@ class Job(Resource):
         else:
             return 'Access denied to this station!', 401
 
+    def _action_set_questionnaire_score(self, station_name, team_name, score):
+        auth, permissions = get_user_permissions(request)
+
+        pusher_channel = current_app.localconfig.get(
+            'pusher_channels', 'team_station_state',
+            default='team_station_state_dev')
+
+        if 'admin_stations' in permissions or (
+                'manage_station' in permissions and
+                core.User.may_access_station(
+                    DB.session, auth['username'], station_name)):
+            LOG.info('Setting questionnaire score of %s on %s to %s ('
+                     'by user: %s)',
+                     team_name, station_name, score, auth['username'])
+            try:
+                new_score = core.set_questionnaire_score(
+                    current_app.localconfig,
+                    DB.session, team_name, station_name, score)
+            except KeyError:
+                return ('No questionnaire assigned to station %r!'
+                        % station_name, 500)
+            output = {
+                'new_score': new_score,
+            }
+            current_app.pusher.trigger(
+                pusher_channel,
+                'questionnaire-score-change',
+                {
+                    'stationName': station_name,
+                    'teamName': team_name,
+                    'score': new_score,
+                }
+            )
+            return output, 200
+        else:
+            return 'Access denied to this station!', 401
+
     @require_permissions('manage_station')
     def post(self):
         data = request.get_json()
