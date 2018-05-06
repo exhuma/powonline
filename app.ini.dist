@@ -1,6 +1,7 @@
 ; Version History of the config file
 ; ----------------------------------
 ;
+;  2.0: Added [questionnaire-map] section
 ;  1.5: Added [pusher_channels] section
 ;  1.4: Added "section.jwt_lifetime"
 ;  1.3: Added [app] section
@@ -11,7 +12,7 @@
 ; ----------------------------------
 
 [meta]
-version = 1.5
+version = 2.0
 
 [app]
 static_folder = /home/exhuma/work/powonline-frontend/dist
@@ -32,3 +33,10 @@ jwt_lifetime = 3600
 
 [pusher_channels]
 team_station_state = team-station-state-dev
+
+[questionnaire-map]
+; Maps questionnaires to stations. When opening a station dashboard, the
+; edit-box for questionnaire scores will be linked to the mapped questionnaire
+; on that station
+questionnaire_1 = station-1
+questionnaire_2 = station-2

@@ -7,7 +7,9 @@ TRUNCATE
     team,
     team_station_state,
     user_role,
-    user_station
+    user_station,
+    questionnaire,
+    questionnaire_score
 ;
 INSERT INTO "user" (name, password) VALUES
     ('user-station-manager', 'user-station-manager'),
@@ -45,3 +47,12 @@ INSERT INTO route_station (route_name, station_name) VALUES
     ('route-blue', 'station-start'),
     ('route-blue', 'station-blue'),
     ('route-blue', 'station-end');
+INSERT INTO questionnaire (name) VALUES
+    ('questionnaire_1'),
+    ('questionnaire_2')
+;
+INSERT INTO questionnaire_score (questionnaire, team, score) VALUES
+    ('questionnaire_1', 'team-red', 10),
+    ('questionnaire_2', 'team-red', 20),
+    ('questionnaire_1', 'team-blue', 30)
+;

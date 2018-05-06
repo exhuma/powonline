@@ -28,6 +28,49 @@ def make_default_team_state():
     }
 
 
+def scoreboard(session):
+    teams = session.query(model.Team)
+    scores = {}
+    for row in teams:
+        station_score = sum(state.score for state in row.station_states)
+        quest_score = sum(quest.score for quest in row.questionnaire_scores)
+        scores[row.name] = sum([station_score, quest_score])
+    output = reversed(sorted(scores.items(), key=lambda x: x[1]))
+    return output
+
+
+def questionnaire_scores(config, session):
+    mapping = {}
+    for option in config.options('questionnaire-map'):
+        mapping[option] = config.get('questionnaire-map', option).strip()
+    query = session.query(model.TeamQuestionnaire)
+    output = {}
+    for row in query:
+        if row.questionnaire_name not in mapping:
+            LOG.error('No mapped station found for questionnaire %r',
+                      row.questionnaire_name)
+            continue
+        station = mapping[row.questionnaire_name]
+        team_stations = output.setdefault(row.team_name, {})
+        team_stations[station] = {
+            'name': row.questionnaire_name,
+            'score': row.score
+        }
+    return output
+
+
+def set_questionnaire_score(config, session, team, station, score):
+    mapping = {}
+    for option in config.options('questionnaire-map'):
+        tmp = config.get('questionnaire-map', option).strip()
+        mapping[tmp] = option
+
+    questionnaire_name = mapping[station]
+    new_state = model.TeamQuestionnaire(team, questionnaire_name, score)
+    session.merge(new_state)
+    return score
+
+
 def global_dashboard(session):
     teams = session.query(model.Team).order_by(model.Team.name)
     stations = session.query(model.Station).order_by(model.Station.name)

@@ -5,7 +5,7 @@ from flask import Blueprint, request, jsonify, current_app, render_template
 import jwt
 
 from .model import DB
-from .core import User
+from .core import User, questionnaire_scores
 
 rootbp = Blueprint('rootbp', __name__)
 
@@ -21,6 +21,16 @@ def after_app_request(response):
                          'GET,PUT,POST,DELETE')
     DB.session.commit()
     return response
+
+
+@rootbp.route('/questionnaire-scores')
+def get_team_station_questionnaire():
+    # TODO this is a quick hack to get finished in time. This route should move
+    # TODO Questionnaires should not be linked to stations
+    #      This is a simplifcation for the UI for now: no manual selection of
+    #      the questionnaire by users.
+    output = questionnaire_scores(current_app.localconfig, DB.session)
+    return jsonify(output)
 
 
 @rootbp.route('/login', methods=['POST'])
