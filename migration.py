@@ -1,13 +1,27 @@
-from contextlib import contextmanager
-from psycopg2.extras import DictCursor
 import argparse
-import psycopg2
+import re
+from contextlib import contextmanager
+from datetime import date, datetime, time
 
-parser = argparse.ArgumentParser()
-parser.add_argument('source_dsn')
-parser.add_argument('destination_dsn')
-parser.add_argument('--clean', action='store_true', default=False)
-args = parser.parse_args()
+import psycopg2
+from psycopg2.extras import DictCursor
+
+P_TIMESPEC = re.compile(r'^(\d{1,2})[h:](\d{1,2})$')
+
+
+def convert_start_time(timespec, date_obj):
+    '''
+    Converts a time-string in the form of "19h30" or "19:30" to a time on the
+    given *date_obj*.
+    '''
+    if not timespec:
+        return None
+    match = P_TIMESPEC.match(timespec.strip())
+    if not match:
+        return None
+    hour, minute = match.groups()
+    time_obj = time(int(hour, 10), int(minute, 10))
+    return datetime.combine(date_obj, time_obj)
 
 
 @contextmanager
@@ -59,6 +73,8 @@ def create_routes_from_directions(source_db, dest_db):
     with source_db.cursor() as source, dest_db.cursor() as dest:
         source.execute('SELECT DISTINCT direction FROM "group"')
         for direction in source:
+            if not direction[0]:
+                continue
             dest.execute(query, direction)
             print('   Added route %s' % direction[0])
     print('done')
@@ -114,7 +130,7 @@ def migrate_teams(source_db, dest_db):
                 group['updated'] or None,
                 group['num_vegetarians'],
                 group['num_participants'],
-                group['start_time'] or None,
+                convert_start_time(group['start_time'], date(2018, 5, 9)),
                 group['departure_time'] or None,
                 group['finish_time'] or None,
                 group['direction'],
@@ -203,9 +219,9 @@ def migrate_messages(source_db, dest_db):
     user_map = {user['id']: user['email'] for user in source}
 
     source.execute('SELECT id, email FROM "group"')
-    team_map = {team['id']: team['name'] for team in source}
+    team_map = {team['id']: team['email'] for team in source}
 
-    source.execute('SELECT * FROM "messages"')
+    source.execute('SELECT id, user_id, "group_id", content FROM "messages"')
     for message in source:
         query = (
             'INSERT INTO message ('
@@ -217,7 +233,7 @@ def migrate_messages(source_db, dest_db):
             ') ON CONFLICT DO NOTHING', (
                 message['content'],
                 user_map[message['user_id']],
-                team_map[message['team']],
+                team_map[message['group_id']],
             ))
         dest.execute(query[0], query[1])
         print('    Added message #%s' % message['id'])
@@ -250,6 +266,12 @@ def migrate_settings(source_db, dest_db):
 
 if __name__ == '__main__':
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument('source_dsn')
+    parser.add_argument('destination_dsn')
+    parser.add_argument('--clean', action='store_true', default=False)
+    args = parser.parse_args()
+
     with connect(args.source_dsn) as source_db:
         with connect(args.destination_dsn) as destination_db:
             add_users(source_db, destination_db)
@@ -257,6 +279,6 @@ if __name__ == '__main__':
             migrate_teams(source_db, destination_db)
             migrate_stations(source_db, destination_db)
             migrate_connections(source_db, destination_db)
-            migrate_messages(source_db, destination_db)
+            # TODO migrate_messages(source_db, destination_db)
             migrate_settings(source_db, destination_db)
             destination_db.commit()
