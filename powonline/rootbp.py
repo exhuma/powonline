@@ -1,11 +1,14 @@
 import logging
 from time import time
 
-from flask import Blueprint, request, jsonify, current_app, render_template
 import jwt
+from flask import (Blueprint, current_app, jsonify, redirect, render_template,
+                   request, session)
+from requests_oauthlib import OAuth2Session
 
-from .model import DB
 from .core import User, questionnaire_scores
+from .model import DB
+from .social import Social
 
 rootbp = Blueprint('rootbp', __name__)
 
@@ -33,14 +36,59 @@ def get_team_station_questionnaire():
     return jsonify(output)
 
 
+@rootbp.route("/social-login/<provider>")
+def social_login(provider):
+    client = Social.create(current_app.localconfig, provider)
+    if not client:
+        return '%s is not supported for login!' % provider
+    authorization_url, state = client.process_login()
+    # State is used to prevent CSRF, keep this for later.
+    session['oauth_state'] = state
+    return jsonify({
+        "authorization_url": authorization_url
+    })
+
+
+@rootbp.route("/connect/<provider>")
+def callback(provider):
+    client = Social.create(current_app.localconfig, provider)
+    if not client:
+        return '%s is not supported for login!' % provider
+    user_info = client.get_user_info(session['oauth_state'], request.url)
+    return jsonify(user_info)
+
+
 @rootbp.route('/login', methods=['POST'])
 def login():
+    user = None
     data = request.get_json()
-    username = data['username']
-    password = data['password']
+    if 'social_provider' in data:
+        provider = data['social_provider']
+        token = data['token']
+        user_id = data['user_id']
+        client = Social.create(current_app.localconfig, provider)
+        user_info = client.get_user_info_simple(token)
+        if user_info:
+            user = User.by_social_connection(
+                DB.session,
+                provider,
+                user_id,
+                {
+                    'display_name': user_info['name'],
+                    'avatar_url': user_info['picture'],
+                    'email': user_info.get('email')
+                }
+            )
+        else:
+            return 'Access Denied', 401
+    else:
+        username = data['username']
+        password = data['password']
+        user = User.get(DB.session, username)
+        if not user or not user.checkpw(password):
+            return 'Access Denied', 401
 
-    user = User.get(DB.session, username)
-    if not user or not user.checkpw(password):
+    if not user:
         return 'Access Denied', 401
 
     roles = {role.name for role in user.roles}
@@ -50,7 +98,7 @@ def login():
 
     now = int(time())
     payload = {
-        'username': username,
+        'username': user.name,
         'roles': list(roles),
         'iat': now,
         'exp': now + jwt_lifetime
@@ -59,7 +107,7 @@ def login():
     result = {
         'token': jwt.encode(payload, jwt_secret).decode('ascii'),
         'roles': list(roles),  # convenience for the frontend
-        'user': data['username'],  # convenience for the frontend
+        'user': user.name,  # convenience for the frontend
     }
     return jsonify(result)
 

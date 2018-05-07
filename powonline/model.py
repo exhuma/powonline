@@ -133,6 +133,24 @@ class Route(DB.Model):
             setattr(self, k, v)
 
 
+class OauthConnection(DB.Model):
+    __tablename__ = 'oauth_connection'
+    id = Column(Integer, primary_key=True)
+    user_ = Column(Unicode, ForeignKey('user.name'), name='user')
+    provider_id = Column(Unicode(255))
+    provider_user_id = Column(Unicode(255))
+    access_token = Column(Unicode(255))
+    secret = Column(Unicode(255))
+    display_name = Column(Unicode(255))
+    profile_url = Column(Unicode(512))
+    image_url = Column(Unicode(512))
+    rank = Column(Integer)
+    inserted = Column(DateTime, nullable=False, server_default=func.now())
+    updated = Column(DateTime, nullable=False, server_default=func.now())
+
+    user = relationship('User', backref='oauth_connection')
+
+
 class User(DB.Model):
     __tablename__ = 'user'
     name = Column(Unicode, primary_key=True)
