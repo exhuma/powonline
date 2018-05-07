@@ -44,7 +44,9 @@ def social_login(provider):
     authorization_url, state = client.process_login()
     # State is used to prevent CSRF, keep this for later.
     session['oauth_state'] = state
-    return redirect(authorization_url)
+    return jsonify({
+        "authorization_url": authorization_url
+    })
 
 
 @rootbp.route("/connect/<provider>")
@@ -58,12 +60,35 @@ def callback(provider):
 
 @rootbp.route('/login', methods=['POST'])
 def login():
+    user = None
     data = request.get_json()
-    username = data['username']
-    password = data['password']
+    if 'social_provider' in data:
+        provider = data['social_provider']
+        token = data['token']
+        user_id = data['user_id']
+        client = Social.create(current_app.localconfig, provider)
+        user_info = client.get_user_info_simple(token)
+        if user_info:
+            user = User.by_social_connection(
+                DB.session,
+                provider,
+                user_id,
+                {
+                    'display_name': user_info['name'],
+                    'avatar_url': user_info['picture'],
+                    'email': user_info.get('email')
+                }
+            )
+        else:
+            return 'Access Denied', 401
+    else:
+        username = data['username']
+        password = data['password']
+        user = User.get(DB.session, username)
+        if not user or not user.checkpw(password):
+            return 'Access Denied', 401
 
-    user = User.get(DB.session, username)
-    if not user or not user.checkpw(password):
+    if not user:
         return 'Access Denied', 401
 
     roles = {role.name for role in user.roles}
@@ -73,7 +98,7 @@ def login():
 
     now = int(time())
     payload = {
-        'username': username,
+        'username': user.name,
         'roles': list(roles),
         'iat': now,
         'exp': now + jwt_lifetime
@@ -82,7 +107,7 @@ def login():
     result = {
         'token': jwt.encode(payload, jwt_secret).decode('ascii'),
         'roles': list(roles),  # convenience for the frontend
-        'user': data['username'],  # convenience for the frontend
+        'user': user.name,  # convenience for the frontend
     }
     return jsonify(result)
 

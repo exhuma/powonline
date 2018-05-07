@@ -1,7 +1,11 @@
+import logging
+from random import SystemRandom
+from string import ascii_letters, digits, punctuation
+
+from sqlalchemy import and_, func
+
 from . import model
 from .model import TeamState
-from sqlalchemy import and_, func
-import logging
 
 LOG = logging.getLogger(__name__)
 
@@ -363,6 +367,31 @@ class Route:
 
 
 class User:
+
+    @staticmethod
+    def by_social_connection(session, provider, user_id, defaults=None):
+        defaults = defaults or {}
+        query = session.query(model.OauthConnection).filter_by(
+            provider_id=provider,
+            provider_user_id=user_id)
+        connection = query.one_or_none()
+        if not connection:
+            user = User.get(session, defaults['email'])
+            if not user:
+                random_pw = ''.join(SystemRandom().choice(
+                    ascii_letters + digits + punctuation) for _ in range(64))
+                user = model.User(defaults['email'], password=random_pw)
+            new_connection = model.OauthConnection()
+            new_connection.user = user
+            new_connection.provider_id = provider
+            new_connection.provider_user_id = user_id
+            new_connection.display_name = defaults.get('display_name')
+            new_connection.image_url = defaults.get('avatar_url')
+            session.add(new_connection)
+            session.commit()
+        else:
+            user = connection.user
+        return user
 
     @staticmethod
     def get(session, name):

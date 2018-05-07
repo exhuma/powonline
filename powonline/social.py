@@ -1,5 +1,9 @@
+import logging
+
 from requests_oauthlib import OAuth2Session
 from requests_oauthlib.compliance_fixes import facebook_compliance_fix
+
+LOG = logging.getLogger(__name__)
 
 
 class Social:
@@ -50,6 +54,20 @@ class Google:
             self.authorization_base_url)
         return authorization_url, state
 
+    def get_user_info_simple(self, token):
+        client = OAuth2Session(
+            self.client_id,
+            redirect_uri=self.redirect_uri,
+            token={
+                'access_token': token
+            }
+        )
+        response = client.get('https://www.googleapis.com/oauth2/v1/userinfo')
+        if response.status_code != 200:
+            return 'Unable to fetch user-info from Google!', 500
+        user_info = response.json()
+        return user_info
+
     def get_user_info(self, state, access_url):
         client = OAuth2Session(
             self.client_id,
@@ -96,6 +114,41 @@ class Facebook:
         authorization_url, state = client.authorization_url(
             self.authorization_base_url)
         return authorization_url, state
+
+    def get_user_info_simple(self, token):
+        client = OAuth2Session(
+            self.client_id,
+            redirect_uri=self.redirect_uri,
+            token={
+                'access_token': token
+            }
+        )
+        client = facebook_compliance_fix(client)
+        args = {
+            'fields': ','.join([
+                'email',
+                'name',
+            ])
+        }
+        response = client.get('https://graph.facebook.com/me', params=args)
+        if response.status_code != 200:
+            LOG.error('Unable to get user-info pic from Facebook: %r',
+                      response.json())
+            return 'Unable to fetch user-info from Facebook!', 500
+        user_info = response.json()
+        user_info['picture'] = None
+        # Fetch profile pic separately (needs different access rights and may
+        # fail)
+        args = {
+            'fields': 'profile_pic'
+        }
+        response = client.get('https://graph.facebook.com/me', params=args)
+        if response.status_code == 200:
+            user_info['picture'] = response.json()['profile_pic']
+        else:
+            LOG.error('Unable to get profile pic from Facebook: %r',
+                      response.json())
+        return user_info
 
     def get_user_info(self, state, access_url):
         client = OAuth2Session(
