@@ -218,8 +218,8 @@ def migrate_messages(source_db, dest_db):
     source.execute('SELECT id, email FROM "user"')
     user_map = {user['id']: user['email'] for user in source}
 
-    source.execute('SELECT id, email FROM "group"')
-    team_map = {team['id']: team['email'] for team in source}
+    source.execute('SELECT id, name FROM "group"')
+    team_map = {team['id']: team['name'] for team in source}
 
     source.execute('SELECT id, user_id, "group_id", content FROM "messages"')
     for message in source:
@@ -279,6 +279,6 @@ if __name__ == '__main__':
             migrate_teams(source_db, destination_db)
             migrate_stations(source_db, destination_db)
             migrate_connections(source_db, destination_db)
-            # TODO migrate_messages(source_db, destination_db)
+            migrate_messages(source_db, destination_db)
             migrate_settings(source_db, destination_db)
             destination_db.commit()
