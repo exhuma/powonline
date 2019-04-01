@@ -13,6 +13,7 @@ from .resources import (
     RouteStationList,
     RouteTeam,
     RouteTeamList,
+    Scoreboard,
     Station,
     StationList,
     StationUser,
@@ -41,6 +42,7 @@ def make_app(config):
     api = Api(app)
 
     app.localconfig = config
+    app.secret_key = config.get('security', 'secret_key')
     app.register_blueprint(rootbp)
     app.pusher = PusherWrapper.create(
         config.get('pusher', 'app_id', default=''),
@@ -75,6 +77,7 @@ def make_app(config):
                      '/team/<team_name>/stations',
                      '/station/<station_name>/teams/<team_name>',
                      )
+    api.add_resource(Scoreboard, '/scoreboard')
     api.add_resource(Dashboard, '/station/<station_name>/dashboard')
     api.add_resource(GlobalDashboard, '/dashboard')
     api.add_resource(Job, '/job')

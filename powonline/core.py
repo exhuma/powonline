@@ -1,7 +1,11 @@
+import logging
+from random import SystemRandom
+from string import ascii_letters, digits, punctuation
+
+from sqlalchemy import and_, func
+
 from . import model
 from .model import TeamState
-from sqlalchemy import and_
-import logging
 
 LOG = logging.getLogger(__name__)
 
@@ -26,6 +30,49 @@ def make_default_team_state():
     return {
         'state': TeamState.UNKNOWN
     }
+
+
+def scoreboard(session):
+    teams = session.query(model.Team)
+    scores = {}
+    for row in teams:
+        station_score = sum(state.score for state in row.station_states)
+        quest_score = sum(quest.score for quest in row.questionnaire_scores)
+        scores[row.name] = sum([station_score, quest_score])
+    output = reversed(sorted(scores.items(), key=lambda x: x[1]))
+    return output
+
+
+def questionnaire_scores(config, session):
+    mapping = {}
+    for option in config.options('questionnaire-map'):
+        mapping[option] = config.get('questionnaire-map', option).strip()
+    query = session.query(model.TeamQuestionnaire)
+    output = {}
+    for row in query:
+        if row.questionnaire_name not in mapping:
+            LOG.error('No mapped station found for questionnaire %r',
+                      row.questionnaire_name)
+            continue
+        station = mapping[row.questionnaire_name]
+        team_stations = output.setdefault(row.team_name, {})
+        team_stations[station] = {
+            'name': row.questionnaire_name,
+            'score': row.score
+        }
+    return output
+
+
+def set_questionnaire_score(config, session, team, station, score):
+    mapping = {}
+    for option in config.options('questionnaire-map'):
+        tmp = config.get('questionnaire-map', option).strip()
+        mapping[tmp] = option
+
+    questionnaire_name = mapping[station]
+    new_state = model.TeamQuestionnaire(team, questionnaire_name, score)
+    session.merge(new_state)
+    return score
 
 
 def global_dashboard(session):
@@ -79,6 +126,10 @@ class Team:
             model.Team.effective_start_time)
 
     @staticmethod
+    def get(session, name):
+        return session.query(model.Team).filter_by(name=name).one_or_none()
+
+    @staticmethod
     def quickfilter_without_route(session):
         return session.query(model.Team).filter(model.Team.route == None)
 
@@ -125,10 +176,19 @@ class Team:
             state = model.TeamStation(team_name=team_name,
                                       station_name=station_name)
             state = session.merge(state)
+            session.flush()
 
         if state.state == TeamState.UNKNOWN:
             state.state = TeamState.ARRIVED
+            # Teams which arrive at the finish station will have their
+            # finish-time set
+            if not state.team.finish_time and state.station.is_end:
+                state.team.finish_time = func.now()
         elif state.state == TeamState.ARRIVED:
+            # Teams which leave the departure station will have their
+            # start-time set
+            if not state.team.effective_start_time and state.station.is_start:
+                state.team.effective_start_time = func.now()
             state.state = TeamState.FINISHED
         else:
             state.state = TeamState.UNKNOWN
@@ -307,6 +367,31 @@ class Route:
 
 
 class User:
+
+    @staticmethod
+    def by_social_connection(session, provider, user_id, defaults=None):
+        defaults = defaults or {}
+        query = session.query(model.OauthConnection).filter_by(
+            provider_id=provider,
+            provider_user_id=user_id)
+        connection = query.one_or_none()
+        if not connection:
+            user = User.get(session, defaults['email'])
+            if not user:
+                random_pw = ''.join(SystemRandom().choice(
+                    ascii_letters + digits + punctuation) for _ in range(64))
+                user = model.User(defaults['email'], password=random_pw)
+            new_connection = model.OauthConnection()
+            new_connection.user = user
+            new_connection.provider_id = provider
+            new_connection.provider_user_id = user_id
+            new_connection.display_name = defaults.get('display_name')
+            new_connection.image_url = defaults.get('avatar_url')
+            session.add(new_connection)
+            session.commit()
+        else:
+            user = connection.user
+        return user
 
     @staticmethod
     def get(session, name):

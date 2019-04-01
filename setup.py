@@ -19,6 +19,7 @@ setup(
         'pusher',
         'pyjwt',
         'python-dateutil',
+        'requests_oauthlib',
         'sqlalchemy',
     ],
     extras_require={

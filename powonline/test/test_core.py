@@ -68,6 +68,77 @@ class TestCore(CommonTest):
         self.assertEqual(result_stations_a, expected_stations_a)
         self.assertEqual(result_stations_b, expected_stations_b)
 
+    def test_scoreboard(self):
+        result = list(core.scoreboard(self.session))
+        expected = [
+            ('team-red', 40),
+            ('team-blue', 30),
+            ('team-without-route', 0),
+        ]
+        self.assertEqual(result, expected)
+
+    def test_questionnaire_scores(self):
+        config = Config('mamerwiselen', 'powonline', filename='test.ini')
+        config.read_string(dedent(
+            '''\
+            [questionnaire-map]
+            questionnaire_1 = station-blue
+            questionnaire_2 = station-red
+            '''))
+        result = core.questionnaire_scores(config, self.session)
+        expected = {
+            'team-red': {
+                'station-blue': {
+                    'name': 'questionnaire_1',
+                    'score': 10
+                },
+                'station-red': {
+                    'name': 'questionnaire_2',
+                    'score': 20
+                }
+            },
+            'team-blue': {
+                'station-blue': {
+                    'name': 'questionnaire_1',
+                    'score': 30
+                }
+            }
+        }
+        self.assertEqual(result, expected)
+
+    def test_set_questionnaire_score(self):
+        config = Config('mamerwiselen', 'powonline', filename='test.ini')
+        config.read_string(dedent(
+            '''\
+            [questionnaire-map]
+            questionnaire_1 = station-blue
+            questionnaire_2 = station-red
+            '''))
+        result = core.set_questionnaire_score(
+            config, self.session, 'team-red', 'station-blue', 40)
+        self.assertEqual(result, 40)
+
+        new_data = core.questionnaire_scores(config, self.session)
+        expected = {
+            'team-red': {
+                'station-blue': {
+                    'name': 'questionnaire_1',
+                    'score': 40
+                },
+                'station-red': {
+                    'name': 'questionnaire_2',
+                    'score': 20
+                }
+            },
+            'team-blue': {
+                'station-blue': {
+                    'name': 'questionnaire_1',
+                    'score': 30
+                }
+            }
+        }
+        self.assertEqual(new_data, expected)
+
     def test_global_dashboard(self):
         result = core.global_dashboard(self.session)
         expected = [

@@ -273,6 +273,13 @@ class Team(Resource):
         core.Team.delete(DB.session, name)
         return '', 204
 
+    def get(self, name):
+        team = core.Team.get(DB.session, name)
+        if not team:
+            return 'No such team', 404
+
+        return Team._single_response(team, 200)
+
 
 class StationList(Resource):
 
@@ -654,6 +661,18 @@ class Assignments(Resource):
         return output
 
 
+class Scoreboard(Resource):
+    '''
+    Helper resource for the frontend
+    '''
+
+    def get(self):
+        output = list(core.scoreboard(DB.session))
+        output = make_response(dumps(output, cls=MyJsonEncoder), 200)
+        output.content_type = 'application/json'
+        return output
+
+
 class Dashboard(Resource):
     '''
     Helper resource for the frontend
@@ -720,7 +739,10 @@ class Job(Resource):
             return 'Access denied to this station!', 401
 
     def _action_set_score(self, station_name, team_name, score):
-        score = int(score, 10)
+        if isinstance(score, str):
+            score = int(score, 10) if score else 0
+        else:
+            score = score if score else 0
         auth, permissions = get_user_permissions(request)
 
         pusher_channel = current_app.localconfig.get(
@@ -745,6 +767,43 @@ class Job(Resource):
                     'station': station_name,
                     'team': team_name,
                     'new_score': new_score,
+                }
+            )
+            return output, 200
+        else:
+            return 'Access denied to this station!', 401
+
+    def _action_set_questionnaire_score(self, station_name, team_name, score):
+        auth, permissions = get_user_permissions(request)
+
+        pusher_channel = current_app.localconfig.get(
+            'pusher_channels', 'team_station_state',
+            default='team_station_state_dev')
+
+        if 'admin_stations' in permissions or (
+                'manage_station' in permissions and
+                core.User.may_access_station(
+                    DB.session, auth['username'], station_name)):
+            LOG.info('Setting questionnaire score of %s on %s to %s ('
+                     'by user: %s)',
+                     team_name, station_name, score, auth['username'])
+            try:
+                new_score = core.set_questionnaire_score(
+                    current_app.localconfig,
+                    DB.session, team_name, station_name, score)
+            except KeyError:
+                return ('No questionnaire assigned to station %r!'
+                        % station_name, 500)
+            output = {
+                'new_score': new_score,
+            }
+            current_app.pusher.trigger(
+                pusher_channel,
+                'questionnaire-score-change',
+                {
+                    'stationName': station_name,
+                    'teamName': team_name,
+                    'score': new_score,
                 }
             )
             return output, 200
