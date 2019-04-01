@@ -74,8 +74,9 @@ def deploy():
 
     fab.put('run-api.sh', '%s/run-api.sh.dist' % DEPLOY_DIR)
 
-    fab.run('docker stop powonline-api')
-    fab.run('docker rm powonline-api')
+    with fab.quiet():
+        fab.run('docker stop powonline-api')
+        fab.run('docker rm powonline-api')
     with fab.cd(DEPLOY_DIR):
         fab.run('bash run-api.sh')
 
