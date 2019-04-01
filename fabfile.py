@@ -13,9 +13,8 @@ DEPLOY_DIR = '/opt/powonline'
 
 @fab.task
 def develop():
-    l = fab.local
-    l('[ -d env ] || pyvenv env')
-    l('./env/bin/pip install -e .[dev,test]')
+    fab.local('[ -d env ] || pyvenv env')
+    fab.local('./env/bin/pip install -e .[dev,test]')
 
 
 @fab.task
