@@ -1,7 +1,10 @@
 import fabric.api as fab
 
+DOCKER_HOST_01 = '195.201.33.98'
+DOCKER_HOST_02 = '195.201.226.98'
+
 fab.env.roledefs = {
-    'prod': ['195.201.33.98'],
+    'prod': [DOCKER_HOST_01],
     'staging': ['192.168.1.2'],
 }
 
