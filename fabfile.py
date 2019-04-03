@@ -1,25 +1,24 @@
-from fabric import task
+from fabric import Connection, task
+from invoke.config import Config
 from invoke.context import Context
 
 DOCKER_HOST_01 = '195.201.33.98'
 DOCKER_HOST_02 = '195.201.226.98'
-
-ROLEDEFS = {
-    'prod': [DOCKER_HOST_01],
-    'staging': ['192.168.1.2'],
-}
-
 DEPLOY_DIR = '/opt/powonline'
+ROLEDEFS = {
+    'prod': DOCKER_HOST_01,
+    'staging': '192.168.1.2',
+}
 
 
 @task
-def develop(ctx):
+def develop(ctx):  # type: ignore
     ctx.run('[ -d env ] || pyvenv env')
     ctx.run('./env/bin/pip install -e .[dev,test]')
 
 
 @task
-def build(ctx, with_docker_image=True):
+def build(ctx, with_docker_image=True):  # type: ignore
     ctx.run('rm -rf dist')
     ctx.run('python setup.py sdist')
     if with_docker_image:
@@ -33,8 +32,7 @@ def build(ctx, with_docker_image=True):
         ctx.run('rm dist.tar.gz')
 
 
-@task(hosts=ROLEDEFS['prod'])
-def deploy_database(conn):
+def _deploy_database_remotely(conn: Connection) -> None:
     version = conn.local('python setup.py --version').stdout.strip()
     tmpdir = conn.run('mktemp -d')
     conn.put('database', tmpdir)
@@ -48,14 +46,16 @@ def deploy_database(conn):
         conn.run('rm -rf %s' % tmpdir)
 
 
-@task(hosts=ROLEDEFS['prod'])
-def deploy(conn):
-    ctx = Context(config=conn.config)
-    build(ctx, with_docker_image=False)
+@task
+def deploy_database(ctx, environment='staging'):  # type: ignore
+    with Connection(ROLEDEFS[environment]) as conn:
+        _deploy_database_remotely(conn)
+
+
+def _deploy_remotely(conn: Connection) -> None:
     fullname = conn.local('python setup.py --fullname').stdout.strip()
     version = conn.local('python setup.py --version').stdout.strip()
-    tmpdir = conn.run('mktemp -d')
-    conn.put('dist/%s.tar.gz' % fullname, '%s/dist.tar.gz' % tmpdir)
+    tmpdir = conn.run('mktemp -d').stdout.strip()
     conn.put('Dockerfile', tmpdir)
     conn.put('app.ini.dist', tmpdir)
     conn.put('docker-entrypoint', tmpdir)
@@ -64,9 +64,9 @@ def deploy(conn):
     try:
         with conn.cd(tmpdir):
             conn.run('docker build '
-                     '-t exhuma/powonline-api:latest '
-                     '-t exhuma/powonline-api:%s '
-                     '.' % version)
+                    '-t exhuma/powonline-api:latest '
+                    '-t exhuma/powonline-api:%s '
+                    '.' % version)
     finally:
         conn.run('rm -rf %s' % tmpdir)
 
@@ -84,5 +84,12 @@ def deploy(conn):
 
 
 @task
-def run(ctx):
+def deploy(ctx, environment='staging'):  # type: ignore
+    build(ctx, with_docker_image=False)
+    with Connection(ctx[environment].hostname) as conn:
+        _deploy_remotely(conn)
+
+
+@task
+def run(ctx):  # type: ignore
     ctx.local('./env/bin/python autoapp.py')
