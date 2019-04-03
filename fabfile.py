@@ -1,9 +1,10 @@
-import fabric.api as fab
+from fabric import task
+from invoke.context import Context
 
 DOCKER_HOST_01 = '195.201.33.98'
 DOCKER_HOST_02 = '195.201.226.98'
 
-fab.env.roledefs = {
+ROLEDEFS = {
     'prod': [DOCKER_HOST_01],
     'staging': ['192.168.1.2'],
 }
@@ -11,76 +12,77 @@ fab.env.roledefs = {
 DEPLOY_DIR = '/opt/powonline'
 
 
-@fab.task
-def develop():
-    fab.local('[ -d env ] || pyvenv env')
-    fab.local('./env/bin/pip install -e .[dev,test]')
+@task
+def develop(ctx):
+    ctx.run('[ -d env ] || pyvenv env')
+    ctx.run('./env/bin/pip install -e .[dev,test]')
 
 
-@fab.task
-def build(with_docker_image=True):
-    fab.local('rm -rf dist')
-    fab.local('python setup.py sdist')
+@task
+def build(ctx, with_docker_image=True):
+    ctx.run('rm -rf dist')
+    ctx.run('python setup.py sdist')
     if with_docker_image:
-        version = fab.local('python setup.py --version', capture=True)
-        fullname = fab.local('python setup.py --fullname', capture=True)
-        fab.local('cp dist/%s.tar.gz dist.tar.gz' % fullname)
-        fab.local('docker build '
-                  '-t exhuma/powonline-api:latest '
-                  '-t exhuma/powonline-api:%s '
-                  '.' % version)
-        fab.local('rm dist.tar.gz')
+        version = ctx.run('python setup.py --version').stdout.strip()
+        fullname = ctx.run('python setup.py --fullname').stdout.strip()
+        ctx.run('cp dist/%s.tar.gz dist.tar.gz' % fullname)
+        ctx.run('docker build '
+                '-t exhuma/powonline-api:latest '
+                '-t exhuma/powonline-api:%s '
+                '.' % version)
+        ctx.run('rm dist.tar.gz')
 
 
-@fab.task
-def deploy_database():
-    version = fab.local('python setup.py --version', capture=True)
-    tmpdir = fab.run('mktemp -d')
-    fab.put('database', tmpdir)
+@task(hosts=ROLEDEFS['prod'])
+def deploy_database(conn):
+    version = conn.local('python setup.py --version').stdout.strip()
+    tmpdir = conn.run('mktemp -d')
+    conn.put('database', tmpdir)
     try:
-        with fab.cd('%s/database' % tmpdir):
-            fab.run('docker build '
+        with conn.cd('%s/database' % tmpdir):
+            conn.run('docker build '
                     '-t exhuma/powonline-db:latest '
                     '-t exhuma/powonline-db:%s '
                     '.' % version)
     finally:
-        fab.run('rm -rf %s' % tmpdir)
+        conn.run('rm -rf %s' % tmpdir)
 
 
-@fab.task
-def deploy():
-    fab.execute(build, with_docker_image=False)
-    fullname = fab.local('python setup.py --fullname', capture=True)
-    version = fab.local('python setup.py --version', capture=True)
-    tmpdir = fab.run('mktemp -d')
-    fab.put('dist/%s.tar.gz' % fullname, '%s/dist.tar.gz' % tmpdir)
-    fab.put('Dockerfile', tmpdir)
-    fab.put('app.ini.dist', tmpdir)
-    fab.put('docker-entrypoint', tmpdir)
-    fab.put('set_config', tmpdir)
-    fab.put('powonline.wsgi', tmpdir)
+@task(hosts=ROLEDEFS['prod'])
+def deploy(conn):
+    ctx = Context(config=conn.config)
+    build(ctx, with_docker_image=False)
+    fullname = conn.local('python setup.py --fullname').stdout.strip()
+    version = conn.local('python setup.py --version').stdout.strip()
+    tmpdir = conn.run('mktemp -d')
+    conn.put('dist/%s.tar.gz' % fullname, '%s/dist.tar.gz' % tmpdir)
+    conn.put('Dockerfile', tmpdir)
+    conn.put('app.ini.dist', tmpdir)
+    conn.put('docker-entrypoint', tmpdir)
+    conn.put('set_config', tmpdir)
+    conn.put('powonline.wsgi', tmpdir)
     try:
-        with fab.cd(tmpdir):
-            fab.run('docker build '
-                    '-t exhuma/powonline-api:latest '
-                    '-t exhuma/powonline-api:%s '
-                    '.' % version)
+        with conn.cd(tmpdir):
+            conn.run('docker build '
+                     '-t exhuma/powonline-api:latest '
+                     '-t exhuma/powonline-api:%s '
+                     '.' % version)
     finally:
-        fab.run('rm -rf %s' % tmpdir)
+        conn.run('rm -rf %s' % tmpdir)
 
-    exists = fab.run('[ -d %s ] && echo 1 || echo 0' % DEPLOY_DIR).strip()
+    exists = conn.run('[ -d %s ] && echo 1 || echo 0' % DEPLOY_DIR).strip()
     if exists == '0':
-        fab.sudo('install -o %s -d %s' % (fab.env.user, DEPLOY_DIR))
+        conn.sudo('install -o %s -d %s' % (conn.user, DEPLOY_DIR))
 
-    fab.put('run-api.sh', '%s/run-api.sh.dist' % DEPLOY_DIR)
+    conn.put('run-api.sh', '%s/run-api.sh.dist' % DEPLOY_DIR)
 
-    with fab.quiet():
-        fab.run('docker stop powonline-api')
-        fab.run('docker rm powonline-api')
-    with fab.cd(DEPLOY_DIR):
-        fab.run('bash run-api.sh')
+    with conn.quiet():
+        conn.run('docker stop powonline-api')
+        conn.run('docker rm powonline-api')
+    with conn.cd(DEPLOY_DIR):
+        conn.run('bash run-api.sh')
 
 
-@fab.task
-def run():
-    fab.local('./env/bin/python autoapp.py')
+@task
+def run(ctx):
+    ctx.local('./env/bin/python autoapp.py')
