@@ -92,4 +92,4 @@ def deploy(ctx, environment='staging'):  # type: ignore
 
 @task
 def run(ctx):  # type: ignore
-    ctx.local('./env/bin/python autoapp.py')
+    ctx.run('./env/bin/python autoapp.py')
