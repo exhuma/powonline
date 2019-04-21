@@ -92,4 +92,5 @@ def deploy(ctx, environment='staging'):  # type: ignore
 
 @task
 def run(ctx):  # type: ignore
-    ctx.run('./env/bin/python autoapp.py')
+    from subprocess import call
+    call(['./env/bin/python', 'autoapp.py'])
