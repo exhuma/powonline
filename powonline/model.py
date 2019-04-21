@@ -194,6 +194,23 @@ class Role(DB.Model):
     def __init__(self):
         self.name = 'Example Station'
 
+    @staticmethod
+    def get_or_create(session: Session, name: str) -> 'Role':
+        """
+        Retrieves a role with name *name*.
+
+        If it does not exist yet in the DB it will be created.
+        """
+        query = session.query(Role).filter_by(name=name)
+        existing = query.one_or_none()
+        if not existing:
+            output = Role()  # type: ignore
+            output.name = name
+            session.add(output)
+        else:
+            output = existing
+        return output  # type: ignore
+
 
 class TeamStation(DB.Model):
     __tablename__ = 'team_station_state'
