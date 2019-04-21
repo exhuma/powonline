@@ -1,23 +1,15 @@
+import logging
 from datetime import datetime
 from enum import Enum
-import logging
 
-from bcrypt import gensalt, hashpw, checkpw
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import (
-    Boolean,
-    Column,
-    DateTime,
-    ForeignKey,
-    Integer,
-    Unicode,
-    func,
-    Table,
-)
-from sqlalchemy.dialects.postgresql import BYTEA
-from sqlalchemy.orm import relationship
+from bcrypt import checkpw, gensalt, hashpw
+
 import sqlalchemy.types as types
-
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import (Boolean, Column, DateTime, ForeignKey, Integer, Table,
+                        Unicode, func)
+from sqlalchemy.dialects.postgresql import BYTEA
+from sqlalchemy.orm import Session, relationship
 
 LOG = logging.getLogger(__name__)
 DB = SQLAlchemy()
@@ -191,7 +183,7 @@ class Role(DB.Model):
                          back_populates='roles',
                          collection_class=set)
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.name = 'Example Station'
 
     @staticmethod
