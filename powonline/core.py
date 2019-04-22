@@ -7,6 +7,7 @@ from string import ascii_letters, digits, punctuation
 from sqlalchemy import and_, func
 
 from . import model
+from .exc import NoQuestionnaireForStation, NoSuchQuestionnaire
 from .model import TeamState
 
 LOG = logging.getLogger(__name__)
@@ -52,11 +53,11 @@ def questionnaire_scores(config, session):
     query = session.query(model.TeamQuestionnaire)
     output = {}
     for row in query:
-        if row.questionnaire_name not in mapping:
+        if row.questionnaire_name.lower() not in mapping:
             LOG.error('No mapped station found for questionnaire %r',
                       row.questionnaire_name)
             continue
-        station = mapping[row.questionnaire_name]
+        station = mapping[row.questionnaire_name.lower()]
         team_stations = output.setdefault(row.team_name, {})
         team_stations[station] = {
             'name': row.questionnaire_name,
@@ -67,13 +68,33 @@ def questionnaire_scores(config, session):
 
 def set_questionnaire_score(config, session, team, station, score):
     mapping = {}
-    for option in config.options('questionnaire-map'):
-        tmp = config.get('questionnaire-map', option).strip()
-        mapping[tmp] = option
+    for qname in config.options('questionnaire-map'):
+        mapped_station = config.get('questionnaire-map', qname).strip()
+        mapping[mapped_station] = qname
+    questionnaire_name = mapping.get(station, None)
+    if not questionnaire_name:
+        raise NoQuestionnaireForStation()
 
-    questionnaire_name = mapping[station]
-    new_state = model.TeamQuestionnaire(team, questionnaire_name, score)
-    session.merge(new_state)
+    # Config options are automatically lower-cased. We need to match that name
+    # case-insensitive so the updates work
+    query = session.query(model.Questionnaire).filter(
+        model.Questionnaire.name.ilike(questionnaire_name)
+    )
+    existing_questionnaire = query.one_or_none()
+    if not existing_questionnaire:
+        raise NoSuchQuestionnaire()
+
+    questionnaire_name = existing_questionnaire.name
+
+    query = session.query(model.TeamQuestionnaire).filter_by(
+        team_name=team,
+        questionnaire_name=questionnaire_name
+    )
+    state = query.one_or_none()
+    if not state:
+        state = model.TeamQuestionnaire(team, questionnaire_name, score)
+        session.add(state)
+    state.score = score
     return score
 
 

@@ -1,28 +1,19 @@
+import logging
 from enum import Enum
 from functools import wraps
-from json import dumps, JSONEncoder
-import logging
+from json import JSONEncoder, dumps
 
-from flask import request, make_response, jsonify, current_app, g
-from flask_restful import Resource, marshal_with, fields
 import jwt
+from flask import current_app, g, jsonify, make_response, request
+from flask_restful import Resource, fields, marshal_with
 
 from . import core
+from .exc import NoQuestionnaireForStation
 from .model import DB
-from .schema import (
-    JOB_SCHEMA,
-    ROLE_SCHEMA,
-    ROUTE_LIST_SCHEMA,
-    ROUTE_SCHEMA,
-    STATION_LIST_SCHEMA,
-    STATION_SCHEMA,
-    TEAM_LIST_SCHEMA,
-    TEAM_SCHEMA,
-    USER_LIST_SCHEMA,
-    USER_SCHEMA,
-    USER_SCHEMA_SAFE,
-)
-
+from .schema import (JOB_SCHEMA, ROLE_SCHEMA, ROUTE_LIST_SCHEMA, ROUTE_SCHEMA,
+                     STATION_LIST_SCHEMA, STATION_SCHEMA, TEAM_LIST_SCHEMA,
+                     TEAM_SCHEMA, USER_LIST_SCHEMA, USER_SCHEMA,
+                     USER_SCHEMA_SAFE)
 
 LOG = logging.getLogger(__name__)
 
@@ -809,7 +800,7 @@ class Job(Resource):
                 new_score = core.set_questionnaire_score(
                     current_app.localconfig,
                     DB.session, team_name, station_name, score)
-            except KeyError:
+            except NoQuestionnaireForStation:
                 return ('No questionnaire assigned to station %r!'
                         % station_name, 500)
             output = {
