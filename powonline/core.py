@@ -1,4 +1,6 @@
 import logging
+from codecs import encode
+from os import urandom
 from random import SystemRandom
 from string import ascii_letters, digits, punctuation
 
@@ -141,6 +143,10 @@ class Team:
 
     @staticmethod
     def create_new(session, data):
+        confirmation_key = data.get('confirmation_key', None)
+        if not confirmation_key:
+            randbytes = encode(urandom(100), 'hex')[:30]
+            data['confirmation_key'] = randbytes.decode('ascii')
         team = model.Team(**data)
         team = session.merge(team)
         return team
