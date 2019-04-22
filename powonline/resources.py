@@ -266,11 +266,29 @@ class Team(Resource):
                     'errors': errors}, 400
 
         output = core.Team.upsert(DB.session, name, parsed_data)
+
+        pusher_channel = current_app.localconfig.get(
+            'pusher_channels', 'team_station_state',
+            default='team_station_state_dev')
+        current_app.pusher.trigger(
+            pusher_channel,
+            'team-details-change',
+            {'name': name}
+        )
+
         return Team._single_response(output, 200)
 
     @require_permissions('admin_teams')
     def delete(self, name):
         core.Team.delete(DB.session, name)
+        pusher_channel = current_app.localconfig.get(
+            'pusher_channels', 'team_station_state',
+            default='team_station_state_dev')
+        current_app.pusher.trigger(
+            pusher_channel,
+            'team-deleted',
+            {'name': name}
+        )
         return '', 204
 
     def get(self, name):
