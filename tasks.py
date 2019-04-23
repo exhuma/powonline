@@ -33,18 +33,20 @@ def build_python_package(ctx):  # type: ignore
 def _build_py_remotely(conn, tmpdir):  # type: ignore
     version = conn.local('./env/bin/python setup.py --version')
     with conn.cd(tmpdir):
-        conn.run('docker build -t powonline-api:latest '
-        '-t powonline-api:%s '
-        '.' % version.stdout.strip())
+        conn.run('docker build '
+                 '-t exhuma/powonline-api:latest '
+                 '-t exhuma/powonline-api:%s '
+                 '.' % version.stdout.strip())
 
 
 @task
 def _build_db_remotely(conn, tmpdir):  # type: ignore
     version = conn.local('./env/bin/python setup.py --version')
     with conn.cd(tmpdir):
-        conn.run('docker build -t powonline-db:latest '
-        '-t powonline-db:%s '
-        '.' % version.stdout.strip())
+        conn.run('docker build '
+                 '-t exhuma/powonline-db:latest '
+                 '-t exhuma/powonline-db:%s '
+                 '.' % version.stdout.strip())
 
 
 @task
