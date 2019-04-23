@@ -36,6 +36,13 @@ setup(
             'pytest-xdist',
         ]
     },
+    entry_points={
+        'flask.commands': [
+            'grant-admin=powonline.cli:grant_admin',
+            'revoke-admin=powonline.cli:revoke_admin',
+            'list-users=powonline.cli:list_users',
+        ]
+    },
     include_package_data=True,
     author="Michel Albert",
     author_email="michel@albert.lu",

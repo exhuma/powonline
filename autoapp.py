@@ -1,11 +1,11 @@
 from config_resolver import Config
-
-from powonline.web import make_app
-from powonline.util import colorize_werkzeug
 from gouge.colourcli import Simple
+from powonline.config import default
+from powonline.util import colorize_werkzeug
+from powonline.web import make_app
 
 Simple.basicConfig(level=0)
-config = Config('mamerwiselen', 'powonline', version='2.0')
+config = default()
 colorize_werkzeug()
 
 

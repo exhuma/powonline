@@ -1,45 +1,38 @@
-from flask import Flask
-from flask_restful import Api
 import logging
 
-from .resources import (
-    Assignments,
-    Dashboard,
-    GlobalDashboard,
-    Job,
-    Route,
-    RouteList,
-    RouteStation,
-    RouteStationList,
-    RouteTeam,
-    RouteTeamList,
-    Scoreboard,
-    Station,
-    StationList,
-    StationUser,
-    StationUserList,
-    Team,
-    TeamList,
-    TeamStation,
-    User,
-    UserList,
-    UserRole,
-    UserRoleList,
-)
+import click
+from flask import Flask
+from flask_restful import Api
+
+from .config import default
 from .model import DB
 from .pusher import PusherWrapper
+from .resources import (Assignments, Dashboard, GlobalDashboard, Job, Route,
+                        RouteList, RouteStation, RouteStationList, RouteTeam,
+                        RouteTeamList, Scoreboard, Station, StationList,
+                        StationUser, StationUserList, Team, TeamList,
+                        TeamStation, User, UserList, UserRole, UserRoleList)
 from .rootbp import rootbp
-
 
 LOG = logging.getLogger(__name__)
 
 
-def make_app(config):
+def grant_admin(login: str) -> None:
+    """
+    Grants the "admin" role to a user with the given login.
+    """
+    print('>>>', login)
+
+
+def make_app(config=None):
     '''
     Application factory
     '''
     app = Flask(__name__)
     api = Api(app)
+
+    if not config:
+        config = default()
 
     app.localconfig = config
     app.secret_key = config.get('security', 'secret_key')

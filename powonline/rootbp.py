@@ -2,9 +2,11 @@ import logging
 from time import time
 
 import jwt
-from flask import (Blueprint, current_app, jsonify, redirect, render_template,
-                   request, session)
+import psycopg2
+from flask import (Blueprint, current_app, jsonify, make_response, redirect,
+                   render_template, request, session)
 from requests_oauthlib import OAuth2Session
+from sqlalchemy.exc import IntegrityError
 
 from .core import User, questionnaire_scores
 from .model import DB
@@ -17,12 +19,18 @@ LOG = logging.getLogger(__name__)
 
 @rootbp.after_app_request
 def after_app_request(response):
+    try:
+        DB.session.commit()
+    except:
+        LOG.exception('Unable to store data in the DB')
+        response = make_response('Internal Server Error!', 500)
+        DB.session.rollback()
+
     response.headers.add('Access-Control-Allow-Origin', '*')
     response.headers.add('Access-Control-Allow-Headers',
                          'Content-Type,Authorization')
     response.headers.add('Access-Control-Allow-Methods',
                          'GET,PUT,POST,DELETE')
-    DB.session.commit()
     return response
 
 
