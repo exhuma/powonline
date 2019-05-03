@@ -1,7 +1,7 @@
 import logging
 
 import click
-from powonline.model import DB, Role, User
+from powonline.model import DB, Role, User, Route
 from powonline.web import make_app
 
 LOG = logging.getLogger(__name__)
@@ -69,3 +69,77 @@ def add_local_user() -> None:
         user = User(name=login, password=password)
         DB.session.add(user)
         DB.session.commit()
+
+
+@click.command()
+@click.argument('filename')
+def import_csv(filename: str) -> None:
+    import csv
+    from datetime import datetime
+    from powonline.model import Team
+
+    with open(filename) as fptr:
+        reader = csv.DictReader(fptr, [
+            'id',
+            'timestamp',
+            'email',
+            'name',
+            'contact',
+            'phone',
+            'num_participants',
+            'num_vegetarians',
+            'planned_start_time',
+            'comments',
+        ])
+        next(reader)
+
+        app = make_app()  # type: ignore
+        with app.app_context():
+            for data in reader:
+                direction, _, timestr = data[
+                    'planned_start_time'].partition(' - ')
+                direction = direction.strip()
+                timestr = timestr.strip()
+
+                try:
+                    timedata = datetime.strptime(timestr, r'%Hh%M').time()
+                    planned_start_time = datetime(
+                        2019, 10, 5,
+                        timedata.hour,
+                        timedata.minute,
+                        0)
+                    order = int(planned_start_time.strftime('%H%M'))
+                except ValueError:
+                    planned_start_time = None
+                    order = 0
+
+                try:
+                    inserted = datetime.strptime(
+                        data['timestamp'], '%m/%d/%Y %H:%M:%S')
+                except ValueError:
+                    inserted = None
+
+                route = DB.session.query(Route).filter_by(name=direction)
+                route = route.one_or_none()
+                if not route:
+                    DB.session.add(Route(name=direction))
+
+                team = Team(
+                    name = data['name'],
+                    email = data['email'] if '@' in data['email'] else 'nobody@example.com',
+                    order = order,
+                    contact = data['contact'],
+                    phone = data['phone'],
+                    comments = data['comments'],
+                    is_confirmed = True,
+                    accepted = True,
+                    inserted = inserted or datetime.now(),
+                    num_vegetarians = int(data['num_vegetarians']),
+                    num_participants = int(data['num_participants']),
+                    planned_start_time = planned_start_time,
+                    route_name = direction,
+                )
+                team.reset_confirmation_key()
+                DB.session.add(team)
+                LOG.info('Added %s', team)
+            DB.session.commit()
