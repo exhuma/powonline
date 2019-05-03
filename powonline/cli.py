@@ -73,10 +73,33 @@ def add_local_user() -> None:
 
 @click.command()
 @click.argument('filename')
-def import_csv(filename: str) -> None:
+@click.argument('event-day')
+def import_csv(filename: str, event_day: str) -> None:
+    """
+    Imports teams from a CSV file.
+
+    FILENAME: The filename to use for import
+
+    EVENT_DAY: The date of the event as YYYY-MM-DD
+
+    The CSV file should use commas as separators, have one line as header and
+    the following fields:
+        * id: ignored
+        * timestamp: used as "inserted" timestamp in the DB. Text format: "4/15/2019 22:13:14"
+        * email: Contact email for the team
+        * name: The (display) name of the team
+        * contact: The name of the person to contact.
+        * phone: The phone number of the person to contact.
+        * num_participants: Number of total participants
+        * num_vegetarians: Number of vegetarians
+        * planned_start_time: The time where the team is scheduled to leave
+        * comments: Additional comments given by the team
+    """
     import csv
     from datetime import datetime
     from powonline.model import Team
+
+    event_day = datetime.strptime(event_day, '%Y-%m-%d')
 
     with open(filename) as fptr:
         reader = csv.DictReader(fptr, [
@@ -104,7 +127,7 @@ def import_csv(filename: str) -> None:
                 try:
                     timedata = datetime.strptime(timestr, r'%Hh%M').time()
                     planned_start_time = datetime(
-                        2019, 10, 5,
+                        event_day.year, event_day.month, event_day.day,
                         timedata.hour,
                         timedata.minute,
                         0)
