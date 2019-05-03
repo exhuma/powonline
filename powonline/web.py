@@ -17,13 +17,6 @@ from .rootbp import rootbp
 LOG = logging.getLogger(__name__)
 
 
-def grant_admin(login: str) -> None:
-    """
-    Grants the "admin" role to a user with the given login.
-    """
-    print('>>>', login)
-
-
 def make_app(config=None):
     '''
     Application factory
