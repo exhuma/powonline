@@ -41,6 +41,7 @@ setup(
             'grant-admin=powonline.cli:grant_admin',
             'revoke-admin=powonline.cli:revoke_admin',
             'list-users=powonline.cli:list_users',
+            'add-local-user=powonline.cli:add_local_user',
         ]
     },
     include_package_data=True,

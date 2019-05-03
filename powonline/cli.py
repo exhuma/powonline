@@ -51,3 +51,21 @@ def list_users() -> None:
         query = User.query.order_by(User.name)
         for row in query:
             print(row.name)
+
+
+@click.command()
+def add_local_user() -> None:
+    """
+    Adds a local user to the DB for login without social provider
+    """
+    from getpass import getpass
+    login = input('Username (login): ').strip()
+    password = getpass()
+    if not all([login, password]):
+        print('Both username and password are required.')
+        return
+    app = make_app()  # type: ignore
+    with app.app_context():
+        user = User(name=login, password=password)
+        DB.session.add(user)
+        DB.session.commit()
