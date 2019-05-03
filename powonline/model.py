@@ -1,6 +1,8 @@
 import logging
+from codecs import encode
 from datetime import datetime
 from enum import Enum
+from os import urandom
 
 from bcrypt import checkpw, gensalt, hashpw
 
@@ -70,6 +72,10 @@ class Team(DB.Model):
     def update(self, **kwargs):
         for k, v in kwargs.items():
             setattr(self, k, v)
+
+    def reset_confirmation_key(self):
+        randbytes = encode(urandom(100), 'hex')[:30]
+        self.confirmation_key = randbytes.decode('ascii')
 
     def __repr__(self):
         return "Team(name=%r)" % self.name

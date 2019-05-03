@@ -75,6 +75,9 @@ def login():
         token = data['token']
         user_id = data['user_id']
         client = Social.create(current_app.localconfig, provider)
+        if not client:
+            return ("Social provider %r not available (either not supported "
+                    "or not fully configured on the back-end)."), 500
         user_info = client.get_user_info_simple(token)
         if user_info:
             user = User.by_social_connection(
