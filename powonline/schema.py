@@ -38,7 +38,7 @@ class TeamSchema(Schema):
     num_participants = fields.Int(allow_none=True)
     planned_start_time = FuzzyDate(allow_none=True)
     effective_start_time = FuzzyDate(allow_none=True)
-    finish_time = fields.LocalDateTime(allow_none=True)
+    finish_time = FuzzyDate(allow_none=True)
     route_name = fields.String(missing=None)
 
 
