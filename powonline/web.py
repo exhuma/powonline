@@ -8,10 +8,11 @@ from .config import default
 from .model import DB
 from .pusher import PusherWrapper
 from .resources import (Assignments, Dashboard, GlobalDashboard, Job, Route,
-                        RouteList, RouteStation, RouteStationList, RouteTeam,
-                        RouteTeamList, Scoreboard, Station, StationList,
-                        StationUser, StationUserList, Team, TeamList,
-                        TeamStation, User, UserList, UserRole, UserRoleList)
+                        RouteColor, RouteList, RouteStation, RouteStationList,
+                        RouteTeam, RouteTeamList, Scoreboard, Station,
+                        StationList, StationUser, StationUserList, Team,
+                        TeamList, TeamStation, User, UserList, UserRole,
+                        UserRoleList)
 from .rootbp import rootbp
 
 LOG = logging.getLogger(__name__)
@@ -67,6 +68,7 @@ def make_app(config=None):
     api.add_resource(Dashboard, '/station/<station_name>/dashboard')
     api.add_resource(GlobalDashboard, '/dashboard')
     api.add_resource(Job, '/job')
+    api.add_resource(RouteColor, '/route/<route_name>/color')
 
     app.config['SQLALCHEMY_DATABASE_URI'] = config.get('db', 'dsn')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False

@@ -388,6 +388,13 @@ class Route:
         route.stations.remove(station)
         return True
 
+    @staticmethod
+    def update_color(session, route_name, color_value):
+        route = session.query(model.Route).filter_by(
+            name=route_name).one()
+        route.color = color_value
+        return True
+
 
 class User:
 
