@@ -2,14 +2,13 @@
 This module contains tests for features implemented mainly for helping the vuejs
 based frontens.
 """
-from textwrap import dedent
 import json
+from textwrap import dedent
 
-from config_resolver import Config
-from flask_testing import TestCase
-
-from powonline.web import make_app
 import powonline.model as model
+from flask_testing import TestCase
+from powonline.test.conftest import test_config
+from powonline.web import make_app
 
 
 def drop_all_except(dct, *keep):
@@ -34,12 +33,14 @@ def here(localname):
 
 class TestFrontendHelpers(TestCase):
 
-    SQLALCHEMY_DATABASE_URI = 'postgresql://exhuma@/powonline_testing'
+    SQLALCHEMY_DATABASE_URI = test_config().get(
+        'db', 'dsn'
+    )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     TESTING = True
 
     def create_app(self):
-        config = Config('mamerwiselen', 'powonline', filename='test.ini')
+        config = test_config()
         config.read_string(dedent(
             '''\
             [db]
@@ -56,7 +57,6 @@ class TestFrontendHelpers(TestCase):
     def setUp(self):
         self.app = self.client  # <-- avoiding unrelated diffs for now.
                                 #     Can be removed in a later commit
-        model.DB.create_all()
 
         with open(here('seed.sql')) as seed:
             model.DB.session.execute(seed.read())
@@ -66,7 +66,6 @@ class TestFrontendHelpers(TestCase):
 
     def tearDown(self):
         model.DB.session.remove()
-        model.DB.drop_all()
 
     def test_fetch_assignments_api(self):
         result = self.app.get('/assignments')

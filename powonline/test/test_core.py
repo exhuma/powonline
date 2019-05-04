@@ -1,11 +1,9 @@
 from textwrap import dedent
 
-from config_resolver import Config
 from flask_testing import TestCase
-
+from powonline import core, model
+from powonline.test.conftest import test_config
 from powonline.web import make_app
-from powonline import core
-from powonline import model
 
 
 def here(localname):
@@ -15,12 +13,14 @@ def here(localname):
 
 class CommonTest(TestCase):
 
-    SQLALCHEMY_DATABASE_URI = 'postgresql://exhuma@/powonline_testing'
+    SQLALCHEMY_DATABASE_URI = test_config().get(
+        'db', 'dsn'
+    )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     TESTING = True
 
     def create_app(self):
-        config = Config('mamerwiselen', 'powonline', filename='test.ini')
+        config = test_config()
         config.read_string(dedent(
             '''\
             [db]
@@ -35,8 +35,6 @@ class CommonTest(TestCase):
         return make_app(config)
 
     def setUp(self):
-        model.DB.create_all()
-
         with open(here('seed.sql')) as seed:
             model.DB.session.execute(seed.read())
             model.DB.session.commit()
@@ -46,7 +44,6 @@ class CommonTest(TestCase):
 
     def tearDown(self):
         model.DB.session.remove()
-        model.DB.drop_all()
 
 
 class TestCore(CommonTest):
@@ -78,7 +75,7 @@ class TestCore(CommonTest):
         self.assertEqual(result, expected)
 
     def test_questionnaire_scores(self):
-        config = Config('mamerwiselen', 'powonline', filename='test.ini')
+        config = test_config()
         config.read_string(dedent(
             '''\
             [questionnaire-map]
@@ -107,7 +104,7 @@ class TestCore(CommonTest):
         self.assertEqual(result, expected)
 
     def test_set_questionnaire_score(self):
-        config = Config('mamerwiselen', 'powonline', filename='test.ini')
+        config = test_config()
         config.read_string(dedent(
             '''\
             [questionnaire-map]

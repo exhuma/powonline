@@ -714,6 +714,23 @@ class GlobalDashboard(Resource):
         return output
 
 
+class RouteColor(Resource):
+    """
+    A direct route to the route color
+    """
+
+    def put(self, route_name):
+        """
+        Replaces the route color with a new color
+        """
+        data = request.get_json()
+        new_color = data['color']
+        output = core.Route.update_color(DB.session, route_name, new_color)
+        DB.session.commit()
+        return jsonify({'color': new_color})
+
+
+
 class Job(Resource):
 
     def _action_advance(self, station_name, team_name):

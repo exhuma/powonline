@@ -1,4 +1,3 @@
-from config_resolver import Config
 from gouge.colourcli import Simple
 from powonline.config import default
 from powonline.util import colorize_werkzeug

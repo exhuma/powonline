@@ -1,6 +1,8 @@
 TRUNCATE 
     "user",
     role,
+    oauth_connection,
+    message,
     route,
     route_station,
     station,
@@ -27,10 +29,10 @@ INSERT INTO station (name, is_start, is_end) VALUES
     ('station-end', false, true),
     ('station-red', false, false),
     ('station-blue', false, false);
-INSERT INTO team (name, email, route_name) VALUES
-    ('team-red', 'email-red@example.com', 'route-red'),
-    ('team-blue', 'email-blue@example.com', 'route-blue'),
-    ('team-without-route', 'email-wr@example.com', NULL);
+INSERT INTO team (confirmation_key, name, email, route_name) VALUES
+    ('a', 'team-red', 'email-red@example.com', 'route-red'),
+    ('b', 'team-blue', 'email-blue@example.com', 'route-blue'),
+    ('c', 'team-without-route', 'email-wr@example.com', NULL);
 INSERT INTO user_role (user_name, role_name) VALUES
     ('user-station-manager', 'station-manager'),
     ('john', 'a-role');
