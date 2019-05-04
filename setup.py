@@ -15,7 +15,7 @@ setup(
         'flask-sqlalchemy',
         'gouge >= 1.1, <2.0',
         'marshmallow',
-        'psycopg2',
+        'psycopg2-binary',
         'pusher',
         'pyjwt',
         'python-dateutil',

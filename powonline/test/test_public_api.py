@@ -1,21 +1,17 @@
-from textwrap import dedent
-from unittest.mock import patch
 import json
 import unittest
+from textwrap import dedent
+from unittest.mock import patch
 
-from flask_testing import TestCase
-from config_resolver import Config
 import jwt
-
-from powonline.model import DB
-from powonline.web import make_app
 import powonline.core as core
-
-from util import (
-    make_dummy_route_dict,
-    make_dummy_station_dict,
-    make_dummy_team_dict,
-)
+from config_resolver import Config
+from flask_testing import TestCase
+from powonline.model import DB
+from powonline.test.conftest import test_config
+from powonline.web import make_app
+from util import (make_dummy_route_dict, make_dummy_station_dict,
+                  make_dummy_team_dict)
 
 
 def here(localname):
@@ -56,7 +52,9 @@ class AuthClientWrapper:
 
 class BaseAuthTestCase(TestCase):
 
-    SQLALCHEMY_DATABASE_URI = 'postgresql://exhuma@/powonline_testing'
+    SQLALCHEMY_DATABASE_URI = test_config().get(
+        'db', 'dsn'
+    )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     TESTING = True
 
@@ -86,8 +84,6 @@ class BaseAuthTestCase(TestCase):
         else:
             self.app = self.client
 
-        DB.create_all()
-
         with open(here('seed.sql')) as seed:
             DB.session.execute(seed.read())
             DB.session.commit()
@@ -96,7 +92,6 @@ class BaseAuthTestCase(TestCase):
 
     def tearDown(self):
         DB.session.remove()
-        DB.drop_all()
 
 
 class TestPublicAPIAsAdmin(BaseAuthTestCase):

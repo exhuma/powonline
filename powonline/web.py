@@ -31,9 +31,9 @@ def make_app(config=None):
     app.secret_key = config.get('security', 'secret_key')
     app.register_blueprint(rootbp)
     app.pusher = PusherWrapper.create(
-        config.get('pusher', 'app_id', default=''),
-        config.get('pusher', 'key', default=''),
-        config.get('pusher', 'secret', default=''),
+        config.get('pusher', 'app_id', fallback=''),
+        config.get('pusher', 'key', fallback=''),
+        config.get('pusher', 'secret', fallback=''),
     )
 
     api.add_resource(Assignments, '/assignments')

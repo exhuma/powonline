@@ -1,6 +1,10 @@
-from config_resolver import Config
+from configparser import ConfigParser
+
+from config_resolver import get_config
 
 
-def default() -> Config:
-    config = Config('mamerwiselen', 'powonline', version='2.0')
-    return config
+def default() -> ConfigParser:
+    lookup = get_config(
+        group_name='mamerwiselen', app_name='powonline',
+        filename='app.ini', lookup_options={'version': '2.0'})
+    return lookup.config
