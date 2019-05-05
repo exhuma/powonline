@@ -1,7 +1,9 @@
 import logging
+from configparser import NoOptionError, NoSectionError
 
 import click
-from powonline.model import DB, Role, User, Route
+from powonline.model import DB, Role, Route, User
+from powonline.pusher import PusherWrapper
 from powonline.web import make_app
 
 LOG = logging.getLogger(__name__)
@@ -166,3 +168,53 @@ def import_csv(filename: str, event_day: str) -> None:
                 DB.session.add(team)
                 LOG.info('Added %s', team)
             DB.session.commit()
+
+@click.command()
+@click.option('--force/--no-force', default=False)
+def fetch_mails(force):
+    import logging
+
+    from gouge.colourcli import Simple
+    from powonline.config import default
+    from powonline.core import Upload
+    from powonline.mailfetcher import MailFetcher
+
+    Simple.basicConfig(level=logging.DEBUG)
+    logging.getLogger('imapclient').setLevel(logging.INFO)
+    config = default()
+
+    pusher = PusherWrapper.create(
+        config.get('pusher', 'app_id', fallback=''),
+        config.get('pusher', 'key', fallback=''),
+        config.get('pusher', 'secret', fallback=''),
+    )
+
+    def callback(username, filename):
+        pusher.trigger('file-events', 'file-downloaded', {
+            'from': username,
+            'relname': filename
+        })
+
+    try:
+        host = config.get('email', 'host')
+        login = config.get('email', 'login')
+        password = config.get('email', 'password')
+        port = config.getint('email', 'port', fallback=143)
+        ssl_raw = config.get('email', 'ssl', fallback='true')
+    except (NoOptionError, NoSectionError):
+        LOG.error('Unable to fetchmail. No mail server configured!')
+        return 1
+
+    ssl = ssl_raw.lower()[0] in ('1', 'y', 't')
+    fetcher = MailFetcher(
+        host,
+        login,
+        password,
+        ssl,
+        config.get('app', 'upload_folder', fallback=Upload.FALLBACK_FOLDER),
+        force=force,
+        file_saved_callback=callback)
+    fetcher.connect()
+    fetcher.fetch()
+    fetcher.disconnect()
+    return 0
