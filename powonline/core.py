@@ -170,6 +170,8 @@ class Team:
 
     @staticmethod
     def upsert(session, name, data):
+        data.pop('inserted', None)
+        data.pop('updated', None)
         old = session.query(model.Team).filter_by(name=name).first()
         if not old:
             old = Team.create_new(session, data)
