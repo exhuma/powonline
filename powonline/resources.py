@@ -741,6 +741,9 @@ class UploadList(Resource):
                 output_files.append({
                     'href': url_for(
                         'api.get_file', uuid=item.uuid, _external=True),
+                    'thumbnail': url_for(
+                        'api.get_file', uuid=item.uuid, thumbnail='true',
+                        _external=True),
                     'name': basename(item.filename),
                     'uuid': item.uuid,
                 })
@@ -752,6 +755,9 @@ class UploadList(Resource):
                 output_files.append({
                     'href': url_for(
                         'api.get_file', uuid=item.uuid, _external=True),
+                    'thumbnail': url_for(
+                        'api.get_file', uuid=item.uuid, thumbnail='true',
+                        _external=True),
                     'name': basename(item.filename),
                     'uuid': item.uuid,
                 })
@@ -764,6 +770,25 @@ class Upload(Resource):
     A list of the current user's uploaded files
     """
 
+    FILE_MAPPINGS = {
+        'gif': ('gif', 'image/gif'),
+        'jpg': ('jpeg', 'image/jpeg'),
+        'jpeg': ('jpeg', 'image/jpeg'),
+        'png': ('png', 'image/png'),
+    }
+
+    def _thumbnail(self, data_folder, file_entity):
+        from PIL import Image
+        from io import BytesIO
+        fullname = join(data_folder, file_entity.filename)
+        im = Image.open(fullname)
+        _, extension = fullname.rsplit('.', 1)
+        pillow_type, mediatype = Upload.FILE_MAPPINGS[extension.lower()]
+        im.thumbnail((64, 64))
+        output = BytesIO()
+        im.save(output, format=pillow_type)
+        return output, mediatype
+
     def get(self, uuid):
         """
         Retrieve a single file
@@ -774,7 +799,17 @@ class Upload(Resource):
             uuid=uuid).one_or_none()
         if not db_instance:
             return 'File not found', 404
-        output = send_from_directory(data_folder, db_instance.filename)
+        thumbnail = request.args.get('thumbnail', 'false')
+        if str(thumbnail).lower()[0] in ('1', 't', 'y'):
+            thumbnail, mediatype = self._thumbnail(data_folder, db_instance)
+            output = make_response(thumbnail.getvalue())
+            output.headers['Content-Type'] = mediatype
+            output.headers.set(
+                'Content-Disposition',
+                'inline',
+                filename='thn_%s' % (basename(db_instance.filename)))
+        else:
+            output = send_from_directory(data_folder, db_instance.filename)
         return output
 
     def delete(self, uuid):
