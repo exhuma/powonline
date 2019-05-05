@@ -8,3 +8,7 @@ class NoQuestionnaireForStation(PowonlineException):
 
 class NoSuchQuestionnaire(PowonlineException):
     pass
+
+
+class AccessDenied(PowonlineException):
+    pass

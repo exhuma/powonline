@@ -10,7 +10,7 @@ import sqlalchemy.types as types
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import (Boolean, Column, DateTime, ForeignKey, Integer, Table,
                         Unicode, func)
-from sqlalchemy.dialects.postgresql import BYTEA
+from sqlalchemy.dialects.postgresql import BYTEA, UUID
 from sqlalchemy.orm import Session, relationship
 
 LOG = logging.getLogger(__name__)
@@ -272,6 +272,26 @@ class TeamQuestionnaire(DB.Model):
         self.team_name = team_name
         self.questionnaire_name = questionnaire_name
         self.score = score
+
+
+class Upload(DB.Model):
+    __tablename__ = 'uploads'
+    filename = Column(Unicode, primary_key=True)
+    username = Column(Unicode(50), ForeignKey(
+        'user.name',
+        onupdate="CASCADE",
+        ondelete="CASCADE"
+    ), primary_key=True)
+    uuid = Column(
+        UUID, unique=True, nullable=False,
+        name='id',
+        server_default=func.uuid_generate_v4())
+
+    user = relationship("User", backref='files')
+
+    def __init__(self, relname, username):
+        self.filename = relname
+        self.username = username
 
 
 route_station_table = Table(

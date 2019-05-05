@@ -2,28 +2,29 @@ import logging
 from enum import Enum
 from functools import wraps
 from json import JSONEncoder, dumps
+from os import makedirs, unlink
+from os.path import basename, dirname, join
 
 import jwt
-from flask import current_app, g, jsonify, make_response, request
+from flask import (current_app, g, jsonify, make_response, request,
+                   send_from_directory, url_for)
 from flask_restful import Resource, fields, marshal_with
+from werkzeug.utils import secure_filename
 
 from . import core
-from .exc import NoQuestionnaireForStation
+from .exc import AccessDenied, NoQuestionnaireForStation
 from .model import DB
+from .model import Upload as DBUpload
 from .schema import (JOB_SCHEMA, ROLE_SCHEMA, ROUTE_LIST_SCHEMA, ROUTE_SCHEMA,
                      STATION_LIST_SCHEMA, STATION_SCHEMA, TEAM_LIST_SCHEMA,
                      TEAM_SCHEMA, USER_LIST_SCHEMA, USER_SCHEMA,
                      USER_SCHEMA_SAFE)
-from .util import get_user_permissions
+from .util import allowed_file, get_user_identity, get_user_permissions
 
 LOG = logging.getLogger(__name__)
 
 class ErrorType(Enum):
     INVALID_SCHEMA = 'invalid-schema'
-
-
-class AccessDenied(Exception):
-    pass
 
 
 class require_permissions:
@@ -682,6 +683,103 @@ class RouteColor(Resource):
         DB.session.commit()
         return jsonify({'color': new_color})
 
+
+class UploadList(Resource):
+    """
+    A list of the current user's uploaded files
+    """
+
+    def post(self):
+        data_folder = current_app.localconfig.get(
+            'app', 'upload_folder', fallback=core.Upload.FALLBACK_FOLDER)
+        identity = get_user_identity(request)
+
+        if 'file' not in request.files:
+            return 'No file received', 400
+
+        fileobj = request.files['file']
+        if fileobj.filename == '':
+            return 'No file selected', 400
+
+        if fileobj and allowed_file(fileobj.filename):
+            filename = secure_filename(fileobj.filename)
+            try:
+                makedirs(join(data_folder, identity['username']))
+            except FileExistsError:
+                pass
+            relative_target = join(identity['username'], filename)
+            target = join(data_folder, relative_target)
+            fileobj.save(target)
+
+            db_instance = DB.session.query(DBUpload).filter_by(
+                filename=relative_target,
+                username=identity['username']).one_or_none()
+
+            if not db_instance:
+                db_instance = DBUpload(relative_target, identity['username'])
+                DB.session.add(db_instance)
+                DB.session.flush()
+
+            response = make_response('OK')
+            response.headers['Location'] = url_for(
+                'api.get_file', uuid=db_instance.uuid, _external=True)
+            response.status_code = 201
+            return response
+        return 'The given file is not allowed', 400
+
+    def get(self):
+        """
+        Retrieve a list of uploads
+        """
+        identity = get_user_identity(request)
+        username = identity['username']
+        files = core.Upload.list(DB.session, username)
+        output = []
+        for item in files:
+            output.append({
+                'href': url_for('api.get_file', uuid=item.uuid, _external=True),
+                'name': basename(item.filename),
+                'uuid': item.uuid,
+            })
+        return jsonify(output)
+
+
+class Upload(Resource):
+    """
+    A list of the current user's uploaded files
+    """
+
+    def get(self, uuid):
+        """
+        Retrieve a single file
+        """
+        data_folder = current_app.localconfig.get(
+            'app', 'upload_folder', fallback=core.Upload.FALLBACK_FOLDER)
+        db_instance = DB.session.query(DBUpload).filter_by(
+            uuid=uuid).one_or_none()
+        if not db_instance:
+            return 'File not found', 404
+        output = send_from_directory(data_folder, db_instance.filename)
+        return output
+
+    def delete(self, uuid):
+        """
+        Retrieve a single file
+        """
+        db_instance = DB.session.query(DBUpload).filter_by(
+            uuid=uuid).one_or_none()
+        if not db_instance:
+            return 'File not found', 404
+        identity = get_user_identity(request)
+        if identity['username'] != db_instance.username:
+            return 'Access Denied', 403
+        data_folder = current_app.localconfig.get(
+            'app', 'upload_folder', fallback=core.Upload.FALLBACK_FOLDER)
+        fullname = join(data_folder, db_instance.filename)
+        unlink(fullname)
+        DB.session.delete(db_instance)
+        DB.session.commit()
+        return 'OK'
 
 
 class Job(Resource):
