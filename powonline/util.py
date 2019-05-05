@@ -12,6 +12,7 @@ P_REQUEST_LOG = re.compile(r'^(.*?) - - \[(.*?)\] "(.*?)" (\d+) (\d+|-)$')
 LOG = logging.getLogger('werkzeug')
 PERMISSION_MAP = {
     'admin': {
+        'admin_files',
         'admin_routes',
         'admin_stations',
         'admin_teams',

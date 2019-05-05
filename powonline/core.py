@@ -531,6 +531,11 @@ class Upload:
     FALLBACK_FOLDER = '/tmp/uploads'
 
     @staticmethod
+    def all(session):
+        query = session.query(model.Upload)
+        return query
+
+    @staticmethod
     def list(session, username):
         query = session.query(model.Upload).filter_by(username=username)
         return query

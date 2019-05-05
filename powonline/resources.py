@@ -731,16 +731,31 @@ class UploadList(Resource):
         """
         Retrieve a list of uploads
         """
-        identity = get_user_identity(request)
-        username = identity['username']
-        files = core.Upload.list(DB.session, username)
-        output = []
-        for item in files:
-            output.append({
-                'href': url_for('api.get_file', uuid=item.uuid, _external=True),
-                'name': basename(item.filename),
-                'uuid': item.uuid,
-            })
+        identity, all_permissions = get_user_permissions(request)
+
+        output = {}
+        if 'admin_files' in all_permissions:
+            files = core.Upload.all(DB.session)
+            for item in files:
+                output_files = output.setdefault(item.username, [])
+                output_files.append({
+                    'href': url_for(
+                        'api.get_file', uuid=item.uuid, _external=True),
+                    'name': basename(item.filename),
+                    'uuid': item.uuid,
+                })
+        else:
+            username = identity['username']
+            files = core.Upload.list(DB.session, username)
+            output_files = []
+            for item in files:
+                output_files.append({
+                    'href': url_for(
+                        'api.get_file', uuid=item.uuid, _external=True),
+                    'name': basename(item.filename),
+                    'uuid': item.uuid,
+                })
+            output['self'] = output_files
         return jsonify(output)
 
 
