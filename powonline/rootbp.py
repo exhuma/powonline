@@ -11,6 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from .core import User, questionnaire_scores
 from .model import DB
 from .social import Social
+from .util import get_user_identity
 
 rootbp = Blueprint('rootbp', __name__)
 

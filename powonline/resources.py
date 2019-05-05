@@ -14,22 +14,9 @@ from .schema import (JOB_SCHEMA, ROLE_SCHEMA, ROUTE_LIST_SCHEMA, ROUTE_SCHEMA,
                      STATION_LIST_SCHEMA, STATION_SCHEMA, TEAM_LIST_SCHEMA,
                      TEAM_SCHEMA, USER_LIST_SCHEMA, USER_SCHEMA,
                      USER_SCHEMA_SAFE)
+from .util import get_user_permissions
 
 LOG = logging.getLogger(__name__)
-
-PERMISSION_MAP = {
-    'admin': {
-        'admin_routes',
-        'admin_stations',
-        'admin_teams',
-        'manage_permissions',
-        'manage_station',
-    },
-    'station_manager': {
-        'manage_station'
-    },
-}
-
 
 class ErrorType(Enum):
     INVALID_SCHEMA = 'invalid-schema'
@@ -37,40 +24,6 @@ class ErrorType(Enum):
 
 class AccessDenied(Exception):
     pass
-
-
-def get_user_permissions(request):
-    auth_header = request.headers.get('Authorization')
-    if not auth_header:
-        LOG.debug('No Authorization header present!')
-        raise AccessDenied('Access Denied (no "Authorization" header passed)!')
-    method, _, token = auth_header.partition(' ')
-    method = method.lower().strip()
-    token = token.strip()
-    if method != 'bearer' or not token:
-        LOG.debug('Authorization header does not provide '
-                  'a bearer token!')
-        raise AccessDenied('Access Denied (not a bearer token)!')
-    try:
-        jwt_secret = current_app.localconfig.get(
-            'security', 'jwt_secret')
-        auth_payload = jwt.decode(
-            token, jwt_secret, algorithms=['HS256'])
-    except jwt.exceptions.DecodeError:
-        LOG.info('Bearer token seems to have been tampered with!')
-        raise AccessDenied('Access Denied (invalid token)!')
-
-    # Expand the user roles to permissions, collecting them all in one
-    # big set.
-    user_roles = set(auth_payload.get('roles', []))
-    LOG.debug('Bearer token with the following roles: %r', user_roles)
-    all_permissions = set()
-    for role in user_roles:
-        all_permissions |= PERMISSION_MAP.get(role, set())
-
-    LOG.debug('Bearer token grants the following permissions: %r',
-              all_permissions)
-    return auth_payload, all_permissions
 
 
 class require_permissions:

@@ -1,10 +1,24 @@
 import logging
 import re
 
+import jwt
+from flask import current_app
 
 P_REQUEST_LOG = re.compile(r'^(.*?) - - \[(.*?)\] "(.*?)" (\d+) (\d+|-)$')
 
 LOG = logging.getLogger('werkzeug')
+PERMISSION_MAP = {
+    'admin': {
+        'admin_routes',
+        'admin_stations',
+        'admin_teams',
+        'manage_permissions',
+        'manage_station',
+    },
+    'station_manager': {
+        'manage_station'
+    },
+}
 
 
 def colorize_werkzeug():  # pragma: no cover
@@ -62,3 +76,42 @@ def colorize_werkzeug():  # pragma: no cover
 
     logging.getLogger('werkzeug').addFilter(WerkzeugColorFilter())
 
+
+def get_user_identity(request):
+
+    auth_header = request.headers.get('Authorization')
+    if not auth_header:
+        LOG.debug('No Authorization header present!')
+        raise AccessDenied('Access Denied (no "Authorization" header passed)!')
+    method, _, token = auth_header.partition(' ')
+    method = method.lower().strip()
+    token = token.strip()
+    if method != 'bearer' or not token:
+        LOG.debug('Authorization header does not provide '
+                  'a bearer token!')
+        raise AccessDenied('Access Denied (not a bearer token)!')
+    try:
+        jwt_secret = current_app.localconfig.get(
+            'security', 'jwt_secret')
+        auth_payload = jwt.decode(
+            token, jwt_secret, algorithms=['HS256'])
+    except jwt.exceptions.DecodeError:
+        LOG.info('Bearer token seems to have been tampered with!')
+        raise AccessDenied('Access Denied (invalid token)!')
+
+    return auth_payload
+
+
+def get_user_permissions(request):
+    auth_payload = get_user_identity(request)
+    # Expand the user roles to permissions, collecting them all in one
+    # big set.
+    user_roles = set(auth_payload.get('roles', []))
+    LOG.debug('Bearer token with the following roles: %r', user_roles)
+    all_permissions = set()
+    for role in user_roles:
+        all_permissions |= PERMISSION_MAP.get(role, set())
+
+    LOG.debug('Bearer token grants the following permissions: %r',
+              all_permissions)
+    return auth_payload, all_permissions
