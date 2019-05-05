@@ -1,20 +1,28 @@
 import logging
+from os.path import basename, dirname, join
 from time import time
 
 import jwt
 import psycopg2
 from flask import (Blueprint, current_app, jsonify, make_response, redirect,
-                   render_template, request, session)
+                   render_template, request, session, url_for)
 from requests_oauthlib import OAuth2Session
 from sqlalchemy.exc import IntegrityError
 
 from .core import User, questionnaire_scores
+from .exc import AccessDenied
 from .model import DB
 from .social import Social
+from .util import allowed_file, get_user_identity
 
 rootbp = Blueprint('rootbp', __name__)
 
 LOG = logging.getLogger(__name__)
+
+
+@rootbp.app_errorhandler(AccessDenied)
+def handle_access_errors(error):
+    return 'Access Denied', 403
 
 
 @rootbp.after_app_request

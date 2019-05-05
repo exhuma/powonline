@@ -13,4 +13,5 @@ VOLUME ["/etc/mamerwiselen/powonline"]
 COPY dist/docker.tar.gz /tmp/
 ADD powonline.wsgi /opt/powonline
 RUN /opt/powonline/bin/pip install /tmp/docker.tar.gz
+RUN /opt/powonline/bin/pip install requests
 CMD ["/docker-entrypoint"]

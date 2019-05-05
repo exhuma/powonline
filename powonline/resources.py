@@ -2,75 +2,29 @@ import logging
 from enum import Enum
 from functools import wraps
 from json import JSONEncoder, dumps
+from os import makedirs, unlink
+from os.path import basename, dirname, join
 
 import jwt
-from flask import current_app, g, jsonify, make_response, request
+from flask import (current_app, g, jsonify, make_response, request,
+                   send_from_directory, url_for)
 from flask_restful import Resource, fields, marshal_with
+from werkzeug.utils import secure_filename
 
 from . import core
-from .exc import NoQuestionnaireForStation
+from .exc import AccessDenied, NoQuestionnaireForStation
 from .model import DB
+from .model import Upload as DBUpload
 from .schema import (JOB_SCHEMA, ROLE_SCHEMA, ROUTE_LIST_SCHEMA, ROUTE_SCHEMA,
                      STATION_LIST_SCHEMA, STATION_SCHEMA, TEAM_LIST_SCHEMA,
                      TEAM_SCHEMA, USER_LIST_SCHEMA, USER_SCHEMA,
                      USER_SCHEMA_SAFE)
+from .util import allowed_file, get_user_identity, get_user_permissions
 
 LOG = logging.getLogger(__name__)
 
-PERMISSION_MAP = {
-    'admin': {
-        'admin_routes',
-        'admin_stations',
-        'admin_teams',
-        'manage_permissions',
-        'manage_station',
-    },
-    'station_manager': {
-        'manage_station'
-    },
-}
-
-
 class ErrorType(Enum):
     INVALID_SCHEMA = 'invalid-schema'
-
-
-class AccessDenied(Exception):
-    pass
-
-
-def get_user_permissions(request):
-    auth_header = request.headers.get('Authorization')
-    if not auth_header:
-        LOG.debug('No Authorization header present!')
-        raise AccessDenied('Access Denied (no "Authorization" header passed)!')
-    method, _, token = auth_header.partition(' ')
-    method = method.lower().strip()
-    token = token.strip()
-    if method != 'bearer' or not token:
-        LOG.debug('Authorization header does not provide '
-                  'a bearer token!')
-        raise AccessDenied('Access Denied (not a bearer token)!')
-    try:
-        jwt_secret = current_app.localconfig.get(
-            'security', 'jwt_secret')
-        auth_payload = jwt.decode(
-            token, jwt_secret, algorithms=['HS256'])
-    except jwt.exceptions.DecodeError:
-        LOG.info('Bearer token seems to have been tampered with!')
-        raise AccessDenied('Access Denied (invalid token)!')
-
-    # Expand the user roles to permissions, collecting them all in one
-    # big set.
-    user_roles = set(auth_payload.get('roles', []))
-    LOG.debug('Bearer token with the following roles: %r', user_roles)
-    all_permissions = set()
-    for role in user_roles:
-        all_permissions |= PERMISSION_MAP.get(role, set())
-
-    LOG.debug('Bearer token grants the following permissions: %r',
-              all_permissions)
-    return auth_payload, all_permissions
 
 
 class require_permissions:
@@ -729,6 +683,161 @@ class RouteColor(Resource):
         DB.session.commit()
         return jsonify({'color': new_color})
 
+
+class UploadList(Resource):
+    """
+    A list of the current user's uploaded files
+    """
+
+    def post(self):
+        data_folder = current_app.localconfig.get(
+            'app', 'upload_folder', fallback=core.Upload.FALLBACK_FOLDER)
+        identity = get_user_identity(request)
+
+        if 'file' not in request.files:
+            return 'No file received', 400
+
+        fileobj = request.files['file']
+        if fileobj.filename == '':
+            return 'No file selected', 400
+
+        if fileobj and allowed_file(fileobj.filename):
+            filename = secure_filename(fileobj.filename)
+            try:
+                makedirs(join(data_folder, identity['username']))
+            except FileExistsError:
+                pass
+            relative_target = join(identity['username'], filename)
+            target = join(data_folder, relative_target)
+            fileobj.save(target)
+
+            db_instance = DB.session.query(DBUpload).filter_by(
+                filename=relative_target,
+                username=identity['username']).one_or_none()
+
+            if not db_instance:
+                db_instance = DBUpload(relative_target, identity['username'])
+                DB.session.add(db_instance)
+                DB.session.flush()
+
+            response = make_response('OK')
+            response.headers['Location'] = url_for(
+                'api.get_file', uuid=db_instance.uuid, _external=True)
+            response.status_code = 201
+            current_app.pusher.trigger('file-events', 'file-added', {
+                'from': identity['username'],
+                'relname': relative_target
+            })
+            return response
+        return 'The given file is not allowed', 400
+
+    def get(self):
+        """
+        Retrieve a list of uploads
+        """
+        identity, all_permissions = get_user_permissions(request)
+
+        output = {}
+        if 'admin_files' in all_permissions:
+            files = core.Upload.all(DB.session)
+            for item in files:
+                output_files = output.setdefault(item.username, [])
+                output_files.append({
+                    'href': url_for(
+                        'api.get_file', uuid=item.uuid, _external=True),
+                    'thumbnail': url_for(
+                        'api.get_file', uuid=item.uuid, thumbnail='true',
+                        _external=True),
+                    'name': basename(item.filename),
+                    'uuid': item.uuid,
+                })
+        else:
+            username = identity['username']
+            files = core.Upload.list(DB.session, username)
+            output_files = []
+            for item in files:
+                output_files.append({
+                    'href': url_for(
+                        'api.get_file', uuid=item.uuid, _external=True),
+                    'thumbnail': url_for(
+                        'api.get_file', uuid=item.uuid, thumbnail='true',
+                        _external=True),
+                    'name': basename(item.filename),
+                    'uuid': item.uuid,
+                })
+            output['self'] = output_files
+        return jsonify(output)
+
+
+class Upload(Resource):
+    """
+    A list of the current user's uploaded files
+    """
+
+    FILE_MAPPINGS = {
+        'gif': ('gif', 'image/gif'),
+        'jpg': ('jpeg', 'image/jpeg'),
+        'jpeg': ('jpeg', 'image/jpeg'),
+        'png': ('png', 'image/png'),
+    }
+
+    def _thumbnail(self, data_folder, file_entity):
+        from PIL import Image
+        from io import BytesIO
+        fullname = join(data_folder, file_entity.filename)
+        im = Image.open(fullname)
+        _, extension = fullname.rsplit('.', 1)
+        pillow_type, mediatype = Upload.FILE_MAPPINGS[extension.lower()]
+        im.thumbnail((64, 64))
+        output = BytesIO()
+        im.save(output, format=pillow_type)
+        return output, mediatype
+
+    def get(self, uuid):
+        """
+        Retrieve a single file
+        """
+        data_folder = current_app.localconfig.get(
+            'app', 'upload_folder', fallback=core.Upload.FALLBACK_FOLDER)
+        db_instance = DB.session.query(DBUpload).filter_by(
+            uuid=uuid).one_or_none()
+        if not db_instance:
+            return 'File not found', 404
+        thumbnail = request.args.get('thumbnail', 'false')
+        if str(thumbnail).lower()[0] in ('1', 't', 'y'):
+            thumbnail, mediatype = self._thumbnail(data_folder, db_instance)
+            output = make_response(thumbnail.getvalue())
+            output.headers['Content-Type'] = mediatype
+            output.headers.set(
+                'Content-Disposition',
+                'inline',
+                filename='thn_%s' % (basename(db_instance.filename)))
+        else:
+            output = send_from_directory(data_folder, db_instance.filename)
+        return output
+
+    def delete(self, uuid):
+        """
+        Retrieve a single file
+        """
+        db_instance = DB.session.query(DBUpload).filter_by(
+            uuid=uuid).one_or_none()
+        if not db_instance:
+            return 'File not found', 404
+        identity, all_permissions = get_user_permissions(request)
+        if ('admin_files' not in all_permissions and
+                identity['username'] != db_instance.username):
+            return 'Access Denied', 403
+        data_folder = current_app.localconfig.get(
+            'app', 'upload_folder', fallback=core.Upload.FALLBACK_FOLDER)
+        fullname = join(data_folder, db_instance.filename)
+        unlink(fullname)
+        DB.session.delete(db_instance)
+        DB.session.commit()
+        current_app.pusher.trigger('file-events', 'file-deleted', {
+            'id': uuid
+        })
+        return 'OK'
 
 
 class Job(Resource):

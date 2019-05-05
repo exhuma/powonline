@@ -1,4 +1,6 @@
 import logging
+from os import makedirs
+from os.path import basename, dirname, join
 from random import SystemRandom
 from string import ascii_letters, digits, punctuation
 
@@ -170,6 +172,8 @@ class Team:
 
     @staticmethod
     def upsert(session, name, data):
+        data.pop('inserted', None)
+        data.pop('updated', None)
         old = session.query(model.Team).filter_by(name=name).first()
         if not old:
             old = Team.create_new(session, data)
@@ -520,3 +524,27 @@ class Role:
     @staticmethod
     def all(session):
         return session.query(model.Role)
+
+
+class Upload:
+
+    FALLBACK_FOLDER = '/tmp/uploads'
+
+    @staticmethod
+    def all(session):
+        query = session.query(model.Upload)
+        return query
+
+    @staticmethod
+    def list(session, username):
+        query = session.query(model.Upload).filter_by(username=username)
+        return query
+
+    @staticmethod
+    def make_thumbnail(session, uuid):
+        query = session.query(model.Upload).filter_by(uuid=uuid)
+        instance = query.one_or_none()
+        if not instance:
+            return
+
+        thumbnail_folder = join(FALLBACK_FOLDER, '__thumbnails__')

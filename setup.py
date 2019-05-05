@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 with open('powonline/version.txt') as fptr:
     VERSION = fptr.read()
@@ -11,10 +11,12 @@ setup(
         'bcrypt',
         'config-resolver >= 4.2, <5.0',
         'flask',
+        'imapclient',
         'flask-restful',
         'flask-sqlalchemy',
         'gouge >= 1.1, <2.0',
         'marshmallow',
+        'pillow',
         'psycopg2-binary',
         'pusher',
         'pyjwt',
@@ -43,6 +45,7 @@ setup(
             'list-users=powonline.cli:list_users',
             'add-local-user=powonline.cli:add_local_user',
             'import-csv=powonline.cli:import_csv',
+            'fetch-mails=powonline.cli:fetch_mails',
         ]
     },
     include_package_data=True,

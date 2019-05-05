@@ -49,6 +49,7 @@ class DefaultPusher(PusherWrapper):
         LOG.debug('Successfully created pusher client for app-id %r', app_id)
 
     def trigger(self, channel, event, payload):
+        LOG.debug('Sending event %r to channel %r', event, channel)
         try:
             self._pusher.trigger(channel, event, payload)
         except:
