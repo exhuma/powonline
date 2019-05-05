@@ -1,6 +1,7 @@
 ; Version History of the config file
 ; ----------------------------------
 ;
+;  2.1: Added "app.upload_folder"
 ;  2.0: Added [questionnaire-map] section
 ;       Added "security.secret_key"
 ;  1.5: Added [pusher_channels] section
@@ -13,10 +14,11 @@
 ; ----------------------------------
 
 [meta]
-version = 2.0
+version = 2.1
 
 [app]
 static_folder = /home/exhuma/work/powonline-frontend/dist
+upload_folder = /tmp/uploads
 
 [db]
 dsn = postgresql://powonline@powonline-db/powonline

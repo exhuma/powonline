@@ -1,8 +1,11 @@
 import logging
 import re
+from os.path import splitext
 
 import jwt
 from flask import current_app
+
+from .exc import AccessDenied
 
 P_REQUEST_LOG = re.compile(r'^(.*?) - - \[(.*?)\] "(.*?)" (\d+) (\d+|-)$')
 
@@ -19,6 +22,13 @@ PERMISSION_MAP = {
         'manage_station'
     },
 }
+ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif'}
+
+
+def allowed_file(filename):
+    name, ext = splitext(filename)
+    return ext in ALLOWED_EXTENSIONS
+
 
 
 def colorize_werkzeug():  # pragma: no cover
