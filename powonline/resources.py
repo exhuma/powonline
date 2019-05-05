@@ -824,8 +824,9 @@ class Upload(Resource):
             uuid=uuid).one_or_none()
         if not db_instance:
             return 'File not found', 404
-        identity = get_user_identity(request)
-        if identity['username'] != db_instance.username:
+        identity, all_permissions = get_user_permissions(request)
+        if ('admin_files' not in all_permissions and
+                identity['username'] != db_instance.username):
             return 'Access Denied', 403
         data_folder = current_app.localconfig.get(
             'app', 'upload_folder', fallback=core.Upload.FALLBACK_FOLDER)
