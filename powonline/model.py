@@ -156,6 +156,21 @@ class User(DB.Model):
     password_is_plaintext = Column(
         Boolean, nullable=False, server_default='false')
 
+    @staticmethod
+    def get_or_create(session, username):
+        """
+        Returns a user instance by name. Creates it if missing.
+        """
+        query = session.query(User).filter_by(name=username)
+        instance = query.one_or_none()
+        if not instance:
+            randbytes = encode(urandom(100), 'hex')[:30]
+            password = randbytes.decode('ascii')
+            instance = User(username, password)
+            session.add(instance)
+            LOG.warning('User initialised with random password!')
+        return instance
+
     def __init__(self, name, password):
         self.name = name
         self.password = hashpw(password.encode('utf8'), gensalt())

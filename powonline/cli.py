@@ -178,6 +178,7 @@ def fetch_mails(force):
     from powonline.config import default
     from powonline.core import Upload
     from powonline.mailfetcher import MailFetcher
+    import powonline.model as mdl
 
     Simple.basicConfig(level=logging.DEBUG)
     logging.getLogger('imapclient').setLevel(logging.INFO)
@@ -189,32 +190,39 @@ def fetch_mails(force):
         config.get('pusher', 'secret', fallback=''),
     )
 
-    def callback(username, filename):
-        pusher.trigger('file-events', 'file-downloaded', {
-            'from': username,
-            'relname': filename
-        })
+    app = make_app()  # type: ignore
+    with app.app_context():
 
-    try:
-        host = config.get('email', 'host')
-        login = config.get('email', 'login')
-        password = config.get('email', 'password')
-        port = config.getint('email', 'port', fallback=143)
-        ssl_raw = config.get('email', 'ssl', fallback='true')
-    except (NoOptionError, NoSectionError):
-        LOG.error('Unable to fetchmail. No mail server configured!')
-        return 1
+        def callback(username, filename):
+            user = mdl.User.get_or_create(DB.session, username)
+            db_instance = mdl.Upload(filename, user.name)
+            DB.session.add(db_instance)
+            DB.session.commit()
+            pusher.trigger('file-events', 'file-added', {
+                'from': username,
+                'relname': filename
+            })
 
-    ssl = ssl_raw.lower()[0] in ('1', 'y', 't')
-    fetcher = MailFetcher(
-        host,
-        login,
-        password,
-        ssl,
-        config.get('app', 'upload_folder', fallback=Upload.FALLBACK_FOLDER),
-        force=force,
-        file_saved_callback=callback)
-    fetcher.connect()
-    fetcher.fetch()
-    fetcher.disconnect()
-    return 0
+        try:
+            host = config.get('email', 'host')
+            login = config.get('email', 'login')
+            password = config.get('email', 'password')
+            port = config.getint('email', 'port', fallback=143)
+            ssl_raw = config.get('email', 'ssl', fallback='true')
+        except (NoOptionError, NoSectionError):
+            LOG.error('Unable to fetchmail. No mail server configured!')
+            return 1
+
+        ssl = ssl_raw.lower()[0] in ('1', 'y', 't')
+        fetcher = MailFetcher(
+            host,
+            login,
+            password,
+            ssl,
+            config.get('app', 'upload_folder', fallback=Upload.FALLBACK_FOLDER),
+            force=force,
+            file_saved_callback=callback)
+        fetcher.connect()
+        fetcher.fetch()
+        fetcher.disconnect()
+        return 0

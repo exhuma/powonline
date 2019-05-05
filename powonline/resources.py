@@ -724,6 +724,10 @@ class UploadList(Resource):
             response.headers['Location'] = url_for(
                 'api.get_file', uuid=db_instance.uuid, _external=True)
             response.status_code = 201
+            current_app.pusher.trigger('file-events', 'file-added', {
+                'from': identity['username'],
+                'relname': relative_target
+            })
             return response
         return 'The given file is not allowed', 400
 
@@ -829,6 +833,9 @@ class Upload(Resource):
         unlink(fullname)
         DB.session.delete(db_instance)
         DB.session.commit()
+        current_app.pusher.trigger('file-events', 'file-deleted', {
+            'id': uuid
+        })
         return 'OK'
 
 
