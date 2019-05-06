@@ -32,6 +32,7 @@ def make_app(config=None):
     app.secret_key = config.get('security', 'secret_key')
     app.register_blueprint(rootbp)
     app.pusher = PusherWrapper.create(
+        config,
         config.get('pusher', 'app_id', fallback=''),
         config.get('pusher', 'key', fallback=''),
         config.get('pusher', 'secret', fallback=''),

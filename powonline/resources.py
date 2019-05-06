@@ -215,8 +215,7 @@ class Team(Resource):
         pusher_channel = current_app.localconfig.get(
             'pusher_channels', 'team_station_state',
             default='team_station_state_dev')
-        current_app.pusher.trigger(
-            pusher_channel,
+        current_app.pusher.send_team_event(
             'team-details-change',
             {'name': name}
         )
@@ -229,8 +228,7 @@ class Team(Resource):
         pusher_channel = current_app.localconfig.get(
             'pusher_channels', 'team_station_state',
             default='team_station_state_dev')
-        current_app.pusher.trigger(
-            pusher_channel,
+        current_app.pusher.send_team_event(
             'team-deleted',
             {'name': name}
         )
@@ -724,7 +722,7 @@ class UploadList(Resource):
             response.headers['Location'] = url_for(
                 'api.get_file', uuid=db_instance.uuid, _external=True)
             response.status_code = 201
-            current_app.pusher.trigger('file-events', 'file-added', {
+            current_app.pusher.send_file_event('file-added', {
                 'from': identity['username'],
                 'relname': relative_target
             })
@@ -834,7 +832,7 @@ class Upload(Resource):
         unlink(fullname)
         DB.session.delete(db_instance)
         DB.session.commit()
-        current_app.pusher.trigger('file-events', 'file-deleted', {
+        current_app.pusher.send_file_event('file-deleted', {
             'id': uuid
         })
         return 'OK'
@@ -860,8 +858,7 @@ class Job(Resource):
                     'state': new_state.value
                 }
             }
-            current_app.pusher.trigger(
-                pusher_channel,
+            current_app.pusher.send_team_event(
                 'state-change',
                 {
                     'station': station_name,
@@ -895,8 +892,7 @@ class Job(Resource):
             output = {
                 'new_score': new_score,
             }
-            current_app.pusher.trigger(
-                pusher_channel,
+            current_app.pusher.send_team_event(
                 'score-change',
                 {
                     'station': station_name,
@@ -932,8 +928,7 @@ class Job(Resource):
             output = {
                 'new_score': new_score,
             }
-            current_app.pusher.trigger(
-                pusher_channel,
+            current_app.pusher.send_team_event(
                 'questionnaire-score-change',
                 {
                     'stationName': station_name,

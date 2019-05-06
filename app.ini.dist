@@ -1,6 +1,7 @@
 ; Version History of the config file
 ; ----------------------------------
 ;
+;  2.3: Added "pusher_channels.file_events"
 ;  2.2: Added [email] section
 ;  2.1: Added "app.upload_folder"
 ;  2.0: Added [questionnaire-map] section
@@ -45,6 +46,7 @@ jwt_lifetime = 3600
 
 [pusher_channels]
 team_station_state = team-station-state-dev
+file = file-events-dev
 
 [questionnaire-map]
 ; Maps questionnaires to stations. When opening a station dashboard, the

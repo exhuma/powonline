@@ -185,6 +185,7 @@ def fetch_mails(force):
     config = default()
 
     pusher = PusherWrapper.create(
+        config,
         config.get('pusher', 'app_id', fallback=''),
         config.get('pusher', 'key', fallback=''),
         config.get('pusher', 'secret', fallback=''),
