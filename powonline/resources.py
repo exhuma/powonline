@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timezone
 from enum import Enum
 from functools import wraps
 from json import JSONEncoder, dumps
@@ -719,12 +720,18 @@ class UploadList(Resource):
                 DB.session.flush()
 
             response = make_response('OK')
-            response.headers['Location'] = url_for(
+            file_url = url_for(
                 'api.get_file', uuid=db_instance.uuid, _external=True)
+            tn_url = url_for(
+                'api.get_file', uuid=db_instance.uuid, thumbnail=True,
+                _external=True)
+            response.headers['Location'] = file_url
             response.status_code = 201
             current_app.pusher.send_file_event('file-added', {
-                'from': identity['username'],
-                'relname': relative_target
+                'uuid': db_instance.uuid,
+                'href': file_url,
+                'thumbnail': tn_url,
+                'when': datetime.now(timezone.utc).isoformat()
             })
             return response
         return 'The given file is not allowed', 400
