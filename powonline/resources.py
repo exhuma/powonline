@@ -736,12 +736,29 @@ class UploadList(Resource):
             return response
         return 'The given file is not allowed', 400
 
-    def get(self):
+    def _get_public(self):
         """
-        Retrieve a list of uploads
+        Return files for a public request (f.ex. image gallery)
+        """
+        output = []
+        files = core.Upload.all(DB.session)
+        for item in files:
+            output.append({
+                'href': url_for(
+                    'api.get_file', uuid=item.uuid, _external=True),
+                'thumbnail': url_for(
+                    'api.get_file', uuid=item.uuid, thumbnail='true',
+                    _external=True),
+                'name': basename(item.filename),
+                'uuid': item.uuid,
+            })
+        return jsonify(output)
+
+    def _get_private(self):
+        """
+        Return files for a private request (f.ex. manageing uploads)
         """
         identity, all_permissions = get_user_permissions(request)
-
         output = {}
         if 'admin_files' in all_permissions:
             files = core.Upload.all(DB.session)
@@ -772,6 +789,15 @@ class UploadList(Resource):
                 })
             output['self'] = output_files
         return jsonify(output)
+
+    def get(self):
+        """
+        Retrieve a list of uploads
+        """
+        if 'public' in request.args:
+            return self._get_public()
+        else:
+            return self._get_private()
 
 
 class Upload(Resource):
