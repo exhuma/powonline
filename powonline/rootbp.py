@@ -18,6 +18,9 @@ from .util import allowed_file, get_user_identity
 rootbp = Blueprint('rootbp', __name__)
 
 LOG = logging.getLogger(__name__)
+ALLOWED_ORIGINS = {
+    'https://localhost:8080'
+}
 
 
 @rootbp.app_errorhandler(AccessDenied)
@@ -34,8 +37,13 @@ def after_app_request(response):
         response = make_response('Internal Server Error!', 500)
         DB.session.rollback()
 
-    response.headers.add('Access-Control-Allow-Origin',
-                         'https://tracker.lost.lu')
+    origin = request.headers.get('Origin', '')
+    if origin in ALLOWED_ORIGINS:
+        response.headers.add('Access-Control-Allow-Origin', origin)
+    elif origin:
+        LOG.error('Unauthorized CORS request from %r', origin)
+
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
     response.headers.add('Access-Control-Allow-Headers',
                          'Content-Type,Authorization')
     response.headers.add('Access-Control-Allow-Methods',
