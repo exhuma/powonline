@@ -34,7 +34,8 @@ def after_app_request(response):
         response = make_response('Internal Server Error!', 500)
         DB.session.rollback()
 
-    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Origin',
+                         'https://tracker.lost.lu')
     response.headers.add('Access-Control-Allow-Headers',
                          'Content-Type,Authorization')
     response.headers.add('Access-Control-Allow-Methods',
