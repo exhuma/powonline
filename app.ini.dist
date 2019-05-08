@@ -1,6 +1,7 @@
 ; Version History of the config file
 ; ----------------------------------
 ;
+;  2.4: Added "app.allowed_origins"
 ;  2.3: Added "pusher_channels.file_events"
 ;  2.2: Added [email] section
 ;  2.1: Added "app.upload_folder"
@@ -21,6 +22,12 @@ version = 2.2
 [app]
 static_folder = /home/exhuma/work/powonline-frontend/dist
 upload_folder = /tmp/uploads
+
+; allowed-origins must be set to the hosts which are allowed to call this API
+; Using "*" won't work as API calls need to be using "withCredentials=true" on
+; the clien-side
+allowed_origins =
+    https://localhost:8080
 
 [email]
 host = example.com
