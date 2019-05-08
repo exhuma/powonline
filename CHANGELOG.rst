@@ -4,6 +4,8 @@ v1.7.0
 * Make pusher channels configurable (config file change)
 * Remove sensitive info from file-added events
 * Add support for a public photo gallery query
+* CORS "Allow-Origin" header can not be set in the config file
+
 
 v1.6.0
 ======
