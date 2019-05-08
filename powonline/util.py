@@ -28,7 +28,7 @@ ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif'}
 
 def allowed_file(filename):
     name, ext = splitext(filename)
-    return ext in ALLOWED_EXTENSIONS
+    return ext.lower() in ALLOWED_EXTENSIONS
 
 
 

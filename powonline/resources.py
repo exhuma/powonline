@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timezone
 from enum import Enum
 from functools import wraps
 from json import JSONEncoder, dumps
@@ -215,8 +216,7 @@ class Team(Resource):
         pusher_channel = current_app.localconfig.get(
             'pusher_channels', 'team_station_state',
             default='team_station_state_dev')
-        current_app.pusher.trigger(
-            pusher_channel,
+        current_app.pusher.send_team_event(
             'team-details-change',
             {'name': name}
         )
@@ -229,8 +229,7 @@ class Team(Resource):
         pusher_channel = current_app.localconfig.get(
             'pusher_channels', 'team_station_state',
             default='team_station_state_dev')
-        current_app.pusher.trigger(
-            pusher_channel,
+        current_app.pusher.send_team_event(
             'team-deleted',
             {'name': name}
         )
@@ -721,22 +720,45 @@ class UploadList(Resource):
                 DB.session.flush()
 
             response = make_response('OK')
-            response.headers['Location'] = url_for(
+            file_url = url_for(
                 'api.get_file', uuid=db_instance.uuid, _external=True)
+            tn_url = url_for(
+                'api.get_file', uuid=db_instance.uuid, thumbnail=True,
+                _external=True)
+            response.headers['Location'] = file_url
             response.status_code = 201
-            current_app.pusher.trigger('file-events', 'file-added', {
-                'from': identity['username'],
-                'relname': relative_target
+            current_app.pusher.send_file_event('file-added', {
+                'uuid': db_instance.uuid,
+                'href': file_url,
+                'thumbnail': tn_url,
+                'when': datetime.now(timezone.utc).isoformat()
             })
             return response
         return 'The given file is not allowed', 400
 
-    def get(self):
+    def _get_public(self):
         """
-        Retrieve a list of uploads
+        Return files for a public request (f.ex. image gallery)
+        """
+        output = []
+        files = core.Upload.all(DB.session)
+        for item in files:
+            output.append({
+                'href': url_for(
+                    'api.get_file', uuid=item.uuid, _external=True),
+                'thumbnail': url_for(
+                    'api.get_file', uuid=item.uuid, thumbnail='true',
+                    _external=True),
+                'name': basename(item.filename),
+                'uuid': item.uuid,
+            })
+        return jsonify(output)
+
+    def _get_private(self):
+        """
+        Return files for a private request (f.ex. manageing uploads)
         """
         identity, all_permissions = get_user_permissions(request)
-
         output = {}
         if 'admin_files' in all_permissions:
             files = core.Upload.all(DB.session)
@@ -767,6 +789,15 @@ class UploadList(Resource):
                 })
             output['self'] = output_files
         return jsonify(output)
+
+    def get(self):
+        """
+        Retrieve a list of uploads
+        """
+        if 'public' in request.args:
+            return self._get_public()
+        else:
+            return self._get_private()
 
 
 class Upload(Resource):
@@ -834,7 +865,7 @@ class Upload(Resource):
         unlink(fullname)
         DB.session.delete(db_instance)
         DB.session.commit()
-        current_app.pusher.trigger('file-events', 'file-deleted', {
+        current_app.pusher.send_file_event('file-deleted', {
             'id': uuid
         })
         return 'OK'
@@ -860,8 +891,7 @@ class Job(Resource):
                     'state': new_state.value
                 }
             }
-            current_app.pusher.trigger(
-                pusher_channel,
+            current_app.pusher.send_team_event(
                 'state-change',
                 {
                     'station': station_name,
@@ -895,8 +925,7 @@ class Job(Resource):
             output = {
                 'new_score': new_score,
             }
-            current_app.pusher.trigger(
-                pusher_channel,
+            current_app.pusher.send_team_event(
                 'score-change',
                 {
                     'station': station_name,
@@ -932,8 +961,7 @@ class Job(Resource):
             output = {
                 'new_score': new_score,
             }
-            current_app.pusher.trigger(
-                pusher_channel,
+            current_app.pusher.send_team_event(
                 'questionnaire-score-change',
                 {
                     'stationName': station_name,
