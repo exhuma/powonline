@@ -1,3 +1,9 @@
+v1.8.0
+======
+
+* Allow for specifying a thumbnail size
+* Add file modification time to image data
+
 v1.7.1
 ======
 
