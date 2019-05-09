@@ -28,6 +28,27 @@ class ErrorType(Enum):
     INVALID_SCHEMA = 'invalid-schema'
 
 
+def upload_to_json(db_instance: DBUpload) -> dict:
+    """
+    Convert a DB-instance of an upload to a JSONifiable dictionary
+    """
+    file_url = url_for(
+        'api.get_file', uuid=db_instance.uuid, _external=True)
+    tn_url = url_for(
+        'api.get_file', uuid=db_instance.uuid, size=256,
+        _external=True)
+    tiny_url = url_for(
+        'api.get_file', uuid=db_instance.uuid, size=64,
+        _external=True)
+    return {
+        'uuid': db_instance.uuid,
+        'href': file_url,
+        'thumbnail': tn_url,
+        'tiny': tiny_url,
+        'name': basename(db_instance.filename),
+    }
+
+
 def validate_score(value):
     if isinstance(value, str):
         score = int(value, 10) if value.strip() else 0
@@ -728,23 +749,11 @@ class UploadList(Resource):
                 DB.session.flush()
 
             response = make_response('OK')
-            file_url = url_for(
-                'api.get_file', uuid=db_instance.uuid, _external=True)
-            tn_url = url_for(
-                'api.get_file', uuid=db_instance.uuid, size=256,
-                _external=True)
-            tiny_url = url_for(
-                'api.get_file', uuid=db_instance.uuid, size=64,
-                _external=True)
-            response.headers['Location'] = file_url
+            event_object = upload_to_json(db_instance)
+            event_object['when'] = datetime.now(timezone.utc).isoformat()
+            response.headers['Location'] = event_object['href']
             response.status_code = 201
-            current_app.pusher.send_file_event('file-added', {
-                'uuid': db_instance.uuid,
-                'href': file_url,
-                'thumbnail': tn_url,
-                'tiny': tiny_url,
-                'when': datetime.now(timezone.utc).isoformat()
-            })
+            current_app.pusher.send_file_event('file-added', event_object)
             return response
         return 'The given file is not allowed', 400
 
@@ -755,18 +764,8 @@ class UploadList(Resource):
         output = []
         files = core.Upload.all(DB.session)
         for item in files:
-            output.append({
-                'href': url_for(
-                    'api.get_file', uuid=item.uuid, _external=True),
-                'thumbnail': url_for(
-                    'api.get_file', uuid=item.uuid, size=256,
-                    _external=True),
-                'tiny': url_for(
-                    'api.get_file', uuid=item.uuid, size=64,
-                    _external=True),
-                'name': basename(item.filename),
-                'uuid': item.uuid,
-            })
+            json_data = upload_to_json(item)
+            output.append(json_data)
         return jsonify(output)
 
     def _get_private(self):
@@ -779,35 +778,15 @@ class UploadList(Resource):
             files = core.Upload.all(DB.session)
             for item in files:
                 output_files = output.setdefault(item.username, [])
-                output_files.append({
-                    'href': url_for(
-                        'api.get_file', uuid=item.uuid, _external=True),
-                    'thumbnail': url_for(
-                        'api.get_file', uuid=item.uuid, size=256,
-                        _external=True),
-                    'tiny': url_for(
-                        'api.get_file', uuid=item.uuid, size=64,
-                        _external=True),
-                    'name': basename(item.filename),
-                    'uuid': item.uuid,
-                })
+                json_data = upload_to_json(item)
+                output_files.append(json_data)
         else:
             username = identity['username']
             files = core.Upload.list(DB.session, username)
             output_files = []
             for item in files:
-                output_files.append({
-                    'href': url_for(
-                        'api.get_file', uuid=item.uuid, _external=True),
-                    'thumbnail': url_for(
-                        'api.get_file', uuid=item.uuid, size=256,
-                        _external=True),
-                    'tiny': url_for(
-                        'api.get_file', uuid=item.uuid, size=64,
-                        _external=True),
-                    'name': basename(item.filename),
-                    'uuid': item.uuid,
-                })
+                json_data = upload_to_json(item)
+                output_files.append(json_data)
             output['self'] = output_files
         return jsonify(output)
 
