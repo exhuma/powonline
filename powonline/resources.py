@@ -731,7 +731,10 @@ class UploadList(Resource):
             file_url = url_for(
                 'api.get_file', uuid=db_instance.uuid, _external=True)
             tn_url = url_for(
-                'api.get_file', uuid=db_instance.uuid, thumbnail=True,
+                'api.get_file', uuid=db_instance.uuid, size=256,
+                _external=True)
+            tiny_url = url_for(
+                'api.get_file', uuid=db_instance.uuid, size=64,
                 _external=True)
             response.headers['Location'] = file_url
             response.status_code = 201
@@ -739,6 +742,7 @@ class UploadList(Resource):
                 'uuid': db_instance.uuid,
                 'href': file_url,
                 'thumbnail': tn_url,
+                'tiny': tiny_url,
                 'when': datetime.now(timezone.utc).isoformat()
             })
             return response
@@ -755,7 +759,10 @@ class UploadList(Resource):
                 'href': url_for(
                     'api.get_file', uuid=item.uuid, _external=True),
                 'thumbnail': url_for(
-                    'api.get_file', uuid=item.uuid, thumbnail='true',
+                    'api.get_file', uuid=item.uuid, size=256,
+                    _external=True),
+                'tiny': url_for(
+                    'api.get_file', uuid=item.uuid, size=64,
                     _external=True),
                 'name': basename(item.filename),
                 'uuid': item.uuid,
@@ -776,7 +783,10 @@ class UploadList(Resource):
                     'href': url_for(
                         'api.get_file', uuid=item.uuid, _external=True),
                     'thumbnail': url_for(
-                        'api.get_file', uuid=item.uuid, thumbnail='true',
+                        'api.get_file', uuid=item.uuid, size=256,
+                        _external=True),
+                    'tiny': url_for(
+                        'api.get_file', uuid=item.uuid, size=64,
                         _external=True),
                     'name': basename(item.filename),
                     'uuid': item.uuid,
@@ -790,7 +800,10 @@ class UploadList(Resource):
                     'href': url_for(
                         'api.get_file', uuid=item.uuid, _external=True),
                     'thumbnail': url_for(
-                        'api.get_file', uuid=item.uuid, thumbnail='true',
+                        'api.get_file', uuid=item.uuid, size=256,
+                        _external=True),
+                    'tiny': url_for(
+                        'api.get_file', uuid=item.uuid, size=64,
                         _external=True),
                     'name': basename(item.filename),
                     'uuid': item.uuid,
@@ -820,14 +833,14 @@ class Upload(Resource):
         'png': ('png', 'image/png'),
     }
 
-    def _thumbnail(self, data_folder, file_entity):
+    def _thumbnail(self, data_folder, file_entity, size):
         from PIL import Image
         from io import BytesIO
         fullname = join(data_folder, file_entity.filename)
         im = Image.open(fullname)
         _, extension = fullname.rsplit('.', 1)
         pillow_type, mediatype = Upload.FILE_MAPPINGS[extension.lower()]
-        im.thumbnail((64, 64))
+        im.thumbnail((size, size))
         output = BytesIO()
         im.save(output, format=pillow_type)
         return output, mediatype
@@ -842,9 +855,14 @@ class Upload(Resource):
             uuid=uuid).one_or_none()
         if not db_instance:
             return 'File not found', 404
-        thumbnail = request.args.get('thumbnail', 'false')
-        if str(thumbnail).lower()[0] in ('1', 't', 'y'):
-            thumbnail, mediatype = self._thumbnail(data_folder, db_instance)
+
+        size = request.args.get('size', 0, type=int)
+
+        # Limit the size to an upper-bound. This prevents users from enlarging
+        # files to inhumane sizes triggering a DoS
+        if size and size < 4000:
+            thumbnail, mediatype = self._thumbnail(
+                data_folder, db_instance, size)
             output = make_response(thumbnail.getvalue())
             output.headers['Content-Type'] = mediatype
             output.headers.set(
