@@ -39,7 +39,7 @@ def after_app_request(response):
 
     cfg_data = current_app.localconfig.get(
         'app', 'allowed_origins', fallback='')
-    elements = {line.strip() for line in cfg_data.splitlines()}
+    elements = {line.strip() for line in cfg_data.splitlines() if line.strip()}
     allowed_origins = elements or DEFAULT_ALLOWED_ORIGINS
     LOG.debug('Allowed CORS origins: %r', allowed_origins)
 

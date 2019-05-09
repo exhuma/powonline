@@ -1,3 +1,8 @@
+v1.7.1
+======
+
+* Make sure that questsionnaire scores are handled as numbers
+
 v1.7.0
 ======
 
