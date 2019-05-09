@@ -710,6 +710,7 @@ class RouteColor(Resource):
     A direct route to the route color
     """
 
+    @require_permissions('admin_stations')
     def put(self, route_name):
         """
         Replaces the route color with a new color
@@ -860,6 +861,7 @@ class Upload(Resource):
             output = send_from_directory(data_folder, db_instance.filename)
         return output
 
+    @require_permissions('admin_files')
     def delete(self, uuid):
         """
         Retrieve a single file
