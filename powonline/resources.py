@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from functools import wraps
 from json import JSONEncoder, dumps
-from os import makedirs, unlink
+from os import makedirs, stat, unlink
 from os.path import basename, dirname, join
 
 import jwt
@@ -40,12 +40,21 @@ def upload_to_json(db_instance: DBUpload) -> dict:
     tiny_url = url_for(
         'api.get_file', uuid=db_instance.uuid, size=64,
         _external=True)
+
+    data_folder = current_app.localconfig.get(
+        'app', 'upload_folder', fallback=core.Upload.FALLBACK_FOLDER)
+    fullname = join(data_folder, db_instance.filename)
+
+    mtime_unix = stat(fullname).st_mtime
+    mtime = datetime.fromtimestamp(mtime_unix, timezone.utc)
+
     return {
         'uuid': db_instance.uuid,
         'href': file_url,
         'thumbnail': tn_url,
         'tiny': tiny_url,
         'name': basename(db_instance.filename),
+        'when': mtime.isoformat()
     }
 
 
@@ -750,7 +759,6 @@ class UploadList(Resource):
 
             response = make_response('OK')
             event_object = upload_to_json(db_instance)
-            event_object['when'] = datetime.now(timezone.utc).isoformat()
             response.headers['Location'] = event_object['href']
             response.status_code = 201
             current_app.pusher.send_file_event('file-added', event_object)
