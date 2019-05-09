@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from functools import wraps
 from json import JSONEncoder, dumps
-from os import makedirs, unlink
+from os import makedirs, stat, unlink
 from os.path import basename, dirname, join
 
 import jwt
@@ -26,6 +26,36 @@ LOG = logging.getLogger(__name__)
 
 class ErrorType(Enum):
     INVALID_SCHEMA = 'invalid-schema'
+
+
+def upload_to_json(db_instance: DBUpload) -> dict:
+    """
+    Convert a DB-instance of an upload to a JSONifiable dictionary
+    """
+    file_url = url_for(
+        'api.get_file', uuid=db_instance.uuid, _external=True)
+    tn_url = url_for(
+        'api.get_file', uuid=db_instance.uuid, size=256,
+        _external=True)
+    tiny_url = url_for(
+        'api.get_file', uuid=db_instance.uuid, size=64,
+        _external=True)
+
+    data_folder = current_app.localconfig.get(
+        'app', 'upload_folder', fallback=core.Upload.FALLBACK_FOLDER)
+    fullname = join(data_folder, db_instance.filename)
+
+    mtime_unix = stat(fullname).st_mtime
+    mtime = datetime.fromtimestamp(mtime_unix, timezone.utc)
+
+    return {
+        'uuid': db_instance.uuid,
+        'href': file_url,
+        'thumbnail': tn_url,
+        'tiny': tiny_url,
+        'name': basename(db_instance.filename),
+        'when': mtime.isoformat()
+    }
 
 
 def validate_score(value):
@@ -680,6 +710,7 @@ class RouteColor(Resource):
     A direct route to the route color
     """
 
+    @require_permissions('admin_stations')
     def put(self, route_name):
         """
         Replaces the route color with a new color
@@ -728,19 +759,10 @@ class UploadList(Resource):
                 DB.session.flush()
 
             response = make_response('OK')
-            file_url = url_for(
-                'api.get_file', uuid=db_instance.uuid, _external=True)
-            tn_url = url_for(
-                'api.get_file', uuid=db_instance.uuid, thumbnail=True,
-                _external=True)
-            response.headers['Location'] = file_url
+            event_object = upload_to_json(db_instance)
+            response.headers['Location'] = event_object['href']
             response.status_code = 201
-            current_app.pusher.send_file_event('file-added', {
-                'uuid': db_instance.uuid,
-                'href': file_url,
-                'thumbnail': tn_url,
-                'when': datetime.now(timezone.utc).isoformat()
-            })
+            current_app.pusher.send_file_event('file-added', event_object)
             return response
         return 'The given file is not allowed', 400
 
@@ -751,15 +773,8 @@ class UploadList(Resource):
         output = []
         files = core.Upload.all(DB.session)
         for item in files:
-            output.append({
-                'href': url_for(
-                    'api.get_file', uuid=item.uuid, _external=True),
-                'thumbnail': url_for(
-                    'api.get_file', uuid=item.uuid, thumbnail='true',
-                    _external=True),
-                'name': basename(item.filename),
-                'uuid': item.uuid,
-            })
+            json_data = upload_to_json(item)
+            output.append(json_data)
         return jsonify(output)
 
     def _get_private(self):
@@ -772,29 +787,15 @@ class UploadList(Resource):
             files = core.Upload.all(DB.session)
             for item in files:
                 output_files = output.setdefault(item.username, [])
-                output_files.append({
-                    'href': url_for(
-                        'api.get_file', uuid=item.uuid, _external=True),
-                    'thumbnail': url_for(
-                        'api.get_file', uuid=item.uuid, thumbnail='true',
-                        _external=True),
-                    'name': basename(item.filename),
-                    'uuid': item.uuid,
-                })
+                json_data = upload_to_json(item)
+                output_files.append(json_data)
         else:
             username = identity['username']
             files = core.Upload.list(DB.session, username)
             output_files = []
             for item in files:
-                output_files.append({
-                    'href': url_for(
-                        'api.get_file', uuid=item.uuid, _external=True),
-                    'thumbnail': url_for(
-                        'api.get_file', uuid=item.uuid, thumbnail='true',
-                        _external=True),
-                    'name': basename(item.filename),
-                    'uuid': item.uuid,
-                })
+                json_data = upload_to_json(item)
+                output_files.append(json_data)
             output['self'] = output_files
         return jsonify(output)
 
@@ -820,14 +821,14 @@ class Upload(Resource):
         'png': ('png', 'image/png'),
     }
 
-    def _thumbnail(self, data_folder, file_entity):
+    def _thumbnail(self, data_folder, file_entity, size):
         from PIL import Image
         from io import BytesIO
         fullname = join(data_folder, file_entity.filename)
         im = Image.open(fullname)
         _, extension = fullname.rsplit('.', 1)
         pillow_type, mediatype = Upload.FILE_MAPPINGS[extension.lower()]
-        im.thumbnail((64, 64))
+        im.thumbnail((size, size))
         output = BytesIO()
         im.save(output, format=pillow_type)
         return output, mediatype
@@ -842,9 +843,14 @@ class Upload(Resource):
             uuid=uuid).one_or_none()
         if not db_instance:
             return 'File not found', 404
-        thumbnail = request.args.get('thumbnail', 'false')
-        if str(thumbnail).lower()[0] in ('1', 't', 'y'):
-            thumbnail, mediatype = self._thumbnail(data_folder, db_instance)
+
+        size = request.args.get('size', 0, type=int)
+
+        # Limit the size to an upper-bound. This prevents users from enlarging
+        # files to inhumane sizes triggering a DoS
+        if size and size < 4000:
+            thumbnail, mediatype = self._thumbnail(
+                data_folder, db_instance, size)
             output = make_response(thumbnail.getvalue())
             output.headers['Content-Type'] = mediatype
             output.headers.set(
@@ -855,6 +861,7 @@ class Upload(Resource):
             output = send_from_directory(data_folder, db_instance.filename)
         return output
 
+    @require_permissions('admin_files')
     def delete(self, uuid):
         """
         Retrieve a single file
