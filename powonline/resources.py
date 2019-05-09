@@ -28,6 +28,14 @@ class ErrorType(Enum):
     INVALID_SCHEMA = 'invalid-schema'
 
 
+def validate_score(value):
+    if isinstance(value, str):
+        score = int(value, 10) if value.strip() else 0
+    else:
+        score = value if value else 0
+    return score
+
+
 class require_permissions:
     '''
     Decorator for routes.
@@ -904,10 +912,7 @@ class Job(Resource):
             return 'Access denied to this station!', 401
 
     def _action_set_score(self, station_name, team_name, score):
-        if isinstance(score, str):
-            score = int(score, 10) if score else 0
-        else:
-            score = score if score else 0
+        score = validate_score(score)
         auth, permissions = get_user_permissions(request)
 
         pusher_channel = current_app.localconfig.get(
@@ -939,6 +944,7 @@ class Job(Resource):
 
     def _action_set_questionnaire_score(self, station_name, team_name, score):
         auth, permissions = get_user_permissions(request)
+        score = validate_score(score)
 
         pusher_channel = current_app.localconfig.get(
             'pusher_channels', 'team_station_state',
