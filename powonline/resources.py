@@ -863,7 +863,6 @@ class Upload(Resource):
             output = send_from_directory(data_folder, db_instance.filename)
         return output
 
-    @require_permissions('admin_files')
     def delete(self, uuid):
         """
         Retrieve a single file
