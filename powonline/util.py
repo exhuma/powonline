@@ -19,6 +19,10 @@ PERMISSION_MAP = {
         'manage_permissions',
         'manage_station',
         'view_audit_log',
+        'view_team_contact',
+    },
+    'staff': {
+        'view_team_contact',
     },
     'station_manager': {
         'manage_station',
