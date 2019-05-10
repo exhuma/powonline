@@ -111,7 +111,7 @@ class TestCore(CommonTest):
             questionnaire_1 = station-blue
             questionnaire_2 = station-red
             '''))
-        result = core.set_questionnaire_score(
+        _, result = core.set_questionnaire_score(
             config, self.session, 'team-red', 'station-blue', 40)
         self.assertEqual(result, 40)
 

@@ -18,9 +18,10 @@ PERMISSION_MAP = {
         'admin_teams',
         'manage_permissions',
         'manage_station',
+        'view_audit_log',
     },
     'station_manager': {
-        'manage_station'
+        'manage_station',
     },
 }
 ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif'}
