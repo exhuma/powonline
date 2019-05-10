@@ -1,6 +1,6 @@
 import logging
 from codecs import encode
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from os import urandom
 
@@ -15,6 +15,12 @@ from sqlalchemy.orm import Session, relationship
 
 LOG = logging.getLogger(__name__)
 DB = SQLAlchemy()
+
+
+class AuditType(Enum):
+    ADMIN = 'admin'
+    QUESTIONNAIRE_SCORE = 'questionnaire_score'
+    STATION_SCORE = 'station_score'
 
 
 class TeamState(Enum):
@@ -307,6 +313,34 @@ class Upload(DB.Model):
     def __init__(self, relname, username):
         self.filename = relname
         self.username = username
+
+
+class AuditLog(DB.Model):
+    __tablename__ = 'auditlog'
+    timestamp = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=datetime.now(timezone.utc),
+        primary_key=True,
+    )
+    username = Column(
+        Unicode,
+        ForeignKey('user.name', onupdate='CASCADE', ondelete='SET NULL'),
+        name='user',
+        primary_key=True,
+    )
+    type_ = Column('type', Unicode, nullable=False)
+    message = Column('message', Unicode, nullable=False)
+
+    user = relationship("User", backref='auditlog')
+
+    def __init__(
+            self, timestamp: datetime, username: str, type_: AuditType,
+            message: str) -> 'AuditLog':
+        self.timestamp = timestamp
+        self.username = username
+        self.type_ = type_.value
+        self.message = message
 
 
 route_station_table = Table(

@@ -1,10 +1,12 @@
 import logging
+from datetime import datetime, timezone
 from os import makedirs
 from os.path import basename, dirname, join
 from random import SystemRandom
 from string import ascii_letters, digits, punctuation
 
 from sqlalchemy import and_, func
+from sqlalchemy.orm import Session
 
 from . import model
 from .exc import NoQuestionnaireForStation, NoSuchQuestionnaire
@@ -66,6 +68,20 @@ def questionnaire_scores(config, session):
     return output
 
 
+def add_audit_log(
+        session: Session,
+        username: str, type_: model.AuditType, message: str) -> model.AuditLog:
+    entry = model.AuditLog(
+        timestamp=datetime.now(timezone.utc),
+        username=username,
+        type_=type_,
+        message=message
+    )
+    LOG.debug('New entry on audit-trail: %r', entry)
+    session.add(entry)
+    return entry
+
+
 def set_questionnaire_score(config, session, team, station, score):
     mapping = {}
     for qname in config.options('questionnaire-map'):
@@ -94,8 +110,9 @@ def set_questionnaire_score(config, session, team, station, score):
     if not state:
         state = model.TeamQuestionnaire(team, questionnaire_name, score)
         session.add(state)
+    old_score = state.score
     state.score = score
-    return score
+    return old_score, score
 
 
 def global_dashboard(session):
@@ -228,9 +245,9 @@ class Team:
             state = model.TeamStation(team_name=team_name,
                                       station_name=station_name)
             state = session.merge(state)
-
+        old_score = state.score
         state.score = score
-        return state.score
+        return old_score, state.score
 
     @staticmethod
     def stations(session, team_name):
