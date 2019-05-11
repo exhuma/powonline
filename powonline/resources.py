@@ -15,6 +15,8 @@ from werkzeug.utils import secure_filename
 from . import core
 from .exc import AccessDenied, NoQuestionnaireForStation
 from .model import DB
+from .model import AuditLog as DBAuditLog
+from .model import AuditType
 from .model import Upload as DBUpload
 from .schema import (JOB_SCHEMA, ROLE_SCHEMA, ROUTE_LIST_SCHEMA, ROUTE_SCHEMA,
                      STATION_LIST_SCHEMA, STATION_SCHEMA, TEAM_LIST_SCHEMA,
@@ -861,7 +863,6 @@ class Upload(Resource):
             output = send_from_directory(data_folder, db_instance.filename)
         return output
 
-    @require_permissions('admin_files')
     def delete(self, uuid):
         """
         Retrieve a single file
@@ -884,6 +885,26 @@ class Upload(Resource):
             'id': uuid
         })
         return 'OK'
+
+
+class AuditLog(Resource):
+    """
+    A list of audit-messages
+    """
+
+    @require_permissions('view_audit_log')
+    def get(self):
+        query = DB.session.query(DBAuditLog).order_by(
+            DBAuditLog.timestamp.desc())
+        output = []
+        for row in query:
+            output.append({
+                'timestamp': row.timestamp.isoformat(),
+                'username': row.username,
+                'type': row.type_,
+                'message': row.message
+            })
+        return output
 
 
 class Job(Resource):
@@ -932,8 +953,16 @@ class Job(Resource):
                     DB.session, auth['username'], station_name)):
             LOG.info('Setting score of %s on %s to %s (by user: %s)',
                      team_name, station_name, score, auth['username'])
-            new_score = core.Team.set_station_score(
+            old_score, new_score = core.Team.set_station_score(
                 DB.session, team_name, station_name, score)
+            if old_score != new_score:
+                core.add_audit_log(
+                    DB.session,
+                    auth['username'],
+                    AuditType.STATION_SCORE,
+                    'Change score of team %r from %s to %s on station %s' % (
+                        team_name, old_score, score, station_name
+                    ))
             output = {
                 'new_score': new_score,
             }
@@ -950,6 +979,9 @@ class Job(Resource):
             return 'Access denied to this station!', 401
 
     def _action_set_questionnaire_score(self, station_name, team_name, score):
+        # Bugfix for 2019
+        if score == 0:
+            return 'Setting questionnaire score to 0 is not allowed', 400
         auth, permissions = get_user_permissions(request)
         score = validate_score(score)
 
@@ -965,12 +997,20 @@ class Job(Resource):
                      'by user: %s)',
                      team_name, station_name, score, auth['username'])
             try:
-                new_score = core.set_questionnaire_score(
+                old_score, new_score = core.set_questionnaire_score(
                     current_app.localconfig,
                     DB.session, team_name, station_name, score)
             except NoQuestionnaireForStation:
                 return ('No questionnaire assigned to station %r!'
                         % station_name, 500)
+            if old_score != new_score:
+                core.add_audit_log(
+                    DB.session,
+                    auth['username'],
+                    AuditType.QUESTIONNAIRE_SCORE,
+                    'Change questionnaire score of team %r from %s to %s on station %s' % (
+                        team_name, old_score, score, station_name
+                    ))
             output = {
                 'new_score': new_score,
             }

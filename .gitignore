@@ -8,3 +8,8 @@
 /dist
 /env
 htmlcov
+/api.env
+/cert.cert
+/key.key
+/new.ssl.csr
+/privkey.pem
