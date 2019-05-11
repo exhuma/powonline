@@ -3,6 +3,7 @@ from base64 import b64decode
 from hashlib import md5
 from os import makedirs
 from os.path import dirname, exists, join
+from uuid import uuid4
 
 from gouge.colourcli import Simple
 from imapclient import FLAGGED, SEEN, IMAPClient
@@ -14,6 +15,13 @@ IMAGE_TYPES = {
     (b'image', b'png'),
     (b'image', b'gif'),
 }
+
+
+def get_extension(major, minor):
+    if major.lower() != 'image':
+        raise ValueError('This application only allows storing images '
+                         '(got %s)!' % major)
+    return minor.lower()
 
 
 def extract_elements(body, elements):
@@ -128,10 +136,17 @@ class MailFetcher(object):
         for image_id, header in images:
             try:
                 (major, minor, params, _, _, encoding, size) = header
-                # Convert "params" into a more conveniend dictionary
-                params = dict(zip(params[::2], params[1::2]))
-                filename = params[b'name'].decode('ascii', errors='ignore')
-                unique_name = 'image_{}_{}_{}'.format(msgid, image_id, filename)
+                if params:
+                    # Convert "params" into a more conveniend dictionary
+                    params = dict(zip(params[::2], params[1::2]))
+                    filename = params[b'name'].decode('ascii', errors='ignore')
+                    unique_name = 'image_{}_{}_{}'.format(msgid, image_id,
+                        filename)
+                else:
+                    extension = get_extension(
+                        major.decode('ascii'), minor.decode('ascii'))
+                    unique_name = 'image_{}_{}_{}.{}'.format(
+                        msgid, image_id, uuid4(), extension)
                 encoding = encoding.decode('ascii')
                 LOG.debug('Processing part #%r in mail #%r', image_id, msgid)
                 element_id = ('BODY[%d]' % image_id).encode('ascii')
