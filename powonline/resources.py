@@ -6,6 +6,8 @@ from json import JSONEncoder, dumps
 from os import makedirs, stat, unlink
 from os.path import basename, dirname, join
 
+from PIL import ExifTags, Image
+
 import jwt
 from flask import (current_app, g, jsonify, make_response, request,
                    send_from_directory, url_for)
@@ -24,7 +26,9 @@ from .schema import (JOB_SCHEMA, ROLE_SCHEMA, ROUTE_LIST_SCHEMA, ROUTE_SCHEMA,
                      USER_SCHEMA_SAFE)
 from .util import allowed_file, get_user_identity, get_user_permissions
 
+EXIF_TAGS = ExifTags.TAGS
 LOG = logging.getLogger(__name__)
+
 
 class ErrorType(Enum):
     INVALID_SCHEMA = 'invalid-schema'
@@ -47,7 +51,11 @@ def upload_to_json(db_instance: DBUpload) -> dict:
         'app', 'upload_folder', fallback=core.Upload.FALLBACK_FOLDER)
     fullname = join(data_folder, db_instance.filename)
 
-    mtime_unix = stat(fullname).st_mtime
+    try:
+        mtime_unix = stat(fullname).st_mtime
+    except FileNotFoundError:
+        LOG.warning('Missing file %r (was in DB but not on disk)!', fullname)
+        return None
     mtime = datetime.fromtimestamp(mtime_unix, timezone.utc)
 
     return {
@@ -776,7 +784,8 @@ class UploadList(Resource):
         files = core.Upload.all(DB.session)
         for item in files:
             json_data = upload_to_json(item)
-            output.append(json_data)
+            if json_data:
+                output.append(json_data)
         return jsonify(output)
 
     def _get_private(self):
@@ -790,14 +799,16 @@ class UploadList(Resource):
             for item in files:
                 output_files = output.setdefault(item.username, [])
                 json_data = upload_to_json(item)
-                output_files.append(json_data)
+                if json_data:
+                    output_files.append(json_data)
         else:
             username = identity['username']
             files = core.Upload.list(DB.session, username)
             output_files = []
             for item in files:
                 json_data = upload_to_json(item)
-                output_files.append(json_data)
+                if json_data:
+                    output_files.append(json_data)
             output['self'] = output_files
         return jsonify(output)
 
@@ -823,14 +834,31 @@ class Upload(Resource):
         'png': ('png', 'image/png'),
     }
 
-    def _thumbnail(self, data_folder, file_entity, size):
-        from PIL import Image
-        from io import BytesIO
-        fullname = join(data_folder, file_entity.filename)
+    def _rotated(self, fullname):
         im = Image.open(fullname)
+        o_id = {v: k for k, v in EXIF_TAGS.items()}['Orientation']
+        orientation = im.getexif().get(o_id)
+        if not orientation:
+            return im
+        if orientation == 3:
+            im = im.rotate(180, expand=True)
+        elif orientation == 6:
+            im = im.rotate(270, expand=True)
+        elif orientation == 8:
+            im = im.rotate(90, expand=True)
+        return im
+
+    def _thumbnail(self, fullname, size):
+        from io import BytesIO
+        im = self._rotated(fullname)
+
+        # Limit the size to an upper-bound. This prevents users from enlarging
+        # files to inhumane sizes triggering a DoS
+        if size and size < 4000:
+            im.thumbnail((size, size))
+
         _, extension = fullname.rsplit('.', 1)
         pillow_type, mediatype = Upload.FILE_MAPPINGS[extension.lower()]
-        im.thumbnail((size, size))
         output = BytesIO()
         im.save(output, format=pillow_type)
         return output, mediatype
@@ -847,20 +875,14 @@ class Upload(Resource):
             return 'File not found', 404
 
         size = request.args.get('size', 0, type=int)
-
-        # Limit the size to an upper-bound. This prevents users from enlarging
-        # files to inhumane sizes triggering a DoS
-        if size and size < 4000:
-            thumbnail, mediatype = self._thumbnail(
-                data_folder, db_instance, size)
-            output = make_response(thumbnail.getvalue())
-            output.headers['Content-Type'] = mediatype
-            output.headers.set(
-                'Content-Disposition',
-                'inline',
-                filename='thn_%s' % (basename(db_instance.filename)))
-        else:
-            output = send_from_directory(data_folder, db_instance.filename)
+        fullname = join(data_folder, db_instance.filename)
+        thumbnail, mediatype = self._thumbnail(fullname, size)
+        output = make_response(thumbnail.getvalue())
+        output.headers['Content-Type'] = mediatype
+        output.headers.set(
+            'Content-Disposition',
+            'inline',
+            filename='thn_%s' % (basename(db_instance.filename)))
         return output
 
     def delete(self, uuid):
