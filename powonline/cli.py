@@ -172,7 +172,8 @@ def import_csv(filename: str, event_day: str) -> None:
 @click.command()
 @click.option('--force/--no-force', default=False)
 @click.option('--fail-fast/--no-fail-fast', default=False)
-def fetch_mails(force, fail_fast):
+@click.option('--quiet/--no-quiet', default=False)
+def fetch_mails(force, fail_fast, quiet):
     import logging
 
     from gouge.colourcli import Simple
@@ -181,8 +182,14 @@ def fetch_mails(force, fail_fast):
     from powonline.mailfetcher import MailFetcher
     import powonline.model as mdl
 
-    Simple.basicConfig(level=logging.DEBUG)
-    logging.getLogger('imapclient').setLevel(logging.INFO)
+    if quiet:
+        log_level = logging.ERROR
+    else:
+        log_level = logging.DEBUG
+        logging.getLogger('imapclient').setLevel(logging.INFO)
+
+    Simple.basicConfig(level=log_level)
+
     config = default()
 
     pusher = PusherWrapper.create(
