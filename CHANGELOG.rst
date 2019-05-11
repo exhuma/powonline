@@ -1,3 +1,9 @@
+v1.9.0
+======
+
+* Add audit-log
+* Add new "staff" role with "view_contact" permission
+
 v1.8.0
 ======
 
