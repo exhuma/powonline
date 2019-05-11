@@ -171,7 +171,8 @@ def import_csv(filename: str, event_day: str) -> None:
 
 @click.command()
 @click.option('--force/--no-force', default=False)
-def fetch_mails(force):
+@click.option('--fail-fast/--no-fail-fast', default=False)
+def fetch_mails(force, fail_fast):
     import logging
 
     from gouge.colourcli import Simple
@@ -222,7 +223,8 @@ def fetch_mails(force):
             ssl,
             config.get('app', 'upload_folder', fallback=Upload.FALLBACK_FOLDER),
             force=force,
-            file_saved_callback=callback)
+            file_saved_callback=callback,
+            fail_fast=fail_fast)
         fetcher.connect()
         fetcher.fetch()
         fetcher.disconnect()

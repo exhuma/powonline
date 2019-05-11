@@ -44,7 +44,7 @@ def flatten_parts(body, start_index=0):
 class MailFetcher(object):
 
     def __init__(self, host, username, password, use_ssl, image_folder,
-                 force=False, file_saved_callback=None):
+                 force=False, file_saved_callback=None, fail_fast=False):
         self.host = host
         self.username = username
         self.password = password
@@ -53,6 +53,7 @@ class MailFetcher(object):
         self.connection = None
         self.force = force
         self.file_saved_callback = file_saved_callback
+        self.fail_fast = fail_fast
 
         # Hardcoded for now (was used in the old app).
         self.use_index = False
@@ -88,7 +89,11 @@ class MailFetcher(object):
             fetch_meta = [(i, data) for i, data in enumerate(el)
                           if (data[0], data[1]) in IMAGE_TYPES]
             if fetch_meta:
-                self.download(msgid, fetch_meta)
+                has_error = self.download(msgid, fetch_meta)
+                if has_error and self.fail_fast:
+                    LOG.error('Failfast activated, bailing out on first error!')
+                    return False
+        return True
 
     def in_index(self, md5sum):
         if not self.use_index:
@@ -175,6 +180,7 @@ class MailFetcher(object):
             self.connection.add_flags([msgid], FLAGGED)
         else:
             self.connection.add_flags([msgid], SEEN)
+        return has_error
 
     def disconnect(self):
         self.connection.shutdown()
@@ -203,6 +209,9 @@ def run_cli():
                         action='store_true', default=False,
                         help='Force fecthing mails. Even if they are read or '
                         'in the index')
+    parser.add_argument('--fail-fast', dest='failfast',
+                        action='store_true', default=False,
+                        help='Exit on first error')
 
     args = parser.parse_args()
 
@@ -225,7 +234,8 @@ def run_cli():
         password,
         True,
         args.destination,
-        args.force)
+        args.force,
+        fail_fast=args.failfast)
     try:
         fetcher.connect()
     except Exception as exc:
@@ -233,12 +243,14 @@ def run_cli():
         sys.exit(1)
 
     try:
-        fetcher.fetch()
+        is_success = fetcher.fetch()
     except Exception as exc:
         LOG.critical('Unable to fetch: %s', exc)
         sys.exit(1)
 
-    sys.exit(0)
+    exit_code = 0 if is_success else 1
+    sys.exit(exit_code)
+
 
 if __name__ == '__main__':
     Simple.basicConfig(level=logging.DEBUG)
