@@ -1,4 +1,6 @@
+import email
 import logging
+import re
 from base64 import b64decode
 from hashlib import md5
 from os import makedirs
@@ -15,6 +17,11 @@ IMAGE_TYPES = {
     (b'image', b'png'),
     (b'image', b'gif'),
 }
+
+P_FROM = re.compile(
+    r'^.*?<(.*?)>$'
+)
+P_IDENTIFIER_CHARS = re.compile(r'[^a-zA-Z0-9_]')
 
 
 def get_extension(major, minor):
@@ -46,6 +53,23 @@ def flatten_parts(body, start_index=0):
         else:
             output.append((index, element))
             index += 1
+    return output
+
+
+def extract_images(eml):
+    output = []
+    sender = eml['from']
+    if '<' in sender:
+        match = P_FROM.match(sender)
+        sender = match.groups()[0]
+    identifier = P_IDENTIFIER_CHARS.sub('_', eml['message-id'])
+    for part in eml.walk():
+        if part.get_content_maintype() != 'image':
+            continue
+        payload = part.get_payload(decode=True)
+        output.append(
+            (sender, part.get_filename(), payload, identifier)
+        )
     return output
 
 
@@ -127,49 +151,20 @@ class MailFetcher(object):
         LOG.debug('Downloading images for mail #%r', msgid)
         has_error = False
 
-        fetched = self.connection.fetch([msgid], [b'BODY', b'ENVELOPE'])
-        sender = fetched[msgid][b'ENVELOPE'].sender[0]
-        raw_from_address = b'%s@%s' % (sender.mailbox, sender.host)
-        from_address = raw_from_address.decode('ascii')
-        parts = flatten_parts(fetched[msgid][b'BODY'][0])
-        images = [part for part in parts if part[1][0] == b'image']
-        for image_id, header in images:
+        raw_data = self.connection.fetch([msgid], 'RFC822')[msgid][b'RFC822']
+        eml = email.message_from_bytes(raw_data)
+        images = extract_images(eml)
+        for sender, filename, data, identifier in images:
             try:
-                (major, minor, params, _, _, encoding, size) = header
-                if params:
-                    # Convert "params" into a more conveniend dictionary
-                    params = dict(zip(params[::2], params[1::2]))
-                    filename = params[b'name'].decode('ascii', errors='ignore')
-                    unique_name = 'image_{}_{}_{}'.format(msgid, image_id,
-                        filename)
-                else:
-                    extension = get_extension(
-                        major.decode('ascii'), minor.decode('ascii'))
-                    unique_name = 'image_{}_{}_{}.{}'.format(
-                        msgid, image_id, uuid4(), extension)
-                encoding = encoding.decode('ascii')
-                LOG.debug('Processing part #%r in mail #%r', image_id, msgid)
-                element_id = ('BODY[%d]' % image_id).encode('ascii')
-                response = self.connection.fetch([msgid], [element_id])
-                content = response[msgid][element_id]
-                if not content:
-                    LOG.error('Attachment data was empty for '
-                              'message #%r', msgid)
-                    has_error = True
-                    continue
-
-                if encoding == 'base64':
-                    bindata = b64decode(content)
-                else:
-                    bindata = content.decode(encoding)
-                md5sum = md5(bindata).hexdigest()
+                md5sum = md5(data).hexdigest()
                 if self.in_index(md5sum) and not self.force:
                     LOG.debug('Ignored duplicate file (md5=%s).', md5sum)
                     continue
                 elif self.in_index(md5sum) and self.force:
                     LOG.debug('Bypassing index check (force=True)')
 
-                fullname = join(self.image_folder, from_address, unique_name)
+                unique_name = '{}_{}'.format(identifier, filename)
+                fullname = join(self.image_folder, sender, unique_name)
                 if not exists(fullname) or self.force:
                     suffix = ' (forced overwrite)' if exists(fullname) else ''
                     try:
@@ -177,12 +172,12 @@ class MailFetcher(object):
                     except FileExistsError:
                         pass
                     with open(fullname, 'wb') as fptr:
-                        fptr.write(bindata)
+                        fptr.write(data)
                     LOG.info('File written to %r%s', fullname, suffix)
                     if self.file_saved_callback:
                         self.file_saved_callback(
-                            from_address,
-                            join(from_address, unique_name))
+                            sender,
+                            join(sender, unique_name))
                     self.add_to_index(md5sum)
                 else:
                     has_error = True
