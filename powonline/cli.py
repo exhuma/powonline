@@ -197,8 +197,8 @@ def fetch_mails(force, fail_fast):
 
         def callback(username, filename):
             user = mdl.User.get_or_create(DB.session, username)
-            db_instance = mdl.Upload(filename, user.name)
-            DB.session.add(db_instance)
+            db_instance = mdl.Upload.get_or_create(
+                DB.session, filename, user.name)
             DB.session.commit()
             pusher.trigger('file-events', 'file-added', {
                 'from': username,
