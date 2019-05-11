@@ -171,7 +171,9 @@ def import_csv(filename: str, event_day: str) -> None:
 
 @click.command()
 @click.option('--force/--no-force', default=False)
-def fetch_mails(force):
+@click.option('--fail-fast/--no-fail-fast', default=False)
+@click.option('--quiet/--no-quiet', default=False)
+def fetch_mails(force, fail_fast, quiet):
     import logging
 
     from gouge.colourcli import Simple
@@ -180,8 +182,14 @@ def fetch_mails(force):
     from powonline.mailfetcher import MailFetcher
     import powonline.model as mdl
 
-    Simple.basicConfig(level=logging.DEBUG)
-    logging.getLogger('imapclient').setLevel(logging.INFO)
+    if quiet:
+        log_level = logging.ERROR
+    else:
+        log_level = logging.DEBUG
+        logging.getLogger('imapclient').setLevel(logging.INFO)
+
+    Simple.basicConfig(level=log_level)
+
     config = default()
 
     pusher = PusherWrapper.create(
@@ -196,8 +204,8 @@ def fetch_mails(force):
 
         def callback(username, filename):
             user = mdl.User.get_or_create(DB.session, username)
-            db_instance = mdl.Upload(filename, user.name)
-            DB.session.add(db_instance)
+            db_instance = mdl.Upload.get_or_create(
+                DB.session, filename, user.name)
             DB.session.commit()
             pusher.trigger('file-events', 'file-added', {
                 'from': username,
@@ -222,7 +230,8 @@ def fetch_mails(force):
             ssl,
             config.get('app', 'upload_folder', fallback=Upload.FALLBACK_FOLDER),
             force=force,
-            file_saved_callback=callback)
+            file_saved_callback=callback,
+            fail_fast=fail_fast)
         fetcher.connect()
         fetcher.fetch()
         fetcher.disconnect()
