@@ -1,50 +1,44 @@
+import email
 import logging
+import re
 from base64 import b64decode
 from hashlib import md5
 from os import makedirs
 from os.path import dirname, exists, join
+from uuid import uuid4
 
 from gouge.colourcli import Simple
 from imapclient import FLAGGED, SEEN, IMAPClient
 from powonline.config import default
 
 LOG = logging.getLogger(__name__)
-IMAGE_TYPES = {
-    (b'image', b'jpeg'),
-    (b'image', b'png'),
-    (b'image', b'gif'),
-}
+P_FROM = re.compile(
+    r'^.*?<(.*?)>$'
+)
+P_IDENTIFIER_CHARS = re.compile(r'[^a-zA-Z0-9_]')
 
 
-def extract_elements(body, elements):
-    if not body.is_multipart:
-        elements.append(body)
-    else:
-        parts, relation = body
-        if relation == 'alternative':
-            elements.append(parts[0])
-        else:
-            for part in parts:
-                extract_elements(part, elements)
-
-
-def flatten_parts(body, start_index=0):
+def extract_images(eml):
     output = []
-    index = start_index
-    for element in body:
-        if element.is_multipart:
-            output.extend(flatten_parts(element[0], index))
-            index = output[-1][0] + 1
-        else:
-            output.append((index, element))
-            index += 1
+    sender = eml['from']
+    if '<' in sender:
+        match = P_FROM.match(sender)
+        sender = match.groups()[0]
+    identifier = P_IDENTIFIER_CHARS.sub('_', eml['message-id'])
+    for part in eml.walk():
+        if part.get_content_maintype() != 'image':
+            continue
+        payload = part.get_payload(decode=True)
+        output.append(
+            (sender, part.get_filename(), payload, identifier)
+        )
     return output
 
 
 class MailFetcher(object):
 
     def __init__(self, host, username, password, use_ssl, image_folder,
-                 force=False, file_saved_callback=None):
+                 force=False, file_saved_callback=None, fail_fast=False):
         self.host = host
         self.username = username
         self.password = password
@@ -53,6 +47,7 @@ class MailFetcher(object):
         self.connection = None
         self.force = force
         self.file_saved_callback = file_saved_callback
+        self.fail_fast = fail_fast
 
         # Hardcoded for now (was used in the old app).
         self.use_index = False
@@ -83,12 +78,11 @@ class MailFetcher(object):
                 LOG.debug('Processing message #%r%s', msgid,
                           ' (forced override)' if is_read else '')
             body = data[b'BODY']
-            el = []
-            extract_elements(body, el)
-            fetch_meta = [(i, data) for i, data in enumerate(el)
-                          if (data[0], data[1]) in IMAGE_TYPES]
-            if fetch_meta:
-                self.download(msgid, fetch_meta)
+            has_error = self.download(msgid)
+            if has_error and self.fail_fast:
+                LOG.error('Failfast activated, bailing out on first error!')
+                return False
+        return True
 
     def in_index(self, md5sum):
         if not self.use_index:
@@ -110,46 +104,24 @@ class MailFetcher(object):
         with open(indexfile, 'a+') as fptr:
             fptr.write(md5sum + '\n')
 
-    def download(self, msgid, metadata):
+    def download(self, msgid):
         LOG.debug('Downloading images for mail #%r', msgid)
         has_error = False
 
-        fetched = self.connection.fetch([msgid], [b'BODY', b'ENVELOPE'])
-        sender = fetched[msgid][b'ENVELOPE'].sender[0]
-        raw_from_address = b'%s@%s' % (sender.mailbox, sender.host)
-        from_address = raw_from_address.decode('ascii')
-        parts = flatten_parts(fetched[msgid][b'BODY'][0])
-        images = [part for part in parts if part[1][0] == b'image']
-        for image_id, header in images:
+        raw_data = self.connection.fetch([msgid], 'RFC822')[msgid][b'RFC822']
+        eml = email.message_from_bytes(raw_data)
+        images = extract_images(eml)
+        for sender, filename, data, identifier in images:
             try:
-                (major, minor, params, _, _, encoding, size) = header
-                # Convert "params" into a more conveniend dictionary
-                params = dict(zip(params[::2], params[1::2]))
-                filename = params[b'name'].decode('ascii', errors='ignore')
-                unique_name = 'image_{}_{}_{}'.format(msgid, image_id, filename)
-                encoding = encoding.decode('ascii')
-                LOG.debug('Processing part #%r in mail #%r', image_id, msgid)
-                element_id = ('BODY[%d]' % image_id).encode('ascii')
-                response = self.connection.fetch([msgid], [element_id])
-                content = response[msgid][element_id]
-                if not content:
-                    LOG.error('Attachment data was empty for '
-                              'message #%r', msgid)
-                    has_error = True
-                    continue
-
-                if encoding == 'base64':
-                    bindata = b64decode(content)
-                else:
-                    bindata = content.decode(encoding)
-                md5sum = md5(bindata).hexdigest()
+                md5sum = md5(data).hexdigest()
                 if self.in_index(md5sum) and not self.force:
                     LOG.debug('Ignored duplicate file (md5=%s).', md5sum)
                     continue
                 elif self.in_index(md5sum) and self.force:
                     LOG.debug('Bypassing index check (force=True)')
 
-                fullname = join(self.image_folder, from_address, unique_name)
+                unique_name = '{}_{}'.format(identifier, filename)
+                fullname = join(self.image_folder, sender, unique_name)
                 if not exists(fullname) or self.force:
                     suffix = ' (forced overwrite)' if exists(fullname) else ''
                     try:
@@ -157,15 +129,14 @@ class MailFetcher(object):
                     except FileExistsError:
                         pass
                     with open(fullname, 'wb') as fptr:
-                        fptr.write(bindata)
+                        fptr.write(data)
                     LOG.info('File written to %r%s', fullname, suffix)
                     if self.file_saved_callback:
                         self.file_saved_callback(
-                            from_address,
-                            join(from_address, unique_name))
+                            sender,
+                            join(sender, unique_name))
                     self.add_to_index(md5sum)
                 else:
-                    has_error = True
                     LOG.warn('%r already exists. Not downloaded!' % fullname)
             except:
                 LOG.error('Unable to process mail #%r', msgid, exc_info=True)
@@ -175,6 +146,7 @@ class MailFetcher(object):
             self.connection.add_flags([msgid], FLAGGED)
         else:
             self.connection.add_flags([msgid], SEEN)
+        return has_error
 
     def disconnect(self):
         self.connection.shutdown()
@@ -203,6 +175,9 @@ def run_cli():
                         action='store_true', default=False,
                         help='Force fecthing mails. Even if they are read or '
                         'in the index')
+    parser.add_argument('--fail-fast', dest='failfast',
+                        action='store_true', default=False,
+                        help='Exit on first error')
 
     args = parser.parse_args()
 
@@ -225,7 +200,8 @@ def run_cli():
         password,
         True,
         args.destination,
-        args.force)
+        args.force,
+        fail_fast=args.failfast)
     try:
         fetcher.connect()
     except Exception as exc:
@@ -233,12 +209,14 @@ def run_cli():
         sys.exit(1)
 
     try:
-        fetcher.fetch()
+        is_success = fetcher.fetch()
     except Exception as exc:
         LOG.critical('Unable to fetch: %s', exc)
         sys.exit(1)
 
-    sys.exit(0)
+    exit_code = 0 if is_success else 1
+    sys.exit(exit_code)
+
 
 if __name__ == '__main__':
     Simple.basicConfig(level=logging.DEBUG)

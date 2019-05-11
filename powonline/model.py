@@ -314,6 +314,23 @@ class Upload(DB.Model):
         self.filename = relname
         self.username = username
 
+    @staticmethod
+    def get_or_create(session, relname, username):
+        """
+        Returns an upload entity. Create it if it is missing
+        """
+        query = session.query(Upload).filter_by(
+            filename=relname, username=username)
+        instance = query.one_or_none()
+        if not instance:
+            instance = Upload(relname, username)
+            session.add(instance)
+            LOG.debug('New file added to DB')
+        else:
+            LOG.debug('Using existing DB entry')
+        return instance
+
+
 
 class AuditLog(DB.Model):
     __tablename__ = 'auditlog'
