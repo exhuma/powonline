@@ -137,7 +137,6 @@ class MailFetcher(object):
                             join(sender, unique_name))
                     self.add_to_index(md5sum)
                 else:
-                    has_error = True
                     LOG.warn('%r already exists. Not downloaded!' % fullname)
             except:
                 LOG.error('Unable to process mail #%r', msgid, exc_info=True)
