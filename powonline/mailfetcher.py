@@ -12,48 +12,10 @@ from imapclient import FLAGGED, SEEN, IMAPClient
 from powonline.config import default
 
 LOG = logging.getLogger(__name__)
-IMAGE_TYPES = {
-    (b'image', b'jpeg'),
-    (b'image', b'png'),
-    (b'image', b'gif'),
-}
-
 P_FROM = re.compile(
     r'^.*?<(.*?)>$'
 )
 P_IDENTIFIER_CHARS = re.compile(r'[^a-zA-Z0-9_]')
-
-
-def get_extension(major, minor):
-    if major.lower() != 'image':
-        raise ValueError('This application only allows storing images '
-                         '(got %s)!' % major)
-    return minor.lower()
-
-
-def extract_elements(body, elements):
-    if not body.is_multipart:
-        elements.append(body)
-    else:
-        parts, relation = body
-        if relation == 'alternative':
-            elements.append(parts[0])
-        else:
-            for part in parts:
-                extract_elements(part, elements)
-
-
-def flatten_parts(body, start_index=0):
-    output = []
-    index = start_index
-    for element in body:
-        if element.is_multipart:
-            output.extend(flatten_parts(element[0], index))
-            index = output[-1][0] + 1
-        else:
-            output.append((index, element))
-            index += 1
-    return output
 
 
 def extract_images(eml):
@@ -116,15 +78,10 @@ class MailFetcher(object):
                 LOG.debug('Processing message #%r%s', msgid,
                           ' (forced override)' if is_read else '')
             body = data[b'BODY']
-            el = []
-            extract_elements(body, el)
-            fetch_meta = [(i, data) for i, data in enumerate(el)
-                          if (data[0], data[1]) in IMAGE_TYPES]
-            if fetch_meta:
-                has_error = self.download(msgid, fetch_meta)
-                if has_error and self.fail_fast:
-                    LOG.error('Failfast activated, bailing out on first error!')
-                    return False
+            has_error = self.download(msgid)
+            if has_error and self.fail_fast:
+                LOG.error('Failfast activated, bailing out on first error!')
+                return False
         return True
 
     def in_index(self, md5sum):
@@ -147,7 +104,7 @@ class MailFetcher(object):
         with open(indexfile, 'a+') as fptr:
             fptr.write(md5sum + '\n')
 
-    def download(self, msgid, metadata):
+    def download(self, msgid):
         LOG.debug('Downloading images for mail #%r', msgid)
         has_error = False
 
