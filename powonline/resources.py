@@ -47,7 +47,11 @@ def upload_to_json(db_instance: DBUpload) -> dict:
         'app', 'upload_folder', fallback=core.Upload.FALLBACK_FOLDER)
     fullname = join(data_folder, db_instance.filename)
 
-    mtime_unix = stat(fullname).st_mtime
+    try:
+        mtime_unix = stat(fullname).st_mtime
+    except FileNotFoundError:
+        LOG.warning('Missing file %r (was in DB but not on disk)!', fullname)
+        return None
     mtime = datetime.fromtimestamp(mtime_unix, timezone.utc)
 
     return {
@@ -776,7 +780,8 @@ class UploadList(Resource):
         files = core.Upload.all(DB.session)
         for item in files:
             json_data = upload_to_json(item)
-            output.append(json_data)
+            if json_data:
+                output.append(json_data)
         return jsonify(output)
 
     def _get_private(self):
@@ -790,14 +795,16 @@ class UploadList(Resource):
             for item in files:
                 output_files = output.setdefault(item.username, [])
                 json_data = upload_to_json(item)
-                output_files.append(json_data)
+                if json_data:
+                    output_files.append(json_data)
         else:
             username = identity['username']
             files = core.Upload.list(DB.session, username)
             output_files = []
             for item in files:
                 json_data = upload_to_json(item)
-                output_files.append(json_data)
+                if json_data:
+                    output_files.append(json_data)
             output['self'] = output_files
         return jsonify(output)
 
