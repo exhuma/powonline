@@ -264,7 +264,7 @@ class Team(Resource):
 
         pusher_channel = current_app.localconfig.get(
             'pusher_channels', 'team_station_state',
-            default='team_station_state_dev')
+            fallback='team_station_state_dev')
         current_app.pusher.send_team_event(
             'team-details-change',
             {'name': name}
@@ -277,7 +277,7 @@ class Team(Resource):
         core.Team.delete(DB.session, name)
         pusher_channel = current_app.localconfig.get(
             'pusher_channels', 'team_station_state',
-            default='team_station_state_dev')
+            fallback='team_station_state_dev')
         current_app.pusher.send_team_event(
             'team-deleted',
             {'name': name}
@@ -937,7 +937,7 @@ class Job(Resource):
 
         pusher_channel = current_app.localconfig.get(
             'pusher_channels', 'team_station_state',
-            default='team_station_state_dev')
+            fallback='team_station_state_dev')
 
         if 'admin_stations' in permissions or (
                 'manage_station' in permissions and
@@ -968,7 +968,7 @@ class Job(Resource):
 
         pusher_channel = current_app.localconfig.get(
             'pusher_channels', 'team_station_state',
-            default='team_station_state_dev')
+            fallback='team_station_state_dev')
 
         if 'admin_stations' in permissions or (
                 'manage_station' in permissions and
@@ -1010,7 +1010,7 @@ class Job(Resource):
 
         pusher_channel = current_app.localconfig.get(
             'pusher_channels', 'team_station_state',
-            default='team_station_state_dev')
+            fallback='team_station_state_dev')
 
         if 'admin_stations' in permissions or (
                 'manage_station' in permissions and
