@@ -3,12 +3,15 @@ This module contains tests for features implemented mainly for helping the vuejs
 based frontens.
 """
 import json
+import logging
 from textwrap import dedent
 
 import powonline.model as model
 from flask_testing import TestCase
 from powonline.test.conftest import test_config
 from powonline.web import make_app
+
+LOG = logging.getLogger(__name__)
 
 
 def drop_all_except(dct, *keep):
@@ -58,6 +61,13 @@ class TestFrontendHelpers(TestCase):
         self.app = self.client  # <-- avoiding unrelated diffs for now.
                                 #     Can be removed in a later commit
 
+        with open(here('seed_cleanup.sql')) as seed:
+            try:
+                model.DB.session.execute(seed.read())
+                model.DB.session.commit()
+            except Exception as exc:
+                LOG.exception("Unable to execute cleanup seed")
+                model.DB.session.rollback()
         with open(here('seed.sql')) as seed:
             model.DB.session.execute(seed.read())
             model.DB.session.commit()

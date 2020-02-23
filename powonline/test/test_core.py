@@ -1,9 +1,12 @@
+import logging
 from textwrap import dedent
 
 from flask_testing import TestCase
 from powonline import core, model
 from powonline.test.conftest import test_config
 from powonline.web import make_app
+
+LOG = logging.getLogger(__name__)
 
 
 def here(localname):
@@ -35,6 +38,13 @@ class CommonTest(TestCase):
         return make_app(config)
 
     def setUp(self):
+        with open(here('seed_cleanup.sql')) as seed:
+            try:
+                model.DB.session.execute(seed.read())
+                model.DB.session.commit()
+            except Exception as exc:
+                LOG.exception("Unable to execute cleanup seed")
+                model.DB.session.rollback()
         with open(here('seed.sql')) as seed:
             model.DB.session.execute(seed.read())
             model.DB.session.commit()

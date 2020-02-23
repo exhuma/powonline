@@ -260,6 +260,7 @@ class Team(Resource):
                     'errors': errors}, 400
 
         output = core.Team.upsert(DB.session, name, parsed_data)
+        DB.session.flush()
 
         pusher_channel = current_app.localconfig.get(
             'pusher_channels', 'team_station_state',

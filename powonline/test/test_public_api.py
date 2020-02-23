@@ -1,4 +1,5 @@
 import json
+import logging
 import unittest
 from textwrap import dedent
 from unittest.mock import patch
@@ -12,6 +13,9 @@ from powonline.test.conftest import test_config
 from powonline.web import make_app
 from util import (make_dummy_route_dict, make_dummy_station_dict,
                   make_dummy_team_dict)
+
+LOG = logging.getLogger(__name__)
+
 
 
 def here(localname):
@@ -84,6 +88,13 @@ class BaseAuthTestCase(TestCase):
         else:
             self.app = self.client
 
+        with open(here('seed_cleanup.sql')) as seed:
+            try:
+                DB.session.execute(seed.read())
+                DB.session.commit()
+            except Exception as exc:
+                LOG.exception("Unable to execute cleanup seed")
+                DB.session.rollback()
         with open(here('seed.sql')) as seed:
             DB.session.execute(seed.read())
             DB.session.commit()
@@ -169,9 +180,16 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
         self.assertEqual(response.content_type, 'application/json')
         response_text = response.data.decode(response.charset)
         data = json.loads(response_text)
+        print(data["inserted"])
         expected = make_dummy_team_dict(
             name='foo',
             contact='new-contact')
+        expected.pop("inserted")
+        expected.pop("updated")
+        inserted = data.pop("inserted", None)
+        updated = data.pop("updated", None)
+        self.assertIsNotNone(inserted)
+        self.assertIsNotNone(updated)
         self.assertEqual(data, expected)
 
     def test_update_own_station(self):
@@ -448,7 +466,7 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
         details = json.loads(detail_response.data.decode(
             detail_response.charset))
         self.assertEqual(details['effective_start_time'], None)
-        self.assertEqual(details['finish_time'], '2018-02-03T01:02:03+00:00')
+        self.assertEqual(details['finish_time'], '2018-02-03T01:02:03')
 
     def test_advance_team_state(self):
         simplejob = {
