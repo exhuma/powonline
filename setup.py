@@ -15,7 +15,7 @@ setup(
         'flask-restful',
         'flask-sqlalchemy',
         'gouge >= 1.1, <2.0',
-        'marshmallow',
+        'marshmallow < 3.0',
         'pillow',
         'psycopg2-binary',
         'pusher',
@@ -23,6 +23,7 @@ setup(
         'python-dateutil',
         'requests_oauthlib',
         'sqlalchemy',
+        'werkzeug < 1.0',  # 1.0 breaks flask-testing
     ],
     extras_require={
         'dev': [
