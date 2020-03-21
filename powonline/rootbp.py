@@ -11,6 +11,7 @@ from sqlalchemy.exc import IntegrityError
 
 from .core import User, questionnaire_scores
 from .exc import AccessDenied
+from .httputil import add_cors_headers
 from .model import DB, Station, Route
 from .social import Social
 from .util import allowed_file, get_user_identity
@@ -18,9 +19,6 @@ from .util import allowed_file, get_user_identity
 rootbp = Blueprint('rootbp', __name__)
 
 LOG = logging.getLogger(__name__)
-DEFAULT_ALLOWED_ORIGINS = {
-    'https://localhost:8080'
-}
 
 
 @rootbp.app_errorhandler(AccessDenied)
@@ -37,23 +35,7 @@ def after_app_request(response):
         response = make_response('Internal Server Error!', 500)
         DB.session.rollback()
 
-    cfg_data = current_app.localconfig.get(
-        'app', 'allowed_origins', fallback='')
-    elements = {line.strip() for line in cfg_data.splitlines() if line.strip()}
-    allowed_origins = elements or DEFAULT_ALLOWED_ORIGINS
-    LOG.debug('Allowed CORS origins: %r', allowed_origins)
-
-    origin = request.headers.get('Origin', '')
-    if origin in allowed_origins:
-        response.headers.add('Access-Control-Allow-Origin', origin)
-    elif origin:
-        LOG.error('Unauthorized CORS request from %r', origin)
-
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
-    response.headers.add('Access-Control-Allow-Headers',
-                         'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods',
-                         'GET,PUT,POST,DELETE')
+    add_cors_headers(response)
     return response
 
 
