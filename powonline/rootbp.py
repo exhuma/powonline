@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 
 from .core import User, questionnaire_scores
 from .exc import AccessDenied
-from .model import DB
+from .model import DB, Station, Route
 from .social import Social
 from .util import allowed_file, get_user_identity
 
@@ -150,6 +150,19 @@ def login():
 def index():
     return render_template('index.html')
 
+
+@rootbp.route('/routeStations', methods=['PUT'])
+def setRouteStations():
+    payload = request.json
+    query = DB.session.query(Station).filter(Station.name == payload["stationName"])
+    station = query.one_or_none()
+    if not station:
+        return jsonify({"error": "no such station"}), 404
+    station.routes.clear()
+    for routeName in payload["routeNames"]:
+        query = DB.session.query(Route).filter(Route.name == routeName)
+        station.routes.add(query.one())
+    return jsonify({"stationName": payload["stationName"], "routeNames": payload["routeNames"]})
 
 @rootbp.route('/login/renew', methods=['POST'])
 def renew_token():
