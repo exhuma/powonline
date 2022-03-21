@@ -173,7 +173,7 @@ def renew_token():
     jwt_lifetime = int(current_app.localconfig.get(
         'security', 'jwt_lifetime', default=(2 * 60 * 60)))
     try:
-        token_info = jwt.decode(current_token, jwt_secret)
+        token_info = jwt.decode(current_token, jwt_secret, algorithms=["HS256"])
     except jwt.InvalidTokenError as exc:
         LOG.debug('Renewal of invalid token: %s', exc)
         return 'Invalid Token!', 400
@@ -185,5 +185,5 @@ def renew_token():
         'iat': now,
         'exp': now + jwt_lifetime
     }
-    new_token = jwt.encode(new_payload, jwt_secret).decode('ascii')
+    new_token = jwt.encode(new_payload, jwt_secret)
     return jsonify({'token': new_token})
