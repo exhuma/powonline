@@ -139,7 +139,7 @@ def login():
     }
     jwt_secret = current_app.localconfig.get('security', 'jwt_secret')
     result = {
-        'token': jwt.encode(payload, jwt_secret).decode('ascii'),
+        'token': jwt.encode(payload, jwt_secret),
         'roles': list(roles),  # convenience for the frontend
         'user': user.name,  # convenience for the frontend
     }
