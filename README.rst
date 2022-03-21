@@ -19,7 +19,6 @@ You need:
 * `git <https://git-scm.com>`_
 * `Python 3 <https://www.python.org>`_ (On debian & derivatives you also need
   the package ``python3-venv``).
-* `npm <https://www.npmjs.com>`_
 * `fabric <http://www.fabfile.org/>`_
 * `pip <https://pip.pypa.io/en/stable/>`_ (should be automatically available in
   Python 3 Virtual Environments).
