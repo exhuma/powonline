@@ -5,15 +5,11 @@ from configparser import ConfigParser
 
 def parse_args():
     parser = ArgumentParser()
+    parser.add_argument("filename", help="The config filename")
     parser.add_argument(
-        'filename',
-        help='The config filename')
-    parser.add_argument(
-        'setting',
-        help='The setting in dotted notation (<section>.<option>)')
-    parser.add_argument(
-        'value',
-        help='The new value')
+        "setting", help="The setting in dotted notation (<section>.<option>)"
+    )
+    parser.add_argument("value", help="The new value")
     return parser.parse_args()
 
 
@@ -25,11 +21,11 @@ def set_value(filename, section, option, value):
         config.add_section(section)
     config[section][option] = value
 
-    with open(filename, 'w') as fptr:
+    with open(filename, "w") as fptr:
         config.write(fptr)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     args = parse_args()
-    section, _, option = args.setting.partition('.')
+    section, _, option = args.setting.partition(".")
     set_value(args.filename, section, option, args.value)

@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-with open('powonline/version.txt') as fptr:
+with open("powonline/version.txt") as fptr:
     VERSION = fptr.read()
 
 setup(
@@ -8,45 +8,45 @@ setup(
     version=VERSION.strip(),
     packages=find_packages(),
     install_requires=[
-        'bcrypt',
-        'config-resolver >= 4.2, <5.0',
-        'flask',
-        'imapclient',
-        'flask-restful',
-        'flask-sqlalchemy',
-        'gouge >= 1.1, <2.0',
-        'marshmallow < 3.0',
-        'pillow',
-        'psycopg2-binary',
-        'pusher',
-        'pyjwt',
-        'python-dateutil',
-        'requests_oauthlib',
-        'sqlalchemy',
-        'werkzeug < 1.0',  # 1.0 breaks flask-testing
+        "bcrypt",
+        "config-resolver >= 4.2, <5.0",
+        "flask",
+        "imapclient",
+        "flask-restful",
+        "flask-sqlalchemy",
+        "gouge >= 1.1, <2.0",
+        "marshmallow < 3.0",
+        "pillow",
+        "psycopg2-binary",
+        "pusher",
+        "pyjwt",
+        "python-dateutil",
+        "requests_oauthlib",
+        "sqlalchemy",
+        "werkzeug < 1.0",  # 1.0 breaks flask-testing
     ],
     extras_require={
-        'dev': [
-            'alembic',
-            'blessings',
-            'gouge',
+        "dev": [
+            "alembic",
+            "blessings",
+            "gouge",
         ],
-        'test': [
-            'flask-testing',
-            'pytest',
-            'pytest-catchlog',
-            'pytest-coverage',
-            'pytest-xdist',
-        ]
+        "test": [
+            "flask-testing",
+            "pytest",
+            "pytest-catchlog",
+            "pytest-coverage",
+            "pytest-xdist",
+        ],
     },
     entry_points={
-        'flask.commands': [
-            'grant-admin=powonline.cli:grant_admin',
-            'revoke-admin=powonline.cli:revoke_admin',
-            'list-users=powonline.cli:list_users',
-            'add-local-user=powonline.cli:add_local_user',
-            'import-csv=powonline.cli:import_csv',
-            'fetch-mails=powonline.cli:fetch_mails',
+        "flask.commands": [
+            "grant-admin=powonline.cli:grant_admin",
+            "revoke-admin=powonline.cli:revoke_admin",
+            "list-users=powonline.cli:list_users",
+            "add-local-user=powonline.cli:add_local_user",
+            "import-csv=powonline.cli:import_csv",
+            "fetch-mails=powonline.cli:fetch_mails",
         ]
     },
     include_package_data=True,
