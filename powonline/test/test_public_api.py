@@ -82,8 +82,7 @@ class BaseAuthTestCase(TestCase):
                 'username': self.USERNAME,
                 'roles': self.ROLES,
             }
-            auth_header = 'Bearer %s' % jwt.encode(
-                payload, 'testing').decode('ascii')
+            auth_header = 'Bearer %s' % jwt.encode(payload, 'testing')
             self.app = AuthClientWrapper(self.client, auth_header)
         else:
             self.app = self.client
