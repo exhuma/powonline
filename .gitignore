@@ -13,3 +13,4 @@ htmlcov
 /key.key
 /new.ssl.csr
 /privkey.pem
+.mypy_cache
