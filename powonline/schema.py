@@ -59,6 +59,7 @@ class RouteSchema(Schema):
 class UserSchema(Schema):
     name = fields.String(required=True)
     password = fields.String()
+    email = fields.String()
 
 
 class RoleSchema(Schema):
