@@ -9,6 +9,7 @@ lost-tracker DB, making data-migration easier.
 """
 
 from textwrap import dedent
+
 from alembic import op
 from sqlalchemy import (
     Boolean,
@@ -19,7 +20,6 @@ from sqlalchemy import (
     String,
     Unicode,
 )
-
 
 # revision identifiers, used by Alembic.
 revision = '5be3d628dcc3'

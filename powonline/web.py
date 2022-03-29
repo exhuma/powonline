@@ -7,12 +7,34 @@ from flask_restful import Api
 from .config import default
 from .model import DB
 from .pusher import PusherWrapper
-from .resources import (Assignments, AuditLog, Dashboard, GlobalDashboard, Job,
-                        Route, RouteColor, RouteList, RouteStation,
-                        RouteStationList, RouteTeam, RouteTeamList, Scoreboard,
-                        Station, StationList, StationUser, StationUserList,
-                        Team, TeamList, TeamStation, Upload, UploadList, User,
-                        UserList, UserRole, UserRoleList)
+from .resources import (
+    Assignments,
+    AuditLog,
+    Dashboard,
+    GlobalDashboard,
+    Job,
+    Route,
+    RouteColor,
+    RouteList,
+    RouteStation,
+    RouteStationList,
+    RouteTeam,
+    RouteTeamList,
+    Scoreboard,
+    Station,
+    StationList,
+    StationUser,
+    StationUserList,
+    Team,
+    TeamList,
+    TeamStation,
+    Upload,
+    UploadList,
+    User,
+    UserList,
+    UserRole,
+    UserRoleList,
+)
 from .rootbp import rootbp
 
 LOG = logging.getLogger(__name__)

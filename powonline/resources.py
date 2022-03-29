@@ -6,12 +6,18 @@ from json import JSONEncoder, dumps
 from os import makedirs, stat, unlink
 from os.path import basename, dirname, join
 
-from PIL import ExifTags, Image
-
 import jwt
-from flask import (current_app, g, jsonify, make_response, request,
-                   send_from_directory, url_for)
+from flask import (
+    current_app,
+    g,
+    jsonify,
+    make_response,
+    request,
+    send_from_directory,
+    url_for,
+)
 from flask_restful import Resource, fields, marshal_with
+from PIL import ExifTags, Image
 from werkzeug.utils import secure_filename
 
 from . import core
@@ -20,10 +26,19 @@ from .model import DB
 from .model import AuditLog as DBAuditLog
 from .model import AuditType
 from .model import Upload as DBUpload
-from .schema import (JOB_SCHEMA, ROLE_SCHEMA, ROUTE_LIST_SCHEMA, ROUTE_SCHEMA,
-                     STATION_LIST_SCHEMA, STATION_SCHEMA, TEAM_LIST_SCHEMA,
-                     TEAM_SCHEMA, USER_LIST_SCHEMA, USER_SCHEMA,
-                     USER_SCHEMA_SAFE)
+from .schema import (
+    JOB_SCHEMA,
+    ROLE_SCHEMA,
+    ROUTE_LIST_SCHEMA,
+    ROUTE_SCHEMA,
+    STATION_LIST_SCHEMA,
+    STATION_SCHEMA,
+    TEAM_LIST_SCHEMA,
+    TEAM_SCHEMA,
+    USER_LIST_SCHEMA,
+    USER_SCHEMA,
+    USER_SCHEMA_SAFE,
+)
 from .util import allowed_file, get_user_identity, get_user_permissions
 
 EXIF_TAGS = ExifTags.TAGS

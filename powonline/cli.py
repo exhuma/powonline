@@ -2,6 +2,7 @@ import logging
 from configparser import NoOptionError, NoSectionError
 
 import click
+
 from powonline.model import DB, Role, Route, User
 from powonline.pusher import PusherWrapper
 from powonline.web import make_app
@@ -99,6 +100,7 @@ def import_csv(filename: str, event_day: str) -> None:
     """
     import csv
     from datetime import datetime
+
     from powonline.model import Team
 
     event_day = datetime.strptime(event_day, '%Y-%m-%d')
@@ -177,10 +179,11 @@ def fetch_mails(force, fail_fast, quiet):
     import logging
 
     from gouge.colourcli import Simple
+
+    import powonline.model as mdl
     from powonline.config import default
     from powonline.core import Upload
     from powonline.mailfetcher import MailFetcher
-    import powonline.model as mdl
 
     if quiet:
         log_level = logging.ERROR

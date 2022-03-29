@@ -1,6 +1,7 @@
 from os.path import exists
 
 from gouge.colourcli import Simple
+
 from powonline.config import default
 from powonline.util import colorize_werkzeug
 from powonline.web import make_app

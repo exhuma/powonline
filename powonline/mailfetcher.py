@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from gouge.colourcli import Simple
 from imapclient import FLAGGED, SEEN, IMAPClient
+
 from powonline.config import default
 
 LOG = logging.getLogger(__name__)

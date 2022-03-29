@@ -1,4 +1,4 @@
-TRUNCATE 
+TRUNCATE
     "user",
     "uploads",
     auditlog,

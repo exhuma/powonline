@@ -2,6 +2,7 @@ import logging
 from textwrap import dedent
 
 from flask_testing import TestCase
+
 from powonline import core, model
 from powonline.test.conftest import test_config
 from powonline.web import make_app
@@ -10,7 +11,7 @@ LOG = logging.getLogger(__name__)
 
 
 def here(localname):
-    from os.path import join, dirname
+    from os.path import dirname, join
     return join(dirname(__file__), localname)
 
 

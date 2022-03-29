@@ -1,5 +1,5 @@
-from marshmallow import Schema, fields
 from dateutil.parser import parse
+from marshmallow import Schema, fields
 
 
 class FuzzyDate(fields.Field):

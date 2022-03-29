@@ -6,8 +6,9 @@ import json
 import logging
 from textwrap import dedent
 
-import powonline.model as model
 from flask_testing import TestCase
+
+import powonline.model as model
 from powonline.test.conftest import test_config
 from powonline.web import make_app
 
@@ -30,7 +31,7 @@ def drop_all_except(dct, *keep):
 
 
 def here(localname):
-    from os.path import join, dirname
+    from os.path import dirname, join
     return join(dirname(__file__), localname)
 
 

@@ -5,21 +5,25 @@ from textwrap import dedent
 from unittest.mock import patch
 
 import jwt
-import powonline.core as core
 from config_resolver import Config
 from flask_testing import TestCase
+from util import (
+    make_dummy_route_dict,
+    make_dummy_station_dict,
+    make_dummy_team_dict,
+)
+
+import powonline.core as core
 from powonline.model import DB
 from powonline.test.conftest import test_config
 from powonline.web import make_app
-from util import (make_dummy_route_dict, make_dummy_station_dict,
-                  make_dummy_team_dict)
 
 LOG = logging.getLogger(__name__)
 
 
 
 def here(localname):
-    from os.path import join, dirname
+    from os.path import dirname, join
     return join(dirname(__file__), localname)
 
 

@@ -4,15 +4,24 @@ from time import time
 
 import jwt
 import psycopg2
-from flask import (Blueprint, current_app, jsonify, make_response, redirect,
-                   render_template, request, session, url_for)
+from flask import (
+    Blueprint,
+    current_app,
+    jsonify,
+    make_response,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 from requests_oauthlib import OAuth2Session
 from sqlalchemy.exc import IntegrityError
 
 from .core import User, questionnaire_scores
 from .exc import AccessDenied
 from .httputil import add_cors_headers
-from .model import DB, Station, Route
+from .model import DB, Route, Station
 from .social import Social
 from .util import allowed_file, get_user_identity
 

@@ -5,10 +5,9 @@ Revises: 6515a04b94bf
 Create Date: 2017-06-30 19:27:34.113674
 
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects.postgresql import BYTEA
-
 
 # revision identifiers, used by Alembic.
 revision = 'adc36a2767ab'

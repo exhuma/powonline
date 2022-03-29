@@ -4,12 +4,19 @@ from datetime import datetime, timezone
 from enum import Enum
 from os import urandom
 
-from bcrypt import checkpw, gensalt, hashpw
-
 import sqlalchemy.types as types
+from bcrypt import checkpw, gensalt, hashpw
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import (Boolean, Column, DateTime, ForeignKey, Integer, Table,
-                        Unicode, func)
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Table,
+    Unicode,
+    func,
+)
 from sqlalchemy.dialects.postgresql import BYTEA, UUID
 from sqlalchemy.orm import Session, relationship
 
