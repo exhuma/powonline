@@ -6,4 +6,3 @@ RUN /opt/alembic/bin/pip install psycopg2-binary
 ADD alembic /alembic-data/alembic
 ADD alembic.ini /alembic-data/alembic.ini
 ADD init_script/* /docker-entrypoint-initdb.d/
-VOLUME /var/lib/postgresql/data
