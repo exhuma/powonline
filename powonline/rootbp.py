@@ -150,7 +150,7 @@ def login():
     }
     jwt_secret = current_app.localconfig.get("security", "jwt_secret")
     result = {
-        "token": jwt.encode(payload, jwt_secret).decode("ascii"),
+        "token": jwt.encode(payload, jwt_secret),
         "roles": list(roles),  # convenience for the frontend
         "user": user.name,  # convenience for the frontend
     }
@@ -186,5 +186,5 @@ def renew_token():
         "iat": now,
         "exp": now + jwt_lifetime,
     }
-    new_token = jwt.encode(new_payload, jwt_secret).decode("ascii")
+    new_token = jwt.encode(new_payload, jwt_secret)
     return jsonify({"token": new_token})
