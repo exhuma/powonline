@@ -2,7 +2,7 @@
 ; ----------------------------------
 ;
 ;  2.4: Added "app.allowed_origins"
-;  2.3: Added "pusher_channels.file_events"
+;  2.3: Added "pusher_channels.file"
 ;  2.2: Added [email] section
 ;  2.1: Added "app.upload_folder"
 ;  2.0: Added [questionnaire-map] section
@@ -17,7 +17,7 @@
 ; ----------------------------------
 
 [meta]
-version = 2.2
+version = 2.4
 
 [app]
 static_folder = /home/exhuma/work/powonline-frontend/dist
