@@ -15,7 +15,7 @@ setup(
         "flask-restful",
         "flask-sqlalchemy",
         "gouge >= 1.1, <2.0",
-        "marshmallow",
+        "marshmallow < 3.0",
         "pillow",
         "psycopg2-binary",
         "pusher",
