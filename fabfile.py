@@ -15,6 +15,12 @@ def develop(context):
     context.run(
         "./env/bin/pip install -e .[dev,test]", replace_env=False, pty=True
     )
+    context.run("mkdir -p .mamerwiselen/powonline", replace_env=False, pty=True)
+    context.run(
+        "cp app.ini.dist .mamerwiselen/powonline/app.ini",
+        replace_env=False,
+        pty=True,
+    )
     context.run("pre-commit install", replace_env=False, pty=True)
 
 
