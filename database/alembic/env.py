@@ -26,7 +26,7 @@ target_metadata = None
 
 
 def get_url():
-    return "postgresql://powonline@/powonline"
+    return "postgresql://postgres:postgres@db/powonline"
 
 
 def run_migrations_offline():
