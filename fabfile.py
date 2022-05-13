@@ -20,15 +20,15 @@ def develop(context):
 
 @task
 def build_python_package(ctx):  # type: ignore
-    ctx.run("./env/bin/python setup.py sdist")
-    fullname = ctx.run("./env/bin/python setup.py --fullname")
+    ctx.run("python3 setup.py sdist")
+    fullname = ctx.run("python3 setup.py --fullname")
     tar_name = "dist/%s.tar.gz" % fullname.stdout.strip()
 
 
 @task
 def build_docker(ctx, datever, environment="staging"):  # type: ignore
     build_python_package(ctx)
-    fullname = ctx.run("./env/bin/python setup.py --fullname")
+    fullname = ctx.run("python3 setup.py --fullname")
     tar_name = "%s.tar.gz" % fullname.stdout.strip()
     tag = f"registry.albert.lu/exhuma/powonline-api:{datever}"
     ctx.run(
