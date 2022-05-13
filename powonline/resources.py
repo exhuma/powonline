@@ -147,7 +147,7 @@ class UserList(Resource):
 
         parsed_output, errors = USER_LIST_SCHEMA.dumps(output)
         if errors:
-            LOG.critical("Unable to process return value: %r", errors)
+            LOG.critical("Unable to process return value: %r", errors, exc_info=True)
             return "Server was unable to process the response", 500
 
         output = make_response(parsed_output, 200)
@@ -174,7 +174,7 @@ class User(Resource):
     def _single_response(output, status_code=200):
         parsed_output, errors = USER_SCHEMA_SAFE.dumps(output)
         if errors:
-            LOG.critical("Unable to process return value: %r", errors)
+            LOG.critical("Unable to process return value: %r", errors, exc_info=True)
             return "Server was unable to process the response", 500
 
         response = make_response(parsed_output)
@@ -229,7 +229,7 @@ class TeamList(Resource):
 
         parsed_output, errors = TEAM_LIST_SCHEMA.dumps(output)
         if errors:
-            LOG.critical("Unable to process return value: %r", errors)
+            LOG.critical("Unable to process return value: %r", errors, exc_info=True)
             return "Server was unable to process the response", 500
 
         output = make_response(parsed_output, 200)
@@ -256,7 +256,7 @@ class Team(Resource):
     def _single_response(output, status_code=200):
         parsed_output, errors = TEAM_SCHEMA.dumps(output)
         if errors:
-            LOG.critical("Unable to process return value: %r", errors)
+            LOG.critical("Unable to process return value: %r", errors, exc_info=True)
             return "Server was unable to process the response", 500
 
         response = make_response(parsed_output)
@@ -314,7 +314,7 @@ class StationList(Resource):
 
         parsed_output, errors = STATION_LIST_SCHEMA.dumps(output)
         if errors:
-            LOG.critical("Unable to process return value: %r", errors)
+            LOG.critical("Unable to process return value: %r", errors, exc_info=True)
             return "Server was unable to process the response", 500
 
         output = make_response(parsed_output, 200)
@@ -341,7 +341,7 @@ class Station(Resource):
     def _single_response(output, status_code=200):
         parsed_output, errors = STATION_SCHEMA.dumps(output)
         if errors:
-            LOG.critical("Unable to process return value: %r", errors)
+            LOG.critical("Unable to process return value: %r", errors, exc_info=True)
             return "Server was unable to process the response", 500
 
         response = make_response(parsed_output)
@@ -383,7 +383,7 @@ class RouteList(Resource):
 
         parsed_output, errors = ROUTE_LIST_SCHEMA.dumps(output)
         if errors:
-            LOG.critical("Unable to process return value: %r", errors)
+            LOG.critical("Unable to process return value: %r", errors, exc_info=True)
             return "Server was unable to process the response", 500
 
         output = make_response(parsed_output, 200)
@@ -410,7 +410,7 @@ class Route(Resource):
     def _single_response(output, status_code=200):
         parsed_output, errors = ROUTE_SCHEMA.dumps(output)
         if errors:
-            LOG.critical("Unable to process return value: %r", errors)
+            LOG.critical("Unable to process return value: %r", errors, exc_info=True)
             return "Server was unable to process the response", 500
 
         response = make_response(parsed_output)
@@ -650,7 +650,7 @@ class TeamStation(Resource):
 
             parsed_output, errors = STATION_LIST_SCHEMA.dumps(output)
             if errors:
-                LOG.critical("Unable to process return value: %r", errors)
+                LOG.critical("Unable to process return value: %r", errors, exc_info=True)
                 return "Server was unable to process the response", 500
 
             output = make_response(parsed_output, 200)
