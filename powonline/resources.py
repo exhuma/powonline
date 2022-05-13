@@ -21,7 +21,7 @@ from PIL import ExifTags, Image
 from werkzeug.utils import secure_filename
 
 from . import core
-from .exc import AccessDenied, NoQuestionnaireForStation
+from .exc import AccessDenied, NoQuestionnaireForStation, ValidationError
 from .model import DB
 from .model import AuditLog as DBAuditLog
 from .model import AuditType
@@ -147,10 +147,7 @@ class UserList(Resource):
 
         parsed_output, errors = USER_LIST_SCHEMA.dumps(output)
         if errors:
-            LOG.critical(
-                "Unable to process return value: %r", errors, exc_info=True
-            )
-            return "Server was unable to process the response", 500
+            raise ValidationError(f"Unable to process return value: {errors}")
 
         output = make_response(parsed_output, 200)
         output.content_type = "application/json"
@@ -176,10 +173,7 @@ class User(Resource):
     def _single_response(output, status_code=200):
         parsed_output, errors = USER_SCHEMA_SAFE.dumps(output)
         if errors:
-            LOG.critical(
-                "Unable to process return value: %r", errors, exc_info=True
-            )
-            return "Server was unable to process the response", 500
+            raise ValidationError(f"Unable to process return value: {errors}")
 
         response = make_response(parsed_output)
         response.status_code = status_code
@@ -233,10 +227,7 @@ class TeamList(Resource):
 
         parsed_output, errors = TEAM_LIST_SCHEMA.dumps(output)
         if errors:
-            LOG.critical(
-                "Unable to process return value: %r", errors, exc_info=True
-            )
-            return "Server was unable to process the response", 500
+            raise ValidationError(f"Unable to process return value: {errors}")
 
         output = make_response(parsed_output, 200)
         output.content_type = "application/json"
@@ -262,10 +253,7 @@ class Team(Resource):
     def _single_response(output, status_code=200):
         parsed_output, errors = TEAM_SCHEMA.dumps(output)
         if errors:
-            LOG.critical(
-                "Unable to process return value: %r", errors, exc_info=True
-            )
-            return "Server was unable to process the response", 500
+            raise ValidationError(f"Unable to process return value: {errors}")
 
         response = make_response(parsed_output)
         response.status_code = status_code
@@ -323,10 +311,7 @@ class StationList(Resource):
 
         parsed_output, errors = STATION_LIST_SCHEMA.dumps(output)
         if errors:
-            LOG.critical(
-                "Unable to process return value: %r", errors, exc_info=True
-            )
-            return "Server was unable to process the response", 500
+            raise ValidationError(f"Unable to process return value: {errors}")
 
         output = make_response(parsed_output, 200)
         output.content_type = "application/json"
@@ -352,10 +337,7 @@ class Station(Resource):
     def _single_response(output, status_code=200):
         parsed_output, errors = STATION_SCHEMA.dumps(output)
         if errors:
-            LOG.critical(
-                "Unable to process return value: %r", errors, exc_info=True
-            )
-            return "Server was unable to process the response", 500
+            raise ValidationError(f"Unable to process return value: {errors}")
 
         response = make_response(parsed_output)
         response.status_code = status_code
@@ -396,10 +378,7 @@ class RouteList(Resource):
 
         parsed_output, errors = ROUTE_LIST_SCHEMA.dumps(output)
         if errors:
-            LOG.critical(
-                "Unable to process return value: %r", errors, exc_info=True
-            )
-            return "Server was unable to process the response", 500
+            raise ValidationError(f"Unable to process return value: {errors}")
 
         output = make_response(parsed_output, 200)
         output.content_type = "application/json"
@@ -425,10 +404,7 @@ class Route(Resource):
     def _single_response(output, status_code=200):
         parsed_output, errors = ROUTE_SCHEMA.dumps(output)
         if errors:
-            LOG.critical(
-                "Unable to process return value: %r", errors, exc_info=True
-            )
-            return "Server was unable to process the response", 500
+            raise ValidationError(f"Unable to process return value: {errors}")
 
         response = make_response(parsed_output)
         response.status_code = status_code
@@ -667,10 +643,7 @@ class TeamStation(Resource):
 
             parsed_output, errors = STATION_LIST_SCHEMA.dumps(output)
             if errors:
-                LOG.critical(
-                    "Unable to process return value: %r", errors, exc_info=True
-                )
-                return "Server was unable to process the response", 500
+                raise ValidationError(f"Unable to process return value: {errors}")
 
             output = make_response(parsed_output, 200)
             output.content_type = "application/json"

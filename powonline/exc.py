@@ -12,3 +12,7 @@ class NoSuchQuestionnaire(PowonlineException):
 
 class AccessDenied(PowonlineException):
     pass
+
+
+class ValidationError(PowonlineException):
+    pass
