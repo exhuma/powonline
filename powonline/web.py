@@ -1,6 +1,6 @@
 import logging
+from os import environ
 
-import click
 from flask import Flask
 from flask_restful import Api
 
@@ -102,7 +102,7 @@ def make_app(config=None):
     api.add_resource(Upload, "/upload/<uuid>", endpoint="api.get_file")
     api.add_resource(AuditLog, "/auditlog")
 
-    app.config["SQLALCHEMY_DATABASE_URI"] = config.get("db", "dsn")
+    app.config["SQLALCHEMY_DATABASE_URI"] = environ["POWONLINE_DSN"]
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     DB.init_app(app)
 

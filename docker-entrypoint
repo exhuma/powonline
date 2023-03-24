@@ -3,11 +3,11 @@
 CONFIG_FILE=/etc/mamerwiselen/powonline/app.ini
 VIRTUAL_PROTO=${VIRTUAL_PROTO:-uwsgi}
 
-if [[ "${DSN}" != "" ]]; then
-    echo ">> DSN overridden in environment with ${DSN}"
-    /set_config ${CONFIG_FILE} db.dsn ${DSN}
+if [[ "${POWONLINE_DSN}" != "" ]]; then
+    echo ">> POWONLINE_DSN overridden in environment with ${POWONLINE_DSN}"
+    /set_config ${CONFIG_FILE} db.dsn ${POWONLINE_DSN}
 else
-    echo ">> Using default DSN"
+    echo ">> Using default POWONLINE_DSN"
 fi
 
 

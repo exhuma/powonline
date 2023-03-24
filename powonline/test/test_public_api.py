@@ -59,8 +59,6 @@ class AuthClientWrapper:
 
 
 class BaseAuthTestCase(TestCase):
-
-    SQLALCHEMY_DATABASE_URI = test_config().get("db", "dsn")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     TESTING = True
 
@@ -69,13 +67,9 @@ class BaseAuthTestCase(TestCase):
         config.read_string(
             dedent(
                 """\
-            [db]
-            dsn = %s
-
             [security]
             jwt_secret = testing
             """
-                % (TestPublicAPIAsAdmin.SQLALCHEMY_DATABASE_URI,)
             )
         )
         return make_app(config)

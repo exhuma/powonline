@@ -37,8 +37,6 @@ def here(localname):
 
 
 class TestFrontendHelpers(TestCase):
-
-    SQLALCHEMY_DATABASE_URI = test_config().get("db", "dsn")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     TESTING = True
 
@@ -47,13 +45,10 @@ class TestFrontendHelpers(TestCase):
         config.read_string(
             dedent(
                 """\
-            [db]
-            dsn = %s
-
             [security]
             jwt_secret = %s
             """
-                % (TestFrontendHelpers.SQLALCHEMY_DATABASE_URI, "testing")
+                % ("testing",)
             )
         )
         return make_app(config)

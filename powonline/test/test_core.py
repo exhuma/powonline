@@ -1,4 +1,5 @@
 import logging
+from os import environ
 from textwrap import dedent
 
 from flask_testing import TestCase
@@ -17,8 +18,6 @@ def here(localname):
 
 
 class CommonTest(TestCase):
-
-    SQLALCHEMY_DATABASE_URI = test_config().get("db", "dsn")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     TESTING = True
 
@@ -27,13 +26,10 @@ class CommonTest(TestCase):
         config.read_string(
             dedent(
                 """\
-            [db]
-            dsn = %s
-
             [security]
             jwt_secret = %s
             """
-                % (CommonTest.SQLALCHEMY_DATABASE_URI, "testing")
+                % ("testing",)
             )
         )
         return make_app(config)
