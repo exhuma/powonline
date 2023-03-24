@@ -38,7 +38,6 @@ class TeamState(Enum):
 
 
 class TeamStateType(types.TypeDecorator):
-
     impl = types.Unicode
 
     def process_bind_param(self, value, dialect):

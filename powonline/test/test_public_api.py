@@ -103,7 +103,6 @@ class BaseAuthTestCase(TestCase):
 
 
 class TestPublicAPIAsAdmin(BaseAuthTestCase):
-
     USERNAME = "user-red"
     ROLES = ["admin"]
 
@@ -618,7 +617,6 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
 
 
 class TestPublicAPIAsStationManager(BaseAuthTestCase):
-
     USERNAME = "user-station-manager"
     ROLES = ["station_manager"]
 
@@ -842,7 +840,6 @@ class TestPublicAPIAsStationManager(BaseAuthTestCase):
 
 
 class TestPublicAPIAsAnonymous(BaseAuthTestCase):
-
     USERNAME = ""
     ROLES = []
 

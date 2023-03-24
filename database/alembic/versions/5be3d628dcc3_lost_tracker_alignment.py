@@ -192,7 +192,6 @@ def upgrade():
 
 
 def downgrade():
-
     op.execute("ALTER TABLE team DROP CONSTRAINT team_confirmation_key")
     op.drop_constraint("oauth_connection_user_fkey", "oauth_connection")
     op.drop_column("team", "owner")

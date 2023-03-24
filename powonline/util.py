@@ -96,7 +96,6 @@ def colorize_werkzeug():  # pragma: no cover
 
 
 def get_user_identity(request):
-
     auth_header = request.headers.get("Authorization")
     if not auth_header:
         LOG.debug("No Authorization header present!")

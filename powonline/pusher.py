@@ -16,7 +16,6 @@ class PusherWrapper(metaclass=ABCMeta):
 
     @staticmethod
     def create(config, app_id, key, secret):
-
         channels = {
             "team-event-channel": config.get(
                 "pusher_channels",

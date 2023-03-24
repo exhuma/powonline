@@ -16,7 +16,6 @@ LOG = logging.getLogger(__name__)
 
 
 def get_assignments(session):
-
     routes = session.query(model.Route)
 
     output = {
@@ -555,7 +554,6 @@ class Role:
 
 
 class Upload:
-
     FALLBACK_FOLDER = "/tmp/uploads"
 
     @staticmethod

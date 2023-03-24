@@ -26,7 +26,6 @@ depends_on = None
 
 
 def upgrade():
-
     op.create_table(
         "route",
         Column("name", Unicode, primary_key=True),
