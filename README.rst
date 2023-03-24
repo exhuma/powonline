@@ -10,9 +10,51 @@ Pow
 
 This repository contains an application to help out with a local event.
 
+Required Environment Variables
+==============================
 
-Development Setup
-=================
+POWONLINE_DSN
+    The database DSN (f.ex.: ``postgresl://user:password@host/dbname``)
+
+
+Development Setup (Recommended)
+===============================
+
+To ensure reproducible development environments, the project uses
+"dev-containers" since March 2023.
+
+Dev-Containers can be used standalone, or, via the VS-Code "Remote Development"
+extension. The latter is well integrated and allows for seamless project setup.
+
+All the required files are located in the ``.devcontainer`` folder in the
+project root. This is picked up by VS-Code and you can simply select the
+"Reopen in Container" option from the command pallette (normally also provided
+via a small popup when the project is loaded).
+
+Database Migrations
+-------------------
+
+The dev-container initialises everything automatically and no additional step
+is needed.
+
+During development, all ``alembic`` tasks can simply be executed from whithin
+the ``database`` subfolder.
+
+The production application container contains a separate entry-point
+``/upgrade-db.bash`` to trigger the migrations. Simply execute it as follows
+whenever needed::
+
+    docker run \
+        --rm \
+        -e POWONLINE_DSN=<dsn> \
+        --entrypoint /upgrade-db.bash \
+        <image-id>
+
+On k8s style deployments, this can be executed in init-containters for example.
+
+
+Development Setup (legacy)
+==========================
 
 You need:
 
@@ -36,7 +78,7 @@ installed, run the following commands::
 After the above steps are run you should be able to run the backend using the
 following command::
 
-    $ ./env/bin/python autoapp.py
+    $ fab run
 
 
 Setup for Questionnaires
