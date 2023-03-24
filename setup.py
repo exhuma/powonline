@@ -23,7 +23,6 @@ setup(
         "python-dateutil",
         "requests_oauthlib",
         "sqlalchemy < 2.0",
-        "werkzeug",
     ],
     extras_require={
         "dev": [

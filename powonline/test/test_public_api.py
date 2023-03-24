@@ -180,7 +180,6 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
         self.assertEqual(response.content_type, "application/json")
         response_text = response.data.decode(response.charset)
         data = json.loads(response_text)
-        print(data["inserted"])
         expected = make_dummy_team_dict(name="foo", contact="new-contact")
         expected.pop("inserted")
         expected.pop("updated")

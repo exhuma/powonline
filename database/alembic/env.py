@@ -37,8 +37,6 @@ def get_url():
         sys.exit(1)
     return dsn
 
-    return "postgresql://postgres:postgres@db/powonline"
-
 
 def run_migrations_offline():
     """Run migrations in 'offline' mode.
