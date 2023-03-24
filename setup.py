@@ -22,8 +22,8 @@ setup(
         "pyjwt",
         "python-dateutil",
         "requests_oauthlib",
-        "sqlalchemy",
-        "werkzeug < 1.0",  # 1.0 breaks flask-testing
+        "sqlalchemy < 2.0",
+        "werkzeug",
     ],
     extras_require={
         "dev": [
