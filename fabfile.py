@@ -21,7 +21,7 @@ def develop(context):
         replace_env=False,
         pty=True,
     )
-    context.run("pre-commit install", replace_env=False, pty=True)
+    context.run("pre-commit install -f", replace_env=False, pty=True)
 
 
 @task

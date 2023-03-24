@@ -36,7 +36,7 @@ port = 993
 ssl = true
 
 [db]
-dsn = postgresql://powonline@powonline-db/powonline
+dsn = postgresql://postgres:postgres@db/postgres
 
 [security]
 jwt_secret = foobar
