@@ -8,6 +8,6 @@
 	"workspaceFolder": "/workspace",
 	"forwardPorts": [5000, 5432],
 	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "pipx install fabric && pipx install pre-commit && fab develop",
+	"postCreateCommand": "bash .devcontainer/initialise.bash",
 	"remoteUser": "vscode"
 }

@@ -1,6 +1,8 @@
 from __future__ import with_statement
+import sys
 
 from logging.config import fileConfig
+from os import environ
 
 from alembic import context
 from sqlalchemy import create_engine
@@ -26,6 +28,13 @@ target_metadata = None
 
 
 def get_url():
+    dsn = environ.get("POWONLINE_DSN", "").strip()
+    if not dsn:
+        print("Environment variable POWONLINE_DSN is not set or empty", file=sys.stderr)
+        sys.exit(1)
+    return dsn
+
+
     return "postgresql://postgres:postgres@db/powonline"
 
 
