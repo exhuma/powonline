@@ -109,8 +109,8 @@ def get_user_identity(request):
     try:
         jwt_secret = current_app.localconfig.get("security", "jwt_secret")
         auth_payload = jwt.decode(token, jwt_secret, algorithms=["HS256"])
-    except jwt.exceptions.InvalidTokenError:
-        LOG.info("Bearer token is invalid!")
+    except (jwt.exceptions.InvalidTokenError, jwt.exceptions.DecodeError):
+        LOG.info("Bearer token seems to have been tampered with!")
         raise AccessDenied("Access Denied (invalid token)!")
 
     return auth_payload
