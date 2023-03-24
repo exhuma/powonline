@@ -643,7 +643,9 @@ class TeamStation(Resource):
 
             parsed_output, errors = STATION_LIST_SCHEMA.dumps(output)
             if errors:
-                raise ValidationError(f"Unable to process return value: {errors}")
+                raise ValidationError(
+                    f"Unable to process return value: {errors}"
+                )
 
             output = make_response(parsed_output, 200)
             output.content_type = "application/json"
