@@ -11,6 +11,9 @@ RUN /opt/powonline/bin/pip install alembic uwsgi
 RUN mkdir -p /etc/mamerwiselen/powonline
 ADD app.ini.dist /etc/mamerwiselen/powonline/app.ini
 ADD docker-entrypoint /
+ADD upgrade-db.bash /
+RUN chmod +x /upgrade-db.bash
+ADD database/ /alembic
 ADD set_config /
 RUN chmod +x /docker-entrypoint
 RUN useradd -ms /bin/bash powonline
