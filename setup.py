@@ -9,7 +9,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         "bcrypt",
-        "config-resolver >= 4.2, <5.0",
+        "config-resolver >= 5.0, <6.0",
         "flask",
         "imapclient",
         "flask-restful",
@@ -29,6 +29,10 @@ setup(
             "alembic",
             "blessings",
             "gouge",
+            "types-Flask-SQLAlchemy",
+            "types-Pillow",
+            "types-psycopg2",
+            "types-python-dateutil",
         ],
         "test": [
             "flask-testing",

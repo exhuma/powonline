@@ -18,7 +18,7 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy.dialects.postgresql import BYTEA, UUID
-from sqlalchemy.orm import Session, relationship
+from sqlalchemy.orm import relationship, scoped_session
 
 LOG = logging.getLogger(__name__)
 DB = SQLAlchemy()
@@ -47,7 +47,7 @@ class TeamStateType(types.TypeDecorator):
         return TeamState(value)
 
 
-class Team(DB.Model):
+class Team(DB.Model):  # type: ignore
     __tablename__ = "team"
 
     name = Column(Unicode, primary_key=True, nullable=False)
@@ -77,8 +77,8 @@ class Team(DB.Model):
     stations = relationship(
         "Station", secondary="team_station_state", viewonly=True
     )  # uses an AssociationObject
-    station_states = relationship("TeamStation")
-    questionnaire_scores = relationship("TeamQuestionnaire")
+    station_states = relationship("TeamStation", viewonly=True)
+    questionnaire_scores = relationship("TeamQuestionnaire", viewonly=True)
     questionnaires = relationship(
         "Questionnaire", secondary="questionnaire_score", viewonly=True
     )  # uses an AssociationObject
@@ -95,7 +95,7 @@ class Team(DB.Model):
         return "Team(name=%r)" % self.name
 
 
-class Station(DB.Model):
+class Station(DB.Model):  # type: ignore
     __tablename__ = "station"
     name = Column(Unicode, primary_key=True, nullable=False)
     contact = Column(Unicode)
@@ -121,6 +121,7 @@ class Station(DB.Model):
     teams = relationship(
         "Team", secondary="team_station_state", viewonly=True
     )  # uses an AssociationObject
+    states = relationship("TeamStation", back_populates="station")
 
     def update(self, **kwargs):
         for k, v in kwargs.items():
@@ -130,7 +131,7 @@ class Station(DB.Model):
         return "Station(name=%r)" % self.name
 
 
-class Route(DB.Model):
+class Route(DB.Model):  # type: ignore
     __tablename__ = "route"
 
     name = Column(Unicode, primary_key=True)
@@ -152,7 +153,7 @@ class Route(DB.Model):
             setattr(self, k, v)
 
 
-class OauthConnection(DB.Model):
+class OauthConnection(DB.Model):  # type: ignore
     __tablename__ = "oauth_connection"
     id = Column(Integer, primary_key=True)
     user_ = Column(Unicode, ForeignKey("user.name"), name="user")
@@ -167,16 +168,25 @@ class OauthConnection(DB.Model):
     inserted = Column(DateTime, nullable=False, server_default=func.now())
     updated = Column(DateTime, nullable=False, server_default=func.now())
 
-    user = relationship("User", backref="oauth_connection")
+    user = relationship("User", back_populates="oauth_connection")
 
 
-class User(DB.Model):
+class User(DB.Model):  # type: ignore
     __tablename__ = "user"
     name = Column(Unicode, primary_key=True)
     password = Column(BYTEA)
     password_is_plaintext = Column(
         Boolean, nullable=False, server_default="false"
     )
+    oauth_connection = relationship("OauthConnection", back_populates="user")
+    stations = relationship(
+        "User",
+        secondary="user_station",
+        back_populates="users",
+        collection_class=set,
+    )
+    files = relationship("Upload", back_populates="user")
+    auditlog = relationship("AuditLog", back_populates="user")
 
     @staticmethod
     def get_or_create(session, username):
@@ -222,7 +232,7 @@ class User(DB.Model):
     )
 
 
-class Role(DB.Model):
+class Role(DB.Model):  # type: ignore
     __tablename__ = "role"
     name = Column(Unicode, primary_key=True)
     users = relationship(
@@ -236,7 +246,7 @@ class Role(DB.Model):
         self.name = "Example Station"
 
     @staticmethod
-    def get_or_create(session: Session, name: str) -> "Role":
+    def get_or_create(session: scoped_session, name: str) -> "Role":
         """
         Retrieves a role with name *name*.
 
@@ -253,7 +263,7 @@ class Role(DB.Model):
         return output  # type: ignore
 
 
-class TeamStation(DB.Model):
+class TeamStation(DB.Model):  # type: ignore
     __tablename__ = "team_station_state"
 
     team_name = Column(
@@ -276,7 +286,7 @@ class TeamStation(DB.Model):
     )
 
     team = relationship("Team")
-    station = relationship("Station", backref="states")
+    station = relationship("Station", back_populates="states")
 
     def __init__(self, team_name, station_name, state=TeamState.UNKNOWN):
         self.team_name = team_name
@@ -284,7 +294,7 @@ class TeamStation(DB.Model):
         self.state = state
 
 
-class Questionnaire(DB.Model):
+class Questionnaire(DB.Model):  # type: ignore
     __tablename__ = "questionnaire"
 
     name = Column(Unicode, nullable=False, primary_key=True)
@@ -305,7 +315,7 @@ class Questionnaire(DB.Model):
         self.name = name
 
 
-class TeamQuestionnaire(DB.Model):
+class TeamQuestionnaire(DB.Model):  # type: ignore
     __tablename__ = "questionnaire_score"
 
     team_name = Column(
@@ -339,7 +349,7 @@ class TeamQuestionnaire(DB.Model):
         self.score = score
 
 
-class Upload(DB.Model):
+class Upload(DB.Model):  # type: ignore
     __tablename__ = "uploads"
     filename = Column(Unicode, primary_key=True)
     username = Column(
@@ -355,7 +365,7 @@ class Upload(DB.Model):
         server_default=func.uuid_generate_v4(),
     )
 
-    user = relationship("User", backref="files")
+    user = relationship("User", back_populates="files")
 
     def __init__(self, relname, username):
         self.filename = relname
@@ -379,7 +389,7 @@ class Upload(DB.Model):
         return instance
 
 
-class AuditLog(DB.Model):
+class AuditLog(DB.Model):  # type: ignore
     __tablename__ = "auditlog"
     timestamp = Column(
         DateTime(timezone=True),
@@ -396,11 +406,11 @@ class AuditLog(DB.Model):
     type_ = Column("type", Unicode, nullable=False)
     message = Column("message", Unicode, nullable=False)
 
-    user = relationship("User", backref="auditlog")
+    user = relationship("User", back_populates="auditlog")
 
     def __init__(
         self, timestamp: datetime, username: str, type_: AuditType, message: str
-    ) -> "AuditLog":
+    ) -> None:
         self.timestamp = timestamp
         self.username = username
         self.type_ = type_.value

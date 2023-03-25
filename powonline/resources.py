@@ -5,6 +5,7 @@ from functools import wraps
 from json import JSONEncoder, dumps
 from os import makedirs, stat, unlink
 from os.path import basename, dirname, join
+from typing import Any
 
 import jwt
 from flask import (
@@ -16,7 +17,7 @@ from flask import (
     send_from_directory,
     url_for,
 )
-from flask_restful import Resource, fields, marshal_with
+from flask_restful import Resource, fields, marshal_with  # type: ignore
 from PIL import ExifTags, Image
 from werkzeug.utils import secure_filename
 
@@ -49,7 +50,7 @@ class ErrorType(Enum):
     INVALID_SCHEMA = "invalid-schema"
 
 
-def upload_to_json(db_instance: DBUpload) -> dict:
+def upload_to_json(db_instance: DBUpload) -> dict[str, Any]:
     """
     Convert a DB-instance of an upload to a JSONifiable dictionary
     """
@@ -61,7 +62,7 @@ def upload_to_json(db_instance: DBUpload) -> dict:
         "api.get_file", uuid=db_instance.uuid, size=64, _external=True
     )
 
-    data_folder = current_app.localconfig.get(
+    data_folder = current_app.localconfig.get(  # type: ignore
         "app", "upload_folder", fallback=core.Upload.FALLBACK_FOLDER
     )
     fullname = join(data_folder, db_instance.filename)
@@ -70,7 +71,7 @@ def upload_to_json(db_instance: DBUpload) -> dict:
         mtime_unix = stat(fullname).st_mtime
     except FileNotFoundError:
         LOG.warning("Missing file %r (was in DB but not on disk)!", fullname)
-        return None
+        return {}
     mtime = datetime.fromtimestamp(mtime_unix, timezone.utc)
 
     return {

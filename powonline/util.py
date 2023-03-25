@@ -44,7 +44,7 @@ def colorize_werkzeug():  # pragma: no cover
     """
 
     try:
-        from blessings import Terminal
+        from blessings import Terminal  # type: ignore
     except ImportError:
         return
 

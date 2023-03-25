@@ -4,7 +4,7 @@ Utility functions to work with pusher.com for distributed live-events.
 import logging
 from abc import ABCMeta, abstractmethod
 
-import pusher
+import pusher  # type: ignore
 
 LOG = logging.getLogger(__name__)
 

@@ -15,7 +15,6 @@ from flask import (
     session,
     url_for,
 )
-from requests_oauthlib import OAuth2Session
 from sqlalchemy.exc import IntegrityError
 
 from .core import User, questionnaire_scores

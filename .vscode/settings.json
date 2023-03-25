@@ -10,5 +10,12 @@
             "username": "postgres",
             "password": "postgres"
         }
-    ]
+    ],
+    "python.analysis.typeCheckingMode": "off",
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "python.linting.mypyEnabled": true,
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": true
+    }
 }

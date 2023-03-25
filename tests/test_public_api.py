@@ -5,8 +5,9 @@ from textwrap import dedent
 from unittest.mock import patch
 
 import jwt
-from config_resolver import Config
+from config_resolver import get_config
 from flask_testing import TestCase
+from sqlalchemy import text
 from util import (
     make_dummy_route_dict,
     make_dummy_station_dict,
@@ -15,7 +16,6 @@ from util import (
 
 import powonline.core as core
 from powonline.model import DB
-from powonline.test.conftest import test_config
 from powonline.web import make_app
 
 LOG = logging.getLogger(__name__)
@@ -63,8 +63,10 @@ class BaseAuthTestCase(TestCase):
     TESTING = True
 
     def create_app(self):
-        config = Config("mamerwiselen", "powonline", filename="test.ini")
-        config.read_string(
+        lookup = get_config(
+            "powonline", "mamerwiselen", lookup_options={"filename": "test.ini"}
+        )
+        lookup.config.read_string(
             dedent(
                 """\
             [security]
@@ -72,7 +74,7 @@ class BaseAuthTestCase(TestCase):
             """
             )
         )
-        return make_app(config)
+        return make_app(lookup.config)
 
     def setUp(self):
         if self.USERNAME:
@@ -80,22 +82,20 @@ class BaseAuthTestCase(TestCase):
                 "username": self.USERNAME,
                 "roles": self.ROLES,
             }
-            auth_header = "Bearer %s" % jwt.encode(payload, "testing").decode(
-                "ascii"
-            )
+            auth_header = "Bearer %s" % jwt.encode(payload, "testing")
             self.app = AuthClientWrapper(self.client, auth_header)
         else:
             self.app = self.client
 
         with open(here("seed_cleanup.sql")) as seed:
             try:
-                DB.session.execute(seed.read())
+                DB.session.execute(text(seed.read()))
                 DB.session.commit()
             except Exception as exc:
                 LOG.exception("Unable to execute cleanup seed")
                 DB.session.rollback()
         with open(here("seed.sql")) as seed:
-            DB.session.execute(seed.read())
+            DB.session.execute(text(seed.read()))
             DB.session.commit()
 
         self.maxDiff = None
@@ -481,7 +481,7 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
             detail_response.data.decode(detail_response.charset)
         )
         self.assertEqual(details["effective_start_time"], None)
-        self.assertEqual(details["finish_time"], "2018-02-03T01:02:03+00:00")
+        self.assertEqual(details["finish_time"], "2018-02-03T01:02:03")
 
     def test_advance_team_state(self):
         simplejob = {
