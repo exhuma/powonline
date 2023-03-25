@@ -80,9 +80,7 @@ class BaseAuthTestCase(TestCase):
                 "username": self.USERNAME,
                 "roles": self.ROLES,
             }
-            auth_header = "Bearer %s" % jwt.encode(payload, "testing").decode(
-                "ascii"
-            )
+            auth_header = "Bearer %s" % jwt.encode(payload, "testing")
             self.app = AuthClientWrapper(self.client, auth_header)
         else:
             self.app = self.client
@@ -481,7 +479,7 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
             detail_response.data.decode(detail_response.charset)
         )
         self.assertEqual(details["effective_start_time"], None)
-        self.assertEqual(details["finish_time"], "2018-02-03T01:02:03+00:00")
+        self.assertEqual(details["finish_time"], "2018-02-03T01:02:03")
 
     def test_advance_team_state(self):
         simplejob = {
