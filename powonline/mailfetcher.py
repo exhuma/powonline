@@ -8,7 +8,7 @@ from os.path import dirname, exists, join
 from uuid import uuid4
 
 from gouge.colourcli import Simple
-from imapclient import FLAGGED, SEEN, IMAPClient
+from imapclient import FLAGGED, SEEN, IMAPClient  # type: ignore
 
 from powonline.config import default
 

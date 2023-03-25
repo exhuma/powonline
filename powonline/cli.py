@@ -1,7 +1,7 @@
 import logging
 from configparser import NoOptionError, NoSectionError
 
-import click
+import click  # type: ignore
 
 from powonline.model import DB, Role, Route, User
 from powonline.pusher import PusherWrapper
@@ -104,7 +104,7 @@ def import_csv(filename: str, event_day: str) -> None:
 
     from powonline.model import Team
 
-    event_day = datetime.strptime(event_day, "%Y-%m-%d")
+    event_day_parsed = datetime.strptime(event_day, "%Y-%m-%d")
 
     with open(filename) as fptr:
         reader = csv.DictReader(
@@ -136,9 +136,9 @@ def import_csv(filename: str, event_day: str) -> None:
                 try:
                     timedata = datetime.strptime(timestr, r"%Hh%M").time()
                     planned_start_time = datetime(
-                        event_day.year,
-                        event_day.month,
-                        event_day.day,
+                        event_day_parsed.year,
+                        event_day_parsed.month,
+                        event_day_parsed.day,
                         timedata.hour,
                         timedata.minute,
                         0,
@@ -190,7 +190,7 @@ def import_csv(filename: str, event_day: str) -> None:
 def fetch_mails(force, fail_fast, quiet):
     import logging
 
-    from gouge.colourcli import Simple
+    from gouge.colourcli import Simple  # type: ignore
 
     import powonline.model as mdl
     from powonline.config import default

@@ -1,8 +1,8 @@
 import logging
 from os import environ
 
-from flask import Flask
-from flask_restful import Api
+from flask import Flask  # type: ignore
+from flask_restful import Api  # type: ignore
 
 from .config import default
 from .model import DB

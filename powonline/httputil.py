@@ -13,7 +13,7 @@ def add_cors_headers(response: Response) -> None:
     """
     Modifies *response* and adds CORS headers as defined in the app-config
     """
-    cfg_data = current_app.localconfig.get(
+    cfg_data = current_app.localconfig.get(  # type: ignore
         "app", "allowed_origins", fallback=""
     )
     elements = {line.strip() for line in cfg_data.splitlines() if line.strip()}

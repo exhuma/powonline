@@ -1,7 +1,9 @@
 import logging
 
-from requests_oauthlib import OAuth2Session
-from requests_oauthlib.compliance_fixes import facebook_compliance_fix
+from requests_oauthlib import OAuth2Session  # type: ignore
+from requests_oauthlib.compliance_fixes import (
+    facebook_compliance_fix,  # type: ignore
+)
 
 LOG = logging.getLogger(__name__)
 

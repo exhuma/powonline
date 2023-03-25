@@ -29,6 +29,10 @@ setup(
             "alembic",
             "blessings",
             "gouge",
+            "types-Flask-SQLAlchemy",
+            "types-Pillow",
+            "types-psycopg2",
+            "types-python-dateutil",
         ],
         "test": [
             "flask-testing",
