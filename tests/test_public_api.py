@@ -15,7 +15,6 @@ from util import (
 
 import powonline.core as core
 from powonline.model import DB
-from powonline.test.conftest import test_config
 from powonline.web import make_app
 
 LOG = logging.getLogger(__name__)
