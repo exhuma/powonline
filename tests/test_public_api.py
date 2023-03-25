@@ -7,6 +7,7 @@ from unittest.mock import patch
 import jwt
 from config_resolver import get_config
 from flask_testing import TestCase
+from sqlalchemy import text
 from util import (
     make_dummy_route_dict,
     make_dummy_station_dict,
@@ -88,13 +89,13 @@ class BaseAuthTestCase(TestCase):
 
         with open(here("seed_cleanup.sql")) as seed:
             try:
-                DB.session.execute(seed.read())
+                DB.session.execute(text(seed.read()))
                 DB.session.commit()
             except Exception as exc:
                 LOG.exception("Unable to execute cleanup seed")
                 DB.session.rollback()
         with open(here("seed.sql")) as seed:
-            DB.session.execute(seed.read())
+            DB.session.execute(text(seed.read()))
             DB.session.commit()
 
         self.maxDiff = None
