@@ -77,8 +77,8 @@ class Team(DB.Model):  # type: ignore
     stations = relationship(
         "Station", secondary="team_station_state", viewonly=True
     )  # uses an AssociationObject
-    station_states = relationship("TeamStation")
-    questionnaire_scores = relationship("TeamQuestionnaire")
+    station_states = relationship("TeamStation", viewonly=True)
+    questionnaire_scores = relationship("TeamQuestionnaire", viewonly=True)
     questionnaires = relationship(
         "Questionnaire", secondary="questionnaire_score", viewonly=True
     )  # uses an AssociationObject
