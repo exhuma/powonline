@@ -1,9 +1,13 @@
 import os
 from pathlib import Path
+from textwrap import dedent
 
 import alembic.config
 from config_resolver import get_config
 from pytest import fixture
+
+from powonline import model
+from powonline.web import make_app
 
 
 @fixture(scope="session", autouse=True)
@@ -17,6 +21,7 @@ def upgrade_db():
         os.chdir(current_dir)
 
 
+@fixture
 def test_config():
     lookup = get_config(
         group_name="mamerwiselen",
@@ -24,3 +29,25 @@ def test_config():
         lookup_options=dict(filename="test.ini"),
     )
     return lookup.config
+
+
+@fixture
+def app(test_config):
+    test_config.read_string(
+        dedent(
+            """\
+        [security]
+        jwt_secret = %s
+        """
+            % ("testing",)
+        )
+    )
+    return make_app(test_config)
+
+
+@fixture
+def dbsession():
+    try:
+        yield model.DB.session
+    finally:
+        model.DB.session.remove()
