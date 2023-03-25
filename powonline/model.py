@@ -121,6 +121,7 @@ class Station(DB.Model):  # type: ignore
     teams = relationship(
         "Team", secondary="team_station_state", viewonly=True
     )  # uses an AssociationObject
+    states = relationship("TeamStation", back_populates="station")
 
     def update(self, **kwargs):
         for k, v in kwargs.items():
@@ -167,7 +168,7 @@ class OauthConnection(DB.Model):  # type: ignore
     inserted = Column(DateTime, nullable=False, server_default=func.now())
     updated = Column(DateTime, nullable=False, server_default=func.now())
 
-    user = relationship("User", backref="oauth_connection")
+    user = relationship("User", back_populates="oauth_connection")
 
 
 class User(DB.Model):  # type: ignore
@@ -177,6 +178,15 @@ class User(DB.Model):  # type: ignore
     password_is_plaintext = Column(
         Boolean, nullable=False, server_default="false"
     )
+    oauth_connection = relationship("OauthConnection", back_populates="user")
+    stations = relationship(
+        "User",
+        secondary="user_station",
+        back_populates="users",
+        collection_class=set,
+    )
+    files = relationship("Upload", back_populates="user")
+    auditlog = relationship("AuditLog", back_populates="user")
 
     @staticmethod
     def get_or_create(session, username):
@@ -276,7 +286,7 @@ class TeamStation(DB.Model):  # type: ignore
     )
 
     team = relationship("Team")
-    station = relationship("Station", backref="states")
+    station = relationship("Station", back_populates="states")
 
     def __init__(self, team_name, station_name, state=TeamState.UNKNOWN):
         self.team_name = team_name
@@ -355,7 +365,7 @@ class Upload(DB.Model):  # type: ignore
         server_default=func.uuid_generate_v4(),
     )
 
-    user = relationship("User", backref="files")
+    user = relationship("User", back_populates="files")
 
     def __init__(self, relname, username):
         self.filename = relname
@@ -396,7 +406,7 @@ class AuditLog(DB.Model):  # type: ignore
     type_ = Column("type", Unicode, nullable=False)
     message = Column("message", Unicode, nullable=False)
 
-    user = relationship("User", backref="auditlog")
+    user = relationship("User", back_populates="auditlog")
 
     def __init__(
         self, timestamp: datetime, username: str, type_: AuditType, message: str
