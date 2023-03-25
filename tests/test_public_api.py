@@ -5,7 +5,7 @@ from textwrap import dedent
 from unittest.mock import patch
 
 import jwt
-from config_resolver import Config
+from config_resolver import get_config
 from flask_testing import TestCase
 from util import (
     make_dummy_route_dict,
@@ -62,8 +62,10 @@ class BaseAuthTestCase(TestCase):
     TESTING = True
 
     def create_app(self):
-        config = Config("mamerwiselen", "powonline", filename="test.ini")
-        config.read_string(
+        lookup = get_config(
+            "powonline", "mamerwiselen", lookup_options={"filename": "test.ini"}
+        )
+        lookup.config.read_string(
             dedent(
                 """\
             [security]
@@ -71,7 +73,7 @@ class BaseAuthTestCase(TestCase):
             """
             )
         )
-        return make_app(config)
+        return make_app(lookup.config)
 
     def setUp(self):
         if self.USERNAME:
