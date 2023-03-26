@@ -178,6 +178,12 @@ class User(DB.Model):  # type: ignore
     password_is_plaintext = Column(
         Boolean, nullable=False, server_default="false"
     )
+    inserted = Column(DateTime(timezone=True), nullable=False)
+    updated = Column(DateTime(timezone=True), nullable=True)
+    email = Column(Unicode)
+    active = Column(Boolean, default=True, server_default="true")
+    confirmed_at = Column(DateTime(timezone=True), nullable=True)
+
     oauth_connection = relationship("OauthConnection", back_populates="user")
     stations = relationship(
         "User",
