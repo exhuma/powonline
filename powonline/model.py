@@ -194,6 +194,20 @@ class User(DB.Model):  # type: ignore
     files = relationship("Upload", back_populates="user")
     auditlog = relationship("AuditLog", back_populates="user")
 
+    @property
+    def avatar_url(self):
+        if not self.oauth_connection:
+            return ""
+        try:
+            if not self.oauth_connection[0].image_url:
+                return ""
+            return self.oauth_connection[0].image_url
+        except IndexError:
+            LOG.debug(
+                "Unexpected error occurred with the avatar-url", exc_info=True
+            )
+            return ""
+
     @staticmethod
     def get_or_create(session, username):
         """

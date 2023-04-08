@@ -65,6 +65,7 @@ class UserSchema(Schema):
     email = fields.Str()
     active = fields.Bool()
     confirmed_at = fields.DateTime()
+    avatar_url = fields.String()
 
 
 class RoleSchema(Schema):
