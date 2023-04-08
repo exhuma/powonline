@@ -60,6 +60,12 @@ class UserSchema(Schema):
     name = fields.String(required=True)
     password = fields.String()
     email = fields.String()
+    inserted = fields.DateTime()
+    updated = fields.DateTime()
+    email = fields.Str()
+    active = fields.Bool()
+    confirmed_at = fields.DateTime()
+    avatar_url = fields.String()
 
 
 class RoleSchema(Schema):
