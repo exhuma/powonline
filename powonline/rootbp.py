@@ -119,7 +119,7 @@ def login():
     # JWT token expiration time (in seconds). Default: 2 hours
     jwt_lifetime = int(
         current_app.localconfig.get(
-            "security", "jwt_lifetime", default=(2 * 60 * 60)
+            "security", "jwt_lifetime", fallback=(2 * 60 * 60)
         )
     )
 
@@ -173,7 +173,7 @@ def renew_token():
     # JWT token expiration time (in seconds). Default: 2 hours
     jwt_lifetime = int(
         current_app.localconfig.get(
-            "security", "jwt_lifetime", default=(2 * 60 * 60)
+            "security", "jwt_lifetime", fallback=(2 * 60 * 60)
         )
     )
     try:
