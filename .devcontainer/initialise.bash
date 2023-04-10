@@ -15,3 +15,5 @@ fab develop
 
 (cd database && alembic upgrade head)
 (cd database && alembic show head)
+
+psql -v ON_ERROR_STOP=1 -X1qf .devcontainer/sample-data.sql postgresql://postgres:postgres@db/powonline

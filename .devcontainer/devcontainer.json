@@ -9,5 +9,15 @@
 	"forwardPorts": [5000, 5432],
 	// Use 'postCreateCommand' to run commands after the container is created.
 	"postCreateCommand": "bash .devcontainer/initialise.bash",
-	"remoteUser": "vscode"
+	"remoteUser": "vscode",
+	"portsAttributes": {
+		"5000": {
+			"label": "API",
+			"onAutoForward": "notify"
+		},
+		"5432": {
+			"label": "Database",
+			"onAutoForward": "notify"
+		}
+	}
 }
