@@ -21,3 +21,7 @@ repos:
     rev: v1.0.0
     hooks:
       - id: prevent-debug-markers
+  - repo: https://github.com/adrienverge/yamllint.git
+    rev: v1.30.0
+    hooks:
+      - id: yamllint
