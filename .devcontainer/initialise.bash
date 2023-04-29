@@ -10,6 +10,7 @@ set -xe
 pipx install alembic
 pipx inject alembic psycopg2-binary
 pipx install fabric
+pipx inject fabric decorator  # <- fabric bugfix
 pipx install pre-commit
 fab develop
 
