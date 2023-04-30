@@ -43,6 +43,7 @@ def with_config(test_config):
             """\
         [security]
         jwt_secret = %s
+        secret_key = secret
         """
             % ("testing",)
         )

@@ -39,6 +39,7 @@ setup(
             "pytest",
             "pytest-catchlog",
             "pytest-coverage",
+            "pytest-env",
             "pytest-xdist",
         ],
     },
