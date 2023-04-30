@@ -1034,9 +1034,6 @@ class Job(Resource):
             return "Access denied to this station!", 401
 
     def _action_set_questionnaire_score(self, station_name, team_name, score):
-        # Bugfix for 2019
-        if score == 0:
-            return "Setting questionnaire score to 0 is not allowed", 400
         auth, permissions = get_user_permissions(request)
         score = validate_score(score)
 
