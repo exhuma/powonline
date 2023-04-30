@@ -716,6 +716,10 @@ class Dashboard(Resource):
             station_name = core.Station.related(
                 DB.session, station_name, parsed_relation
             )
+            if not station_name:
+                output = make_response("{}")
+                output.content_type = "application/json"
+                return output
 
         output = []
         for team_name, state, score in core.Station.team_states(
