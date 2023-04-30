@@ -1066,6 +1066,10 @@ class Job(Resource):
                     score,
                 )
             except NoQuestionnaireForStation:
+                LOG.error(
+                    "No questionnaire assigned to station %r!",
+                    station_name,
+                )
                 return (
                     "No questionnaire assigned to station %r!" % station_name,
                     500,
