@@ -137,8 +137,7 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
             response = self.app.get("/station")
         self.assertEqual(response.status_code, 200, response.data)
         self.assertEqual(response.content_type, "application/json")
-        response_text = response.data.decode(response.charset)
-        data = json.loads(response_text)
+        data = json.loads(response.text)
         items = data["items"]
         expected = [
             make_dummy_station_dict(name="station1"),
@@ -157,8 +156,7 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
             response = self.app.get("/route")
         self.assertEqual(response.status_code, 200, response.data)
         self.assertEqual(response.content_type, "application/json")
-        response_text = response.data.decode(response.charset)
-        data = json.loads(response_text)
+        data = json.loads(response.text)
         items = data["items"]
         expected = [
             make_dummy_route_dict(name="route1"),
@@ -179,8 +177,7 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
         )
         self.assertEqual(response.status_code, 200, response.data)
         self.assertEqual(response.content_type, "application/json")
-        response_text = response.data.decode(response.charset)
-        data = json.loads(response_text)
+        data = json.loads(response.text)
         expected = make_dummy_team_dict(name="foo", contact="new-contact")
         expected.pop("inserted")
         expected.pop("updated")
@@ -202,8 +199,7 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
         )
         self.assertEqual(response.status_code, 200, response.data)
         self.assertEqual(response.content_type, "application/json")
-        response_text = response.data.decode(response.charset)
-        data = json.loads(response_text)
+        data = json.loads(response.text)
         expected = make_dummy_station_dict(name="foo", contact="new-contact")
         self.assertEqual(data, expected)
 
@@ -219,8 +215,7 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
         )
         self.assertEqual(response.status_code, 200, response.data)
         self.assertEqual(response.content_type, "application/json")
-        response_text = response.data.decode(response.charset)
-        data = json.loads(response_text)
+        data = json.loads(response.text)
         expected = make_dummy_station_dict(name="foo", contact="new-contact")
         self.assertEqual(data, expected)
 
@@ -241,8 +236,7 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
             )
         self.assertEqual(response.status_code, 200, response.data)
         self.assertEqual(response.content_type, "application/json")
-        response_text = response.data.decode(response.charset)
-        data = json.loads(response_text)
+        data = json.loads(response.text)
         expected = make_dummy_route_dict(name="foo")
         self.assertEqual(data, expected)
 
@@ -256,8 +250,7 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
         )
         self.assertEqual(response.status_code, 201, response.data)
         self.assertEqual(response.content_type, "application/json")
-        response_text = response.data.decode(response.charset)
-        data = json.loads(response_text)
+        data = json.loads(response.text)
         expected = make_dummy_team_dict(name="foo", contact="new-contact")
         self.assertEqual(data, expected)
 
@@ -271,8 +264,7 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
         )
         self.assertEqual(response.status_code, 201, response.data)
         self.assertEqual(response.content_type, "application/json")
-        response_text = response.data.decode(response.charset)
-        data = json.loads(response_text)
+        data = json.loads(response.text)
         expected = make_dummy_station_dict(name="foo", contact="new-contact")
         self.assertEqual(data, expected)
 
@@ -286,8 +278,7 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
         )
         self.assertEqual(response.status_code, 201, response.data)
         self.assertEqual(response.content_type, "application/json")
-        response_text = response.data.decode(response.charset)
-        data = json.loads(response_text)
+        data = json.loads(response.text)
         expected = make_dummy_route_dict(name="foo")
         self.assertEqual(data, expected)
 
@@ -405,8 +396,7 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
         response = self.app.get("/team/team-red/stations/station-start")
         self.assertEqual(response.status_code, 200, response.data)
         self.assertEqual(response.content_type, "application/json")
-        response_text = response.data.decode(response.charset)
-        data = json.loads(response_text)
+        data = json.loads(response.text)
         self.assertEqual(data["state"], "finished")
 
     def test_show_team_station_state_inverse(self):
@@ -442,12 +432,10 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
             _func.now.assert_called_once()
 
         state_response = self.app.get("/station/station-start/teams/team-red")
-        state = json.loads(state_response.data.decode(state_response.charset))
+        state = json.loads(state_response.text)
         self.assertEqual(state["state"], "finished")
         detail_response = self.app.get("/team/team-red")
-        details = json.loads(
-            detail_response.data.decode(detail_response.charset)
-        )
+        details = json.loads(detail_response.text)
         self.assertEqual(details["effective_start_time"], "2018-01-01T01:02:03")
         self.assertEqual(details["finish_time"], None)
 
@@ -475,12 +463,10 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
             _func.now.assert_called_once()
 
         state_response = self.app.get("/station/station-end/teams/team-red")
-        state = json.loads(state_response.data.decode(state_response.charset))
+        state = json.loads(state_response.text)
         self.assertEqual(state["state"], "arrived")
         detail_response = self.app.get("/team/team-red")
-        details = json.loads(
-            detail_response.data.decode(detail_response.charset)
-        )
+        details = json.loads(detail_response.text)
         self.assertEqual(details["effective_start_time"], None)
         self.assertEqual(details["finish_time"], "2018-02-03T01:02:03")
 
@@ -498,8 +484,7 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
             data=json.dumps(simplejob),
         )
         self.assertEqual(response.status_code, 200, response.data)
-        response_text = response.data.decode(response.charset)
-        data = json.loads(response_text)
+        data = json.loads(response.text)
         result = data["result"]
         self.assertEqual(result, {"state": "unknown"})
 
@@ -510,8 +495,8 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
                 ("team2", 20),
                 ("team3", 0),
             ]
-            result = self.app.get("/scoreboard")
-            data = json.loads(result.data.decode(result.charset))
+            response = self.app.get("/scoreboard")
+            data = json.loads(response.text)
             expected = [
                 ["team1", 40],
                 ["team2", 20],
@@ -524,8 +509,8 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
             _qs.return_value = {
                 "team1": {"station1": {"name": "quest1", "score": 19}}
             }
-            result = self.app.get("/questionnaire-scores")
-            data = json.loads(result.data.decode(result.charset))
+            response = self.app.get("/questionnaire-scores")
+            data = json.loads(response.text)
             expected = {"team1": {"station1": {"name": "quest1", "score": 19}}}
             self.assertEqual(data, expected)
 
@@ -535,8 +520,8 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
                 ("team1", core.TeamState.ARRIVED, 10),
                 ("team2", core.TeamState.UNKNOWN, None),
             ]
-            result = self.app.get("/station/station-1/dashboard")
-            data = json.loads(result.data.decode(result.charset))
+            response = self.app.get("/station/station-1/dashboard")
+            data = json.loads(response.text)
             testable = {
                 (row["score"], row["team"], row["state"]) for row in data
             }
@@ -580,8 +565,8 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
                     ],
                 },
             ]
-            result = self.app.get("/dashboard")
-            data = json.loads(result.data.decode(result.charset))
+            response = self.app.get("/dashboard")
+            data = json.loads(response.text)
 
             expected = [
                 {
@@ -819,8 +804,7 @@ class TestPublicAPIAsStationManager(BaseAuthTestCase):
             data=json.dumps(simplejob),
         )
         self.assertEqual(response.status_code, 200, response.data)
-        response_text = response.data.decode(response.charset)
-        data = json.loads(response_text)
+        data = json.loads(response.text)
         result = data["result"]
         self.assertEqual(result, {"state": "arrived"})
 

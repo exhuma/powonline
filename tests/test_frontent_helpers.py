@@ -74,8 +74,8 @@ class TestFrontendHelpers(TestCase):
 
 
 def test_fetch_assignments_api(with_config):
-    result = with_config.get("/assignments")
-    result_data = json.loads(result.data.decode(result.charset))
+    response = with_config.get("/assignments")
+    result_data = json.loads(response.text)
 
     # To be testing a bit easier, we drop all the irrelevant keys
     for k1, k2 in [
