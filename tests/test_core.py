@@ -14,26 +14,6 @@ def app_context(app):
         yield
 
 
-def here(localname):
-    from os.path import dirname, join
-
-    return join(dirname(__file__), localname)
-
-
-@fixture
-def seed(dbsession):
-    with open(here("seed_cleanup.sql")) as seed:
-        try:
-            model.DB.session.execute(seed.read())
-            model.DB.session.commit()
-        except Exception as exc:
-            LOG.exception("Unable to execute cleanup seed")
-            model.DB.session.rollback()
-    with open(here("seed.sql")) as seed:
-        model.DB.session.execute(seed.read())
-        model.DB.session.commit()
-
-
 def test_get_assignments(dbsession):
     result = core.get_assignments(dbsession)
     result_stations_a = {_.name for _ in result["stations"]["route-blue"]}
