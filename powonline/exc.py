@@ -16,3 +16,9 @@ class AccessDenied(PowonlineException):
 
 class ValidationError(PowonlineException):
     pass
+
+
+class UserInputError(ValidationError):
+    """
+    Raised for invalid user-input
+    """

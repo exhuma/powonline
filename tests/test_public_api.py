@@ -5,6 +5,7 @@ from textwrap import dedent
 from unittest.mock import patch
 
 import jwt
+import pytest
 from config_resolver import get_config
 from flask_testing import TestCase
 from sqlalchemy import text
@@ -1043,3 +1044,57 @@ class TestPublicAPIAsAnonymous(BaseAuthTestCase):
             data=json.dumps(simplejob),
         )
         self.assertEqual(response.status_code, 401, response.data)
+
+    def test_related_states_next(self):
+        url_node = "next"  # TODO: Can be parametrised in pytest-style tests
+        with patch("powonline.resources.core") as _core:
+            _core.Station.team_states.return_value = [
+                ("team1", core.TeamState.ARRIVED, 10),
+                ("team2", core.TeamState.UNKNOWN, None),
+            ]
+            response = self.app.get(f"/station/station-1/{url_node}/dashboard")
+            assert response.status_code == 200
+            _core.Station.related.assert_called_with(
+                DB.session, "station-1", core.StationRelation.NEXT
+            )
+            data = json.loads(response.text)
+            testable = {
+                (row["score"], row["team"], row["state"]) for row in data
+            }
+            expected = {
+                (10, "team1", "arrived"),
+                (None, "team2", "unknown"),
+            }
+            self.assertEqual(testable, expected)
+
+    def test_related_states_previous(self):
+        url_node = "previous"  # TODO: Can be parametrised in pytest-style tests
+        with patch("powonline.resources.core") as _core:
+            _core.Station.team_states.return_value = [
+                ("team1", core.TeamState.ARRIVED, 10),
+                ("team2", core.TeamState.UNKNOWN, None),
+            ]
+            response = self.app.get(f"/station/station-1/{url_node}/dashboard")
+            assert response.status_code == 200
+            _core.Station.related.assert_called_with(
+                DB.session, "station-1", core.StationRelation.PREVIOUS
+            )
+            data = json.loads(response.text)
+            testable = {
+                (row["score"], row["team"], row["state"]) for row in data
+            }
+            expected = {
+                (10, "team1", "arrived"),
+                (None, "team2", "unknown"),
+            }
+            self.assertEqual(testable, expected)
+
+    def test_related_states_invalid_state(self):
+        """
+        If a user specifies an invalid state, we want a 4xx error, not a 5xx error
+        """
+        response = self.app.get(
+            f"/station/station-1/this-state-is-wrong/dashboard"
+        )
+        assert response.status_code == 400
+        assert "this-state-is-wrong" in response.text

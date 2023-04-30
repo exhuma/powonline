@@ -94,7 +94,11 @@ def make_app(config=None):
         "/station/<station_name>/teams/<team_name>",
     )
     api.add_resource(Scoreboard, "/scoreboard")
-    api.add_resource(Dashboard, "/station/<station_name>/dashboard")
+    api.add_resource(
+        Dashboard,
+        "/station/<station_name>/dashboard",
+        "/station/<station_name>/<relation>/dashboard",
+    )
     api.add_resource(GlobalDashboard, "/dashboard")
     api.add_resource(Job, "/job")
     api.add_resource(RouteColor, "/route/<route_name>/color")

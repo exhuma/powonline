@@ -22,7 +22,13 @@ from PIL import ExifTags, Image
 from werkzeug.utils import secure_filename
 
 from . import core
-from .exc import AccessDenied, NoQuestionnaireForStation, ValidationError
+from .core import StationRelation
+from .exc import (
+    AccessDenied,
+    NoQuestionnaireForStation,
+    UserInputError,
+    ValidationError,
+)
 from .model import DB
 from .model import AuditLog as DBAuditLog
 from .model import AuditType
@@ -698,7 +704,19 @@ class Dashboard(Resource):
     Helper resource for the frontend
     """
 
-    def get(self, station_name):
+    def get(self, station_name, relation=""):
+        if relation.strip():
+            try:
+                parsed_relation = StationRelation[relation.upper()]
+            except KeyError:
+                raise UserInputError(
+                    f"{relation!r} is not a valid station-relation"
+                )
+
+            station_name = core.Station.related(
+                DB.session, station_name, parsed_relation
+            )
+
         output = []
         for team_name, state, score in core.Station.team_states(
             DB.session, station_name

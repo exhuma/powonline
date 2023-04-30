@@ -18,7 +18,7 @@ from flask import (
 from sqlalchemy.exc import IntegrityError
 
 from .core import User, questionnaire_scores
-from .exc import AccessDenied
+from .exc import AccessDenied, UserInputError
 from .httputil import add_cors_headers
 from .model import DB, Route, Station
 from .social import Social
@@ -32,6 +32,17 @@ LOG = logging.getLogger(__name__)
 @rootbp.app_errorhandler(AccessDenied)
 def handle_access_errors(error):
     return "Access Denied", 403
+
+
+@rootbp.app_errorhandler(UserInputError)
+def handle_value_error(error):
+    return str(error), 400
+
+
+@rootbp.app_errorhandler(Exception)
+def handle_unhandled_exceptions(error):
+    LOG.exception(error)
+    return "Internal Server Error", 500
 
 
 @rootbp.after_app_request
