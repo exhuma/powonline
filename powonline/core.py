@@ -386,7 +386,7 @@ class Station:
         subquery = (
             session.query(model.Station.order)
             .filter_by(name=station_name)
-            .subquery()
+            .scalar_subquery()
         )
 
         if relation == StationRelation.PREVIOUS:
