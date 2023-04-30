@@ -1,9 +1,11 @@
 import logging
 from datetime import datetime, timezone
+from enum import Enum, auto
 from os import makedirs
 from os.path import basename, dirname, join
 from random import SystemRandom
 from string import ascii_letters, digits, punctuation
+from typing import Generator, Optional, Tuple
 
 from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
@@ -13,6 +15,15 @@ from .exc import NoQuestionnaireForStation, NoSuchQuestionnaire
 from .model import TeamState
 
 LOG = logging.getLogger(__name__)
+
+
+class StationRelation(Enum):
+    """
+    A station-relation defines how one station relates to another.
+    """
+
+    PREVIOUS = auto()
+    NEXT = auto()
 
 
 def get_assignments(session):
@@ -358,6 +369,38 @@ class Station:
         if not user:
             return set()
         return {station.name for station in user.stations}
+
+    @staticmethod
+    def related_team_states(
+        session: Session, station_name: str, relation: StationRelation
+    ) -> Generator[Tuple[str, TeamState, Optional[int]], None, None]:
+        related_station = Station.related(session, station_name, relation)
+        if not related_station:
+            return
+        yield from Station.team_states(session, related_station)
+
+    @staticmethod
+    def related(
+        session: Session, station_name: str, relation: StationRelation
+    ) -> str:
+        subquery = (
+            session.query(model.Station.order)
+            .filter_by(name=station_name)
+            .subquery()
+        )
+
+        if relation == StationRelation.PREVIOUS:
+            relation_filter = model.Station.order < subquery
+        elif relation == StationRelation.NEXT:
+            relation_filter = model.Station.order > subquery
+        else:
+            raise ValueError(f"Unsupported station-relation: {relation}")
+
+        query = session.query(model.Station.name).filter(relation_filter)
+        first_row = query.first()
+        if first_row is None:
+            return ""
+        return first_row.name
 
 
 class Route:

@@ -1,3 +1,4 @@
+import pytest
 from pytest import fixture
 
 from powonline import core
@@ -57,4 +58,50 @@ def test_team_states(dbsession):
         ("team-blue", core.TeamState.UNKNOWN, None),
         ("team-red", core.TeamState.FINISHED, 10),
     }
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    "relation, expected",
+    [
+        (
+            core.StationRelation.NEXT,
+            {
+                ("team-blue", core.TeamState.FINISHED, 20),
+            },
+        ),
+        (
+            core.StationRelation.PREVIOUS,
+            set(),
+        ),
+    ],
+)
+def test_related_station_states(dbsession, seed, relation, expected):
+    """
+    Ensure that we have an easy method to request the team-states of a station
+    related to a given station.
+    """
+    result = set(
+        core.Station.related_team_states(dbsession, "station-start", relation)
+    )
+    from pprint import pprint
+
+    print(relation)
+    pprint(result)
+    assert result == expected
+
+
+@pytest.mark.parametrize(
+    "relation, expected",
+    [
+        (core.StationRelation.NEXT, "station-blue"),
+        (core.StationRelation.PREVIOUS, ""),
+    ],
+)
+def test_get_related_station(dbsession, seed, relation, expected):
+    """
+    Ensure that we have an easy method to determine a station related to a given
+    station.
+    """
+    result = core.Station.related(dbsession, "station-start", relation)
     assert result == expected

@@ -97,8 +97,8 @@ def test_global_dashboard(dbsession):
             "stations": [
                 {
                     "name": "station-blue",
-                    "score": 0,
-                    "state": core.TeamState.UNKNOWN,
+                    "score": 20,
+                    "state": core.TeamState.FINISHED,
                 },
                 {
                     "name": "station-end",
