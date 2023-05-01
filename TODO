@@ -1,0 +1,2 @@
+- "Related" stations depend on the route! The current implementation assumes
+  that everything is "linked" in the same way.
