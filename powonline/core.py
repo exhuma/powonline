@@ -361,7 +361,7 @@ class Station:
                         state=TeamState.UNKNOWN,
                     ),
                 )
-                yield (team.name, state.state, state.score)
+                yield (team.name, state.state, state.score, state.updated)
 
     @staticmethod
     def accessible_by(session, username):

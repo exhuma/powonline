@@ -143,6 +143,8 @@ class MyJsonEncoder(JSONEncoder):
             return list(value)
         elif isinstance(value, Enum):
             return value.value
+        elif isinstance(value, datetime):
+            return value.isoformat()
         super().default(value)
 
 
@@ -741,11 +743,16 @@ class Dashboard(Resource):
                 return output
 
         output = []
-        for team_name, state, score in core.Station.team_states(
+        for team_name, state, score, updated in core.Station.team_states(
             DB.session, station_name
         ):
             output.append(
-                {"team": team_name, "state": state.value, "score": score}
+                {
+                    "team": team_name,
+                    "state": state.value,
+                    "score": score,
+                    "updated": updated,
+                }
             )
 
         output = make_response(dumps(output, cls=MyJsonEncoder), 200)

@@ -1,6 +1,7 @@
 import json
 import logging
 import unittest
+from datetime import datetime
 from textwrap import dedent
 from unittest.mock import patch
 
@@ -518,8 +519,8 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
     def test_dashboard(self):
         with patch("powonline.resources.core") as _core:
             _core.Station.team_states.return_value = [
-                ("team1", core.TeamState.ARRIVED, 10),
-                ("team2", core.TeamState.UNKNOWN, None),
+                ("team1", core.TeamState.ARRIVED, 10, datetime(2020, 1, 1)),
+                ("team2", core.TeamState.UNKNOWN, None, None),
             ]
             response = self.app.get("/station/station-1/dashboard")
             data = json.loads(response.text)
@@ -1049,8 +1050,8 @@ class TestPublicAPIAsAnonymous(BaseAuthTestCase):
         url_node = "next"  # TODO: Can be parametrised in pytest-style tests
         with patch("powonline.resources.core") as _core:
             _core.Station.team_states.return_value = [
-                ("team1", core.TeamState.ARRIVED, 10),
-                ("team2", core.TeamState.UNKNOWN, None),
+                ("team1", core.TeamState.ARRIVED, 10, datetime(2020, 1, 1)),
+                ("team2", core.TeamState.UNKNOWN, None, None),
             ]
             response = self.app.get(f"/station/station-1/{url_node}/dashboard")
             assert response.status_code == 200
@@ -1071,8 +1072,8 @@ class TestPublicAPIAsAnonymous(BaseAuthTestCase):
         url_node = "previous"  # TODO: Can be parametrised in pytest-style tests
         with patch("powonline.resources.core") as _core:
             _core.Station.team_states.return_value = [
-                ("team1", core.TeamState.ARRIVED, 10),
-                ("team2", core.TeamState.UNKNOWN, None),
+                ("team1", core.TeamState.ARRIVED, 10, datetime(2020, 1, 2)),
+                ("team2", core.TeamState.UNKNOWN, None, None),
             ]
             response = self.app.get(f"/station/station-1/{url_node}/dashboard")
             assert response.status_code == 200

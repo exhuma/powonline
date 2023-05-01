@@ -54,11 +54,12 @@ def test_assign_user(dbsession):
 
 def test_team_states(dbsession):
     result = set(core.Station.team_states(dbsession, "station-start"))
+    testable = {tuple(row[:3]) for row in result}
     expected = {
         ("team-blue", core.TeamState.UNKNOWN, None),
         ("team-red", core.TeamState.FINISHED, 10),
     }
-    assert result == expected
+    assert testable == expected
 
 
 @pytest.mark.parametrize(
@@ -84,11 +85,8 @@ def test_related_station_states(dbsession, seed, relation, expected):
     result = set(
         core.Station.related_team_states(dbsession, "station-start", relation)
     )
-    from pprint import pprint
-
-    print(relation)
-    pprint(result)
-    assert result == expected
+    testable = {tuple(row[:3]) for row in result}
+    assert testable == expected
 
 
 @pytest.mark.parametrize(
