@@ -351,6 +351,25 @@ class Station(Resource):
         response.content_type = "application/json"
         return response
 
+    def get(self, name, relation=""):
+        if relation.strip():
+            try:
+                parsed_relation = StationRelation[relation.upper()]
+            except KeyError:
+                raise UserInputError(
+                    f"{relation!r} is not a valid station-relation"
+                )
+
+            related_station = core.Station.related(
+                DB.session, name, parsed_relation
+            )
+            if not related_station:
+                output = make_response('""')
+                output.content_type = "application/json"
+                return output
+            return jsonify(related_station)
+        raise NotImplementedError("Not yet implemented")
+
     @require_permissions("manage_station")
     def put(self, name):
         auth, permissions = get_user_permissions(request)

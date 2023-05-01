@@ -64,7 +64,11 @@ def make_app(config=None):
     api.add_resource(TeamList, "/team")
     api.add_resource(Team, "/team/<name>")
     api.add_resource(StationList, "/station")
-    api.add_resource(Station, "/station/<name>")
+    api.add_resource(
+        Station,
+        "/station/<name>",
+        "/station/<name>/related/<relation>",
+    )
     api.add_resource(RouteList, "/route")
     api.add_resource(Route, "/route/<name>")
     api.add_resource(

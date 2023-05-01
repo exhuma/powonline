@@ -16,6 +16,7 @@ from flask import (
     url_for,
 )
 from sqlalchemy.exc import IntegrityError
+from werkzeug.exceptions import NotFound
 
 from .core import User, questionnaire_scores
 from .exc import AccessDenied, UserInputError
@@ -37,6 +38,12 @@ def handle_access_errors(error):
 @rootbp.app_errorhandler(UserInputError)
 def handle_value_error(error):
     return str(error), 400
+
+
+@rootbp.app_errorhandler(NotFound)
+def handle_unhandled_exceptions(error):
+    LOG.info(error)
+    return str(error), 404
 
 
 @rootbp.app_errorhandler(Exception)

@@ -1098,3 +1098,41 @@ class TestPublicAPIAsAnonymous(BaseAuthTestCase):
         )
         assert response.status_code == 400
         assert "this-state-is-wrong" in response.text
+
+    def test_related_station_next(self):
+        """
+        Ensure that we can easily get the station immediately following a given
+        station.
+        """
+        url_node = "next"  # TODO: Can be parametrised in pytest-style tests
+        with patch("powonline.resources.core") as _core:
+            _core.Station.related.return_value = "foobar"
+            response = self.app.get(f"/station/station-1/related/{url_node}")
+            assert response.status_code == 200, response.text
+            _core.Station.related.assert_called_with(
+                DB.session, "station-1", core.StationRelation.NEXT
+            )
+            data = json.loads(response.text)
+            self.assertEqual(data, "foobar")
+
+    def test_related_station_previous(self):
+        url_node = "previous"  # TODO: Can be parametrised in pytest-style tests
+        with patch("powonline.resources.core") as _core:
+            _core.Station.related.return_value = "foobar"
+            response = self.app.get(f"/station/station-1/related/{url_node}")
+            assert response.status_code == 200, response.text
+            _core.Station.related.assert_called_with(
+                DB.session, "station-1", core.StationRelation.PREVIOUS
+            )
+            data = json.loads(response.text)
+            self.assertEqual(data, "foobar")
+
+    def test_related_station_invalid_state(self):
+        """
+        If a user specifies an invalid state, we want a 4xx error, not a 5xx error
+        """
+        response = self.app.get(
+            f"/station/station-1/related/this-state-is-wrong"
+        )
+        assert response.status_code == 400, response.text
+        assert "this-state-is-wrong" in response.text
