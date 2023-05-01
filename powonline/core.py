@@ -397,6 +397,10 @@ class Station:
             raise ValueError(f"Unsupported station-relation: {relation}")
 
         query = session.query(model.Station.name).filter(relation_filter)
+        if relation == StationRelation.PREVIOUS:
+            query = query.order_by(model.Station.order.desc())
+        elif relation == StationRelation.NEXT:
+            query = query.order_by(model.Station.order)
         first_row = query.first()
         if first_row is None:
             return ""
