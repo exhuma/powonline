@@ -736,7 +736,7 @@ class Dashboard(Resource):
                 DB.session, station_name, parsed_relation
             )
             if not station_name:
-                output = make_response("{}")
+                output = make_response("[]")
                 output.content_type = "application/json"
                 return output
 
