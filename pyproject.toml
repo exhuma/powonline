@@ -1,3 +1,62 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "powonline"
+version = "2023.05.05"
+authors = [
+    {name = "Michel Albert", email = "michel@albert.lu"},
+]
+description = "Tracker for PowWow 2017"
+readme = "README.rst"
+requires-python = ">=3.7"
+license = {text = "BSD-3-Clause"}
+classifiers = []
+dependencies = [
+    "bcrypt",
+    "config-resolver >= 5.0, <6.0",
+    "flask",
+    "flask-restful",
+    "flask-sqlalchemy",
+    "gouge >= 1.1, <2.0",
+    "imapclient",
+    "marshmallow < 3.0",
+    "pillow",
+    "psycopg2-binary",
+    "pusher",
+    "pyjwt",
+    "python-dateutil",
+    "requests_oauthlib",
+    "sqlalchemy < 2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "alembic",
+    "blessings",
+    "gouge",
+    "types-Flask-SQLAlchemy",
+    "types-Pillow",
+    "types-psycopg2",
+    "types-python-dateutil",
+]
+test = [
+    "flask-testing",
+    "pytest",
+    "pytest-catchlog",
+    "pytest-coverage",
+    "pytest-env",
+    "pytest-xdist",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["powonline*"]
+
+[tool.setuptools.dynamic]
+entry-points = {file = ["entry-points.ini"]}
+
 [tool.black]
 line_length = 80
 

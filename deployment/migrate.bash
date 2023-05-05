@@ -11,6 +11,6 @@
 #      alembic upgrade head
 # -----------------------------------------------------------------------------
 
-set -xe
+set +xe
 cd /alembic
 /opt/powonline/bin/alembic upgrade head
