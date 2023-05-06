@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "powonline"
-version = "2023.05.06.1"
+version = "2023.05.06.2"
 authors = [
     {name = "Michel Albert", email = "michel@albert.lu"},
 ]
@@ -54,8 +54,13 @@ test = [
 where = ["."]
 include = ["powonline*"]
 
-[tool.setuptools.dynamic]
-entry-points = {file = ["entry-points.ini"]}
+[project.entry-points."flask.commands"]
+grant-admin = "powonline.cli:grant_admin"
+revoke-admin = "powonline.cli:revoke_admin"
+list-users = "powonline.cli:list_users"
+add-local-user = "powonline.cli:add_local_user"
+import-csv = "powonline.cli:import_csv"
+fetch-mails = "powonline.cli:fetch_mails"
 
 [tool.black]
 line_length = 80
