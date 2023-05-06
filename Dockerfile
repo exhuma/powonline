@@ -11,10 +11,12 @@ FROM python:3.11-slim
 COPY --from=build /opt/powonline /opt/powonline
 ADD deployment/start.bash /
 ADD deployment/migrate.bash /
+ADD deployment/fetch-mails.bash /
 ADD database/alembic /alembic/alembic
 ADD database/alembic.ini /alembic/alembic.ini
 RUN chmod +x /start.bash
 RUN chmod +x /migrate.bash
+RUN chmod +x /fetch-mails.bash
 EXPOSE 8000
 ENTRYPOINT ["/start.bash"]
 
