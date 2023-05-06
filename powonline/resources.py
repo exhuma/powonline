@@ -60,12 +60,22 @@ def upload_to_json(db_instance: DBUpload) -> dict[str, Any]:
     """
     Convert a DB-instance of an upload to a JSONifiable dictionary
     """
-    file_url = url_for("api.get_file", uuid=db_instance.uuid, _external=True)
+    file_url = url_for(
+        "api.get_file", uuid=db_instance.uuid, _external=True, _scheme="https"
+    )
     tn_url = url_for(
-        "api.get_file", uuid=db_instance.uuid, size=256, _external=True
+        "api.get_file",
+        uuid=db_instance.uuid,
+        size=256,
+        _external=True,
+        _scheme="https",
     )
     tiny_url = url_for(
-        "api.get_file", uuid=db_instance.uuid, size=64, _external=True
+        "api.get_file",
+        uuid=db_instance.uuid,
+        size=64,
+        _external=True,
+        _scheme="https",
     )
 
     data_folder = current_app.localconfig.get(  # type: ignore
