@@ -16,7 +16,7 @@ jobs:
              >> "${GITHUB_ENV}"
       - name: Build Image
         run: "docker build \
-              -t \"registry.digitalocean.com/michel-albert/\
+              -t \"${{secrets.DOCKER_REGISTRY}}\
                    powonline-api:${PROJECT_VERSION}\"
               ."
       - name: Install doctl
@@ -26,5 +26,5 @@ jobs:
       - name: Log in to DO container Registry
         run: doctl registry login --expiry-seconds 600
       - name: Push
-        run: "docker push \"registry.digitalocean.com/michel-albert/\
+        run: "docker push \"${{secrets.DOCKER_REGISTRY}}\
               powonline-api:${PROJECT_VERSION}\""
