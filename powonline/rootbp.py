@@ -13,7 +13,6 @@ from flask import (
     render_template,
     request,
     session,
-    url_for,
 )
 from sqlalchemy.exc import IntegrityError
 from werkzeug.exceptions import NotFound
