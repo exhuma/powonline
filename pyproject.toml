@@ -15,3 +15,7 @@ disable = ["C0330", "C0326"]
 
 [tool.pylint.format]
 max-line-length = "80"
+
+[tool.yamlfix]
+line_length = 80
+sequence_style = "block_style"
