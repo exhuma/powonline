@@ -531,7 +531,7 @@ class User:
     def unassign_role(session, user_name, role_name):
         user = session.query(model.User).filter_by(name=user_name).one()
         role = session.query(model.Role).filter_by(name=role_name).one_or_none()
-        if role:
+        if role and role in user.roles:
             user.roles.remove(role)
         return True
 
