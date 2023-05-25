@@ -2,7 +2,7 @@
 ; ----------------------------------
 ;
 ;  2.4: Added "app.allowed_origins"
-;  2.3: Added "pusher_channels.file_events"
+;  2.3: Added "pusher_channels.file"
 ;  2.2: Added [email] section
 ;  2.1: Added "app.upload_folder"
 ;  2.0: Added [questionnaire-map] section
@@ -17,10 +17,9 @@
 ; ----------------------------------
 
 [meta]
-version = 2.2
+version = 2.4
 
 [app]
-static_folder = /home/exhuma/work/powonline-frontend/dist
 upload_folder = /tmp/uploads
 
 ; allowed-origins must be set to the hosts which are allowed to call this API
@@ -37,7 +36,7 @@ port = 993
 ssl = true
 
 [db]
-dsn = postgresql://powonline@powonline-db/powonline
+dsn = postgresql://postgres:postgres@db/postgres
 
 [security]
 jwt_secret = foobar
@@ -59,8 +58,8 @@ file = file-events-dev
 ; Maps questionnaires to stations. When opening a station dashboard, the
 ; edit-box for questionnaire scores will be linked to the mapped questionnaire
 ; on that station
-questionnaire_1 = station-1
-questionnaire_2 = station-2
+questionnaire_1 = Station 1
+questionnaire_2 = Station 2
 
 [social:google]
 client_id = <client-id>

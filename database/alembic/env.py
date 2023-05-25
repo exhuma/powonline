@@ -1,7 +1,11 @@
 from __future__ import with_statement
+
+import sys
+from logging.config import fileConfig
+from os import environ
+
 from alembic import context
 from sqlalchemy import create_engine
-from logging.config import fileConfig
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -24,7 +28,14 @@ target_metadata = None
 
 
 def get_url():
-    return 'postgresql://powonline@/powonline'
+    dsn = environ.get("POWONLINE_DSN", "").strip()
+    if not dsn:
+        print(
+            "Environment variable POWONLINE_DSN is not set or empty",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    return dsn
 
 
 def run_migrations_offline():
@@ -41,7 +52,8 @@ def run_migrations_offline():
     """
     url = get_url()
     context.configure(
-        url=url, target_metadata=target_metadata, literal_binds=True)
+        url=url, target_metadata=target_metadata, literal_binds=True
+    )
 
     with context.begin_transaction():
         context.run_migrations()
@@ -58,12 +70,12 @@ def run_migrations_online():
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection,
-            target_metadata=target_metadata
+            connection=connection, target_metadata=target_metadata
         )
 
         with context.begin_transaction():
             context.run_migrations()
+
 
 if context.is_offline_mode():
     run_migrations_offline()

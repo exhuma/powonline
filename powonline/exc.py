@@ -12,3 +12,13 @@ class NoSuchQuestionnaire(PowonlineException):
 
 class AccessDenied(PowonlineException):
     pass
+
+
+class ValidationError(PowonlineException):
+    pass
+
+
+class UserInputError(ValidationError):
+    """
+    Raised for invalid user-input
+    """

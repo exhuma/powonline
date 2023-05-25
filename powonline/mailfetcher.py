@@ -8,37 +8,42 @@ from os.path import dirname, exists, join
 from uuid import uuid4
 
 from gouge.colourcli import Simple
-from imapclient import FLAGGED, SEEN, IMAPClient
+from imapclient import FLAGGED, SEEN, IMAPClient  # type: ignore
+
 from powonline.config import default
 
 LOG = logging.getLogger(__name__)
-P_FROM = re.compile(
-    r'^.*?<(.*?)>$'
-)
-P_IDENTIFIER_CHARS = re.compile(r'[^a-zA-Z0-9_]')
+P_FROM = re.compile(r"^.*?<(.*?)>$")
+P_IDENTIFIER_CHARS = re.compile(r"[^a-zA-Z0-9_]")
 
 
 def extract_images(eml):
     output = []
-    sender = eml['from']
-    if '<' in sender:
+    sender = eml["from"]
+    if "<" in sender:
         match = P_FROM.match(sender)
         sender = match.groups()[0]
-    identifier = P_IDENTIFIER_CHARS.sub('_', eml['message-id'])
+    identifier = P_IDENTIFIER_CHARS.sub("_", eml["message-id"])
     for part in eml.walk():
-        if part.get_content_maintype() != 'image':
+        if part.get_content_maintype() != "image":
             continue
         payload = part.get_payload(decode=True)
-        output.append(
-            (sender, part.get_filename(), payload, identifier)
-        )
+        output.append((sender, part.get_filename(), payload, identifier))
     return output
 
 
 class MailFetcher(object):
-
-    def __init__(self, host, username, password, use_ssl, image_folder,
-                 force=False, file_saved_callback=None, fail_fast=False):
+    def __init__(
+        self,
+        host,
+        username,
+        password,
+        use_ssl,
+        image_folder,
+        force=False,
+        file_saved_callback=None,
+        fail_fast=False,
+    ):
         self.host = host
         self.username = username
         self.password = password
@@ -53,43 +58,46 @@ class MailFetcher(object):
         self.use_index = False
 
     def connect(self):
-        LOG.debug('Connecting to mail host...')
+        LOG.debug("Connecting to mail host...")
         self.connection = IMAPClient(self.host, use_uid=True, ssl=self.use_ssl)
-        LOG.debug('Logging in...')
+        LOG.debug("Logging in...")
         self.connection.login(self.username, self.password)
 
     def fetch(self):
-        LOG.debug('Fetching mail...')
+        LOG.debug("Fetching mail...")
         if not exists(self.image_folder):
             makedirs(self.image_folder)
-            LOG.info('Created image folder at %r' % self.image_folder)
+            LOG.info("Created image folder at %r" % self.image_folder)
 
-        self.connection.select_folder('INBOX')
-        messages = self.connection.search(['NOT', 'DELETED'])
-        response = self.connection.fetch(messages, ['FLAGS', 'BODY'])
+        self.connection.select_folder("INBOX")
+        messages = self.connection.search(["NOT", "DELETED"])
+        response = self.connection.fetch(messages, ["FLAGS", "BODY"])
         for msgid, data in response.items():
-            is_read = SEEN in data[b'FLAGS']
+            is_read = SEEN in data[b"FLAGS"]
             if is_read and not self.force:
-                LOG.debug('Skipping already processed message #%r', msgid)
+                LOG.debug("Skipping already processed message #%r", msgid)
                 continue
             else:
                 # Add a "forced" note only if the message would not have been
                 # processed otherwise.
-                LOG.debug('Processing message #%r%s', msgid,
-                          ' (forced override)' if is_read else '')
-            body = data[b'BODY']
+                LOG.debug(
+                    "Processing message #%r%s",
+                    msgid,
+                    " (forced override)" if is_read else "",
+                )
+            body = data[b"BODY"]
             has_error = self.download(msgid)
             if has_error and self.fail_fast:
-                LOG.error('Failfast activated, bailing out on first error!')
+                LOG.error("Failfast activated, bailing out on first error!")
                 return False
         return True
 
     def in_index(self, md5sum):
         if not self.use_index:
             return False
-        indexfile = join(self.image_folder, 'index')
+        indexfile = join(self.image_folder, "index")
         if not exists(indexfile):
-            LOG.debug('%r does not exist. Assuming first run.', indexfile)
+            LOG.debug("%r does not exist. Assuming first run.", indexfile)
             return False
         with open(indexfile) as fptr:
             hashes = [line.strip() for line in fptr]
@@ -100,46 +108,46 @@ class MailFetcher(object):
             return
         if not md5sum.strip():
             return
-        indexfile = join(self.image_folder, 'index')
-        with open(indexfile, 'a+') as fptr:
-            fptr.write(md5sum + '\n')
+        indexfile = join(self.image_folder, "index")
+        with open(indexfile, "a+") as fptr:
+            fptr.write(md5sum + "\n")
 
     def download(self, msgid):
-        LOG.debug('Downloading images for mail #%r', msgid)
+        LOG.debug("Downloading images for mail #%r", msgid)
         has_error = False
 
-        raw_data = self.connection.fetch([msgid], 'RFC822')[msgid][b'RFC822']
+        raw_data = self.connection.fetch([msgid], "RFC822")[msgid][b"RFC822"]
         eml = email.message_from_bytes(raw_data)
         images = extract_images(eml)
         for sender, filename, data, identifier in images:
             try:
                 md5sum = md5(data).hexdigest()
                 if self.in_index(md5sum) and not self.force:
-                    LOG.debug('Ignored duplicate file (md5=%s).', md5sum)
+                    LOG.debug("Ignored duplicate file (md5=%s).", md5sum)
                     continue
                 elif self.in_index(md5sum) and self.force:
-                    LOG.debug('Bypassing index check (force=True)')
+                    LOG.debug("Bypassing index check (force=True)")
 
-                unique_name = '{}_{}'.format(identifier, filename)
+                unique_name = "{}_{}".format(identifier, filename)
                 fullname = join(self.image_folder, sender, unique_name)
                 if not exists(fullname) or self.force:
-                    suffix = ' (forced overwrite)' if exists(fullname) else ''
+                    suffix = " (forced overwrite)" if exists(fullname) else ""
                     try:
                         makedirs(dirname(fullname))
                     except FileExistsError:
                         pass
-                    with open(fullname, 'wb') as fptr:
+                    with open(fullname, "wb") as fptr:
                         fptr.write(data)
-                    LOG.info('File written to %r%s', fullname, suffix)
+                    LOG.info("File written to %r%s", fullname, suffix)
                     if self.file_saved_callback:
                         self.file_saved_callback(
-                            sender,
-                            join(sender, unique_name))
+                            sender, join(sender, unique_name)
+                        )
                     self.add_to_index(md5sum)
                 else:
-                    LOG.warn('%r already exists. Not downloaded!' % fullname)
+                    LOG.warn("%r already exists. Not downloaded!" % fullname)
             except:
-                LOG.error('Unable to process mail #%r', msgid, exc_info=True)
+                LOG.error("Unable to process mail #%r", msgid, exc_info=True)
                 has_error = True
 
         if has_error:
@@ -156,28 +164,45 @@ def run_cli():
     import argparse
     import sys
 
-    parser = argparse.ArgumentParser(description='Fetch photos from IMAP.')
-    parser.add_argument('--verbose', '-v', dest='verbose',
-                        default=0, action='count',
-                        help='Prints actions on stdout.')
-    parser.add_argument('--host', dest='host',
-                        required=True,
-                        help='IMAP Hostname')
-    parser.add_argument('--login', '-l', dest='login',
-                        required=True,
-                        help='IMAP Username')
-    parser.add_argument('--password', '-p', dest='password',
-                        help='IMAP password.')
-    parser.add_argument('--destination', '-d', dest='destination',
-                        required=True,
-                        help='The folder where files will be stored')
-    parser.add_argument('--force', dest='force',
-                        action='store_true', default=False,
-                        help='Force fecthing mails. Even if they are read or '
-                        'in the index')
-    parser.add_argument('--fail-fast', dest='failfast',
-                        action='store_true', default=False,
-                        help='Exit on first error')
+    parser = argparse.ArgumentParser(description="Fetch photos from IMAP.")
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        dest="verbose",
+        default=0,
+        action="count",
+        help="Prints actions on stdout.",
+    )
+    parser.add_argument(
+        "--host", dest="host", required=True, help="IMAP Hostname"
+    )
+    parser.add_argument(
+        "--login", "-l", dest="login", required=True, help="IMAP Username"
+    )
+    parser.add_argument(
+        "--password", "-p", dest="password", help="IMAP password."
+    )
+    parser.add_argument(
+        "--destination",
+        "-d",
+        dest="destination",
+        required=True,
+        help="The folder where files will be stored",
+    )
+    parser.add_argument(
+        "--force",
+        dest="force",
+        action="store_true",
+        default=False,
+        help="Force fecthing mails. Even if they are read or " "in the index",
+    )
+    parser.add_argument(
+        "--fail-fast",
+        dest="failfast",
+        action="store_true",
+        default=False,
+        help="Exit on first error",
+    )
 
     args = parser.parse_args()
 
@@ -190,7 +215,8 @@ def run_cli():
 
     if not args.password:
         from getpass import getpass
-        password = getpass('Password: ')
+
+        password = getpass("Password: ")
     else:
         password = args.password
 
@@ -201,40 +227,35 @@ def run_cli():
         True,
         args.destination,
         args.force,
-        fail_fast=args.failfast)
+        fail_fast=args.failfast,
+    )
     try:
         fetcher.connect()
     except Exception as exc:
-        LOG.critical('Unable to connect: %s', exc)
+        LOG.critical("Unable to connect: %s", exc)
         sys.exit(1)
 
     try:
         is_success = fetcher.fetch()
     except Exception as exc:
-        LOG.critical('Unable to fetch: %s', exc)
+        LOG.critical("Unable to fetch: %s", exc)
         sys.exit(1)
 
     exit_code = 0 if is_success else 1
     sys.exit(exit_code)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     Simple.basicConfig(level=logging.DEBUG)
-    logging.getLogger('imapclient').setLevel(logging.INFO)
+    logging.getLogger("imapclient").setLevel(logging.INFO)
     config = default()
-    host = config.get('email', 'host')
-    login = config.get('email', 'login')
-    password = config.get('email', 'password')
-    port = config.getint('email', 'port', fallback=143)
-    ssl_raw = config.get('email', 'ssl', fallback='true')
-    ssl = ssl_raw.lower()[0] in ('1', 'y', 't')
-    fetcher = MailFetcher(
-        host,
-        login,
-        password,
-        ssl,
-        'lost_images',
-        force=True)
+    host = config.get("email", "host")
+    login = config.get("email", "login")
+    password = config.get("email", "password")
+    port = config.getint("email", "port", fallback=143)
+    ssl_raw = config.get("email", "ssl", fallback="true")
+    ssl = ssl_raw.lower()[0] in ("1", "y", "t")
+    fetcher = MailFetcher(host, login, password, ssl, "lost_images", force=True)
     fetcher.connect()
     fetcher.fetch()
     fetcher.disconnect()

@@ -1,9 +1,11 @@
 import logging
 from datetime import datetime, timezone
+from enum import Enum, auto
 from os import makedirs
 from os.path import basename, dirname, join
 from random import SystemRandom
 from string import ascii_letters, digits, punctuation
+from typing import Generator, Optional, Tuple
 
 from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
@@ -15,26 +17,32 @@ from .model import TeamState
 LOG = logging.getLogger(__name__)
 
 
-def get_assignments(session):
+class StationRelation(Enum):
+    """
+    A station-relation defines how one station relates to another.
+    """
 
+    PREVIOUS = auto()
+    NEXT = auto()
+
+
+def get_assignments(session):
     routes = session.query(model.Route)
 
     output = {
-        'teams': {},
-        'stations': {},
+        "teams": {},
+        "stations": {},
     }
 
     for route in routes:
-        output['teams'][route.name] = route.teams
-        output['stations'][route.name] = route.stations
+        output["teams"][route.name] = route.teams
+        output["stations"][route.name] = route.stations
 
     return output
 
 
 def make_default_team_state():
-    return {
-        'state': TeamState.UNKNOWN
-    }
+    return {"state": TeamState.UNKNOWN}
 
 
 def scoreboard(session):
@@ -50,42 +58,44 @@ def scoreboard(session):
 
 def questionnaire_scores(config, session):
     mapping = {}
-    for option in config.options('questionnaire-map'):
-        mapping[option] = config.get('questionnaire-map', option).strip()
+    for option in config.options("questionnaire-map"):
+        mapping[option] = config.get("questionnaire-map", option).strip()
     query = session.query(model.TeamQuestionnaire)
     output = {}
     for row in query:
         if row.questionnaire_name.lower() not in mapping:
-            LOG.error('No mapped station found for questionnaire %r',
-                      row.questionnaire_name)
+            LOG.error(
+                "No mapped station found for questionnaire %r",
+                row.questionnaire_name,
+            )
             continue
         station = mapping[row.questionnaire_name.lower()]
         team_stations = output.setdefault(row.team_name, {})
         team_stations[station] = {
-            'name': row.questionnaire_name,
-            'score': row.score
+            "name": row.questionnaire_name,
+            "score": row.score,
         }
     return output
 
 
 def add_audit_log(
-        session: Session,
-        username: str, type_: model.AuditType, message: str) -> model.AuditLog:
+    session: Session, username: str, type_: model.AuditType, message: str
+) -> model.AuditLog:
     entry = model.AuditLog(
         timestamp=datetime.now(timezone.utc),
         username=username,
         type_=type_,
-        message=message
+        message=message,
     )
-    LOG.debug('New entry on audit-trail: %r', entry)
+    LOG.debug("New entry on audit-trail: %r", entry)
     session.add(entry)
     return entry
 
 
 def set_questionnaire_score(config, session, team, station, score):
     mapping = {}
-    for qname in config.options('questionnaire-map'):
-        mapped_station = config.get('questionnaire-map', qname).strip()
+    for qname in config.options("questionnaire-map"):
+        mapped_station = config.get("questionnaire-map", qname).strip()
         mapping[mapped_station] = qname
     questionnaire_name = mapping.get(station, None)
     if not questionnaire_name:
@@ -103,8 +113,7 @@ def set_questionnaire_score(config, session, team, station, score):
     questionnaire_name = existing_questionnaire.name
 
     query = session.query(model.TeamQuestionnaire).filter_by(
-        team_name=team,
-        questionnaire_name=questionnaire_name
+        team_name=team, questionnaire_name=questionnaire_name
     )
     state = query.one_or_none()
     if not state:
@@ -123,22 +132,22 @@ def global_dashboard(session):
     output = []
     for team in teams:
         team_names.add(team.name)
-        team_data = {
-            'stations': [],
-            'team': team.name
-        }
+        team_data = {"stations": [], "team": team.name}
         if team.route:
-            reachable_stations = {station.name
-                                  for station in team.route.stations}
+            reachable_stations = {
+                station.name for station in team.route.stations
+            }
         else:
             reachable_stations = set()
         for station in stations:
             station_names.add(station.name)
             if station.name in reachable_stations:
-                team_states = session.query(model.TeamStation).filter(and_(
-                    model.TeamStation.team == team,
-                    model.TeamStation.station == station
-                ))
+                team_states = session.query(model.TeamStation).filter(
+                    and_(
+                        model.TeamStation.team == team,
+                        model.TeamStation.station == station,
+                    )
+                )
                 dbstate = team_states.one_or_none()
                 if dbstate:
                     cell_state = dbstate.state
@@ -149,21 +158,19 @@ def global_dashboard(session):
             else:
                 cell_state = TeamState.UNREACHABLE
                 cell_score = 0
-            team_data['stations'].append({
-                'name': station.name,
-                'score': cell_score,
-                'state': cell_state
-            })
+            team_data["stations"].append(
+                {"name": station.name, "score": cell_score, "state": cell_state}
+            )
         output.append(team_data)
     return output
 
 
 class Team:
-
     @staticmethod
     def all(session):
         return session.query(model.Team).order_by(
-            model.Team.effective_start_time)
+            model.Team.effective_start_time
+        )
 
     @staticmethod
     def get(session, name):
@@ -175,22 +182,21 @@ class Team:
 
     @staticmethod
     def assigned_to_route(session, route_name):
-        route = session.query(model.Route).filter_by(
-            name=route_name).one()
+        route = session.query(model.Route).filter_by(name=route_name).one()
         return route.teams
 
     @staticmethod
     def create_new(session, data):
         team = model.Team(**data)
-        if not data.get('confirmation_key'):
+        if not data.get("confirmation_key"):
             team.reset_confirmation_key()
         team = session.merge(team)
         return team
 
     @staticmethod
     def upsert(session, name, data):
-        data.pop('inserted', None)
-        data.pop('updated', None)
+        data.pop("inserted", None)
+        data.pop("updated", None)
         old = session.query(model.Team).filter_by(name=name).first()
         if not old:
             old = Team.create_new(session, data)
@@ -205,20 +211,28 @@ class Team:
 
     @staticmethod
     def get_station_data(session, team_name, station_name):
-        state = session.query(model.TeamStation).filter_by(
-            team_name=team_name, station_name=station_name).one_or_none()
+        state = (
+            session.query(model.TeamStation)
+            .filter_by(team_name=team_name, station_name=station_name)
+            .one_or_none()
+        )
         if not state:
-            return model.TeamStation(team_name=team_name,
-                                     station_name=station_name)
+            return model.TeamStation(
+                team_name=team_name, station_name=station_name
+            )
         else:
             return state
 
     def advance_on_station(session, team_name, station_name):
-        state = session.query(model.TeamStation).filter_by(
-            team_name=team_name, station_name=station_name).one_or_none()
+        state = (
+            session.query(model.TeamStation)
+            .filter_by(team_name=team_name, station_name=station_name)
+            .one_or_none()
+        )
         if not state:
-            state = model.TeamStation(team_name=team_name,
-                                      station_name=station_name)
+            state = model.TeamStation(
+                team_name=team_name, station_name=station_name
+            )
             state = session.merge(state)
             session.flush()
 
@@ -239,11 +253,15 @@ class Team:
         return state.state
 
     def set_station_score(session, team_name, station_name, score):
-        state = session.query(model.TeamStation).filter_by(
-            team_name=team_name, station_name=station_name).one_or_none()
+        state = (
+            session.query(model.TeamStation)
+            .filter_by(team_name=team_name, station_name=station_name)
+            .one_or_none()
+        )
         if not state:
-            state = model.TeamStation(team_name=team_name,
-                                      station_name=station_name)
+            state = model.TeamStation(
+                team_name=team_name, station_name=station_name
+            )
             state = session.merge(state)
         old_score = state.score
         state.score = score
@@ -253,7 +271,7 @@ class Team:
     def stations(session, team_name):
         team = session.query(model.Team).filter_by(name=team_name).one_or_none()
         if not team:
-            LOG.debug('Team %r not found!', team_name)
+            LOG.debug("Team %r not found!", team_name)
             return []
         if not team.route:
             return []
@@ -261,7 +279,6 @@ class Team:
 
 
 class Station:
-
     @staticmethod
     def all(session):
         return session.query(model.Station).order_by(model.Station.order)
@@ -288,26 +305,29 @@ class Station:
 
     @staticmethod
     def assigned_to_route(session, route_name):
-        route = session.query(model.Route).filter_by(
-            name=route_name).one_or_none()
+        route = (
+            session.query(model.Route).filter_by(name=route_name).one_or_none()
+        )
         return route.stations
 
     @staticmethod
     def assign_user(session, station_name, user_name):
-        '''
+        """
         Returns true if the operation worked, false if the use is already
         assigned to another station.
-        '''
-        station = session.query(model.Station).filter_by(
-            name=station_name).one()
+        """
+        station = (
+            session.query(model.Station).filter_by(name=station_name).one()
+        )
         user = session.query(model.User).filter_by(name=user_name).one()
         station.users.add(user)
         return True
 
     @staticmethod
     def unassign_user(session, station_name, user_name):
-        station = session.query(model.Station).filter_by(
-            name=station_name).one()
+        station = (
+            session.query(model.Station).filter_by(name=station_name).one()
+        )
 
         found_user = None
         for user in station.users:
@@ -323,19 +343,25 @@ class Station:
     @staticmethod
     def team_states(session, station_name):
         # TODO this could be improved by just using one query
-        station = session.query(model.Station).filter_by(
-            name=station_name).one()
+        station = (
+            session.query(model.Station).filter_by(name=station_name).one()
+        )
         states = session.query(model.TeamStation).filter_by(
-            station_name=station_name)
+            station_name=station_name
+        )
         mapping = {state.team_name: state for state in states}
 
         for route in station.routes:
             for team in route.teams:
-                state = mapping.get(team.name, model.TeamStation(
-                    team_name=team.name,
-                    station_name=station_name,
-                    state=TeamState.UNKNOWN))
-                yield (team.name, state.state, state.score)
+                state = mapping.get(
+                    team.name,
+                    model.TeamStation(
+                        team_name=team.name,
+                        station_name=station_name,
+                        state=TeamState.UNKNOWN,
+                    ),
+                )
+                yield (team.name, state.state, state.score, state.updated)
 
     @staticmethod
     def accessible_by(session, username):
@@ -344,9 +370,44 @@ class Station:
             return set()
         return {station.name for station in user.stations}
 
+    @staticmethod
+    def related_team_states(
+        session: Session, station_name: str, relation: StationRelation
+    ) -> Generator[Tuple[str, TeamState, Optional[int]], None, None]:
+        related_station = Station.related(session, station_name, relation)
+        if not related_station:
+            return
+        yield from Station.team_states(session, related_station)
+
+    @staticmethod
+    def related(
+        session: Session, station_name: str, relation: StationRelation
+    ) -> str:
+        subquery = (
+            session.query(model.Station.order)
+            .filter_by(name=station_name)
+            .scalar_subquery()
+        )
+
+        if relation == StationRelation.PREVIOUS:
+            relation_filter = model.Station.order < subquery
+        elif relation == StationRelation.NEXT:
+            relation_filter = model.Station.order > subquery
+        else:
+            raise ValueError(f"Unsupported station-relation: {relation}")
+
+        query = session.query(model.Station.name).filter(relation_filter)
+        if relation == StationRelation.PREVIOUS:
+            query = query.order_by(model.Station.order.desc())
+        elif relation == StationRelation.NEXT:
+            query = query.order_by(model.Station.order)
+        first_row = query.first()
+        if first_row is None:
+            return ""
+        return first_row.name
+
 
 class Route:
-
     @staticmethod
     def all(session):
         return session.query(model.Route)
@@ -373,71 +434,67 @@ class Route:
 
     @staticmethod
     def assign_team(session, route_name, team_name):
-        team = session.query(model.Team).filter_by(
-            name=team_name).one()
+        team = session.query(model.Team).filter_by(name=team_name).one()
         if team.route:
             return False  # A team can only be assigned to one route
-        route = session.query(model.Route).filter_by(
-            name=route_name).one()
+        route = session.query(model.Route).filter_by(name=route_name).one()
         route.teams.add(team)
         return True
 
     @staticmethod
     def unassign_team(session, route_name, team_name):
-        route = session.query(model.Route).filter_by(
-            name=route_name).one()
-        team = session.query(model.Team).filter_by(
-            name=team_name).one()
+        route = session.query(model.Route).filter_by(name=route_name).one()
+        team = session.query(model.Team).filter_by(name=team_name).one()
         route.teams.remove(team)
         return True
 
     @staticmethod
     def assign_station(session, route_name, station_name):
-        route = session.query(model.Route).filter_by(
-            name=route_name).one()
-        station = session.query(model.Station).filter_by(
-            name=station_name).one()
+        route = session.query(model.Route).filter_by(name=route_name).one()
+        station = (
+            session.query(model.Station).filter_by(name=station_name).one()
+        )
         route.stations.add(station)
         return True
 
     @staticmethod
     def unassign_station(session, route_name, station_name):
-        route = session.query(model.Route).filter_by(
-            name=route_name).one()
-        station = session.query(model.Station).filter_by(
-            name=station_name).one()
+        route = session.query(model.Route).filter_by(name=route_name).one()
+        station = (
+            session.query(model.Station).filter_by(name=station_name).one()
+        )
         route.stations.remove(station)
         return True
 
     @staticmethod
     def update_color(session, route_name, color_value):
-        route = session.query(model.Route).filter_by(
-            name=route_name).one()
+        route = session.query(model.Route).filter_by(name=route_name).one()
         route.color = color_value
         return True
 
 
 class User:
-
     @staticmethod
     def by_social_connection(session, provider, user_id, defaults=None):
         defaults = defaults or {}
         query = session.query(model.OauthConnection).filter_by(
-            provider_id=provider,
-            provider_user_id=user_id)
+            provider_id=provider, provider_user_id=user_id
+        )
         connection = query.one_or_none()
         if not connection:
-            user = User.get(session, defaults['email'])
+            user = User.get(session, defaults["email"])
             if not user:
-                random_pw = ''.join(SystemRandom().choice(
-                    ascii_letters + digits + punctuation) for _ in range(64))
-                user = model.User(defaults['email'], password=random_pw)
+                random_pw = "".join(
+                    SystemRandom().choice(ascii_letters + digits + punctuation)
+                    for _ in range(64)
+                )
+                user = model.User(defaults["email"], password=random_pw)
             new_connection = model.OauthConnection()
             new_connection.user = user
             new_connection.provider_id = provider
             new_connection.provider_user_id = user_id
-            new_connection.display_name = defaults.get('display_name')
-            new_connection.image_url = defaults.get('avatar_url')
+            new_connection.display_name = defaults.get("display_name")
+            new_connection.image_url = defaults.get("avatar_url")
             session.add(new_connection)
             session.commit()
         else:
@@ -474,7 +531,7 @@ class User:
     def unassign_role(session, user_name, role_name):
         user = session.query(model.User).filter_by(name=user_name).one()
         role = session.query(model.Role).filter_by(name=role_name).one_or_none()
-        if role:
+        if role and role in user.roles:
             user.roles.remove(role)
         return True
 
@@ -485,20 +542,22 @@ class User:
 
     @staticmethod
     def assign_station(session, user_name, station_name):
-        '''
+        """
         Returns true if the operation worked, false if the use is already
         assigned to another station.
-        '''
-        station = session.query(model.Station).filter_by(
-            name=station_name).one()
+        """
+        station = (
+            session.query(model.Station).filter_by(name=station_name).one()
+        )
         user = session.query(model.User).filter_by(name=user_name).one()
         station.users.add(user)
         return True
 
     @staticmethod
     def unassign_station(session, user_name, station_name):
-        station = session.query(model.Station).filter_by(
-            name=station_name).one()
+        station = (
+            session.query(model.Station).filter_by(name=station_name).one()
+        )
 
         found_user = None
         for user in station.users:
@@ -513,8 +572,7 @@ class User:
 
     @staticmethod
     def may_access_station(session, user_name, station_name):
-        user = session.query(model.User).filter_by(
-            name=user_name).one_or_none()
+        user = session.query(model.User).filter_by(name=user_name).one_or_none()
         if not user:
             return False
         user_stations = {_.name for _ in user.stations}
@@ -522,7 +580,6 @@ class User:
 
 
 class Role:
-
     @staticmethod
     def get(session, name):
         return session.query(model.Role).filter_by(name=name).one_or_none()
@@ -544,8 +601,7 @@ class Role:
 
 
 class Upload:
-
-    FALLBACK_FOLDER = '/tmp/uploads'
+    FALLBACK_FOLDER = "/tmp/uploads"
 
     @staticmethod
     def all(session):
@@ -564,4 +620,4 @@ class Upload:
         if not instance:
             return
 
-        thumbnail_folder = join(FALLBACK_FOLDER, '__thumbnails__')
+        thumbnail_folder = join(FALLBACK_FOLDER, "__thumbnails__")

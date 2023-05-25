@@ -1,17 +1,24 @@
-FROM python:3
-EXPOSE 9000
+FROM python:3.11-slim AS build
+ADD . /tmp/src
+WORKDIR /tmp/src
 RUN python3 -m venv /opt/powonline
-RUN /opt/powonline/bin/pip install alembic uwsgi
-RUN mkdir -p /etc/mamerwiselen/powonline
-ADD app.ini.dist /etc/mamerwiselen/powonline/app.ini
-ADD docker-entrypoint /
-ADD set_config /
-RUN chmod +x /docker-entrypoint
-RUN useradd -ms /bin/bash powonline
-VOLUME ["/etc/mamerwiselen/powonline"]
+RUN /opt/powonline/bin/pip install -U pip
+RUN /opt/powonline/bin/pip install gunicorn alembic
+RUN /opt/powonline/bin/pip install -r requirements.txt
+RUN /opt/powonline/bin/pip install --no-deps .
 
-COPY dist/docker.tar.gz /tmp/
-ADD powonline.wsgi /opt/powonline
-RUN /opt/powonline/bin/pip install /tmp/docker.tar.gz
-RUN /opt/powonline/bin/pip install requests
-CMD ["/docker-entrypoint"]
+FROM python:3.11-slim
+COPY --from=build /opt/powonline /opt/powonline
+ADD deployment/start.bash /
+ADD deployment/migrate.bash /
+ADD deployment/fetch-mails.bash /
+ADD database/alembic /alembic/alembic
+ADD database/alembic.ini /alembic/alembic.ini
+RUN chmod +x /start.bash
+RUN chmod +x /migrate.bash
+RUN chmod +x /fetch-mails.bash
+EXPOSE 8000
+ENTRYPOINT ["/start.bash"]
+
+
+# RUN useradd -ms /bin/bash powonline

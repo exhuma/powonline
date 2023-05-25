@@ -1,18 +1,3 @@
-TRUNCATE 
-    "user",
-    role,
-    oauth_connection,
-    message,
-    route,
-    route_station,
-    station,
-    team,
-    team_station_state,
-    user_role,
-    user_station,
-    questionnaire,
-    questionnaire_score
-;
 INSERT INTO "user" (name, password) VALUES
     ('user-station-manager', 'user-station-manager'),
     ('user-red', 'user-red'),
@@ -24,11 +9,11 @@ INSERT INTO route (name) VALUES
 INSERT INTO role (name) VALUES
     ('station-manager'),
     ('a-role');
-INSERT INTO station (name, is_start, is_end) VALUES
-    ('station-start', true, false),
-    ('station-end', false, true),
-    ('station-red', false, false),
-    ('station-blue', false, false);
+INSERT INTO station (name, is_start, is_end, "order") VALUES
+    ('station-start', true, false, 10),
+    ('station-blue', false, false, 20),
+    ('station-red', false, false, 30),
+    ('station-end', false, true, 40);
 INSERT INTO team (confirmation_key, name, email, route_name) VALUES
     ('a', 'team-red', 'email-red@example.com', 'route-red'),
     ('b', 'team-blue', 'email-blue@example.com', 'route-blue'),
@@ -41,7 +26,8 @@ INSERT INTO user_station (user_name, station_name) VALUES
     ('user-red', 'station-red');
 INSERT INTO team_station_state (team_name, station_name, state, score) VALUES
     ('team-red', 'station-end', 'arrived', 0),
-    ('team-red', 'station-start', 'finished', 10);
+    ('team-red', 'station-start', 'finished', 10),
+    ('team-blue', 'station-blue', 'finished', 20);
 INSERT INTO route_station (route_name, station_name) VALUES
     ('route-red', 'station-start'),
     ('route-red', 'station-red'),
