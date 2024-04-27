@@ -132,9 +132,9 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
     def test_fetch_list_of_stations(self):
         with patch("powonline.resources.core") as _core:
             _core.Station.all.return_value = [
-                make_dummy_station_dict(as_mock=True, name="station1"),
-                make_dummy_station_dict(as_mock=True, name="station2"),
-                make_dummy_station_dict(as_mock=True, name="station3"),
+                make_dummy_station_dict(as_mock=False, name="station1"),
+                make_dummy_station_dict(as_mock=False, name="station2"),
+                make_dummy_station_dict(as_mock=False, name="station3"),
             ]
             response = self.app.get("/station")
         self.assertEqual(response.status_code, 200, response.data)
@@ -151,9 +151,9 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
     def test_fetch_list_of_routes(self):
         with patch("powonline.resources.core") as _core:
             _core.Route.all.return_value = [
-                make_dummy_route_dict(as_mock=True, name="route1"),
-                make_dummy_route_dict(as_mock=True, name="route2"),
-                make_dummy_route_dict(as_mock=True, name="route3"),
+                make_dummy_route_dict(as_mock=False, name="route1"),
+                make_dummy_route_dict(as_mock=False, name="route2"),
+                make_dummy_route_dict(as_mock=False, name="route3"),
             ]
             response = self.app.get("/route")
         self.assertEqual(response.status_code, 200, response.data)
@@ -254,6 +254,8 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
         self.assertEqual(response.content_type, "application/json")
         data = json.loads(response.text)
         expected = make_dummy_team_dict(name="foo", contact="new-contact")
+        expected.pop("inserted")
+        data.pop("inserted")
         self.assertEqual(data, expected)
 
     def test_create_station(self):

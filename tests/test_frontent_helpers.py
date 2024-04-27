@@ -75,6 +75,7 @@ class TestFrontendHelpers(TestCase):
 
 def test_fetch_assignments_api(with_config):
     response = with_config.get("/assignments")
+    assert response.status_code == 200, response.text
     result_data = json.loads(response.text)
 
     # To be testing a bit easier, we drop all the irrelevant keys

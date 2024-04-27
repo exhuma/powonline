@@ -21,7 +21,7 @@ dependencies = [
     "flask-sqlalchemy",
     "gouge >= 1.1, <2.0",
     "imapclient",
-    "marshmallow < 3.0",
+    "pydantic[email]",
     "pillow",
     "psycopg2-binary",
     "pusher",
