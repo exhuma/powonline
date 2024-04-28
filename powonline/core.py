@@ -620,4 +620,4 @@ class Upload:
         if not instance:
             return
 
-        thumbnail_folder = join(FALLBACK_FOLDER, "__thumbnails__")
+        thumbnail_folder = join(Upload.FALLBACK_FOLDER, "__thumbnails__")

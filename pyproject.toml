@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "powonline"
-version = "2023.05.06.6"
+version = "2024.04.28"
 authors = [
     {name = "Michel Albert", email = "michel@albert.lu"},
 ]
@@ -19,9 +19,9 @@ dependencies = [
     "flask",
     "flask-restful",
     "flask-sqlalchemy",
-    "gouge >= 1.1, <2.0",
+    "gouge >= 2.0",
     "imapclient",
-    "marshmallow < 3.0",
+    "pydantic[email]",
     "pillow",
     "psycopg2-binary",
     "pusher",
@@ -66,6 +66,7 @@ fetch-mails = "powonline.cli:fetch_mails"
 line_length = 80
 
 [tool.isort]
+profile = "black"
 force_grid_wrap = 0
 include_trailing_comma = true
 line_length = 80
@@ -78,3 +79,7 @@ disable = ["C0330", "C0326"]
 
 [tool.pylint.format]
 max-line-length = "80"
+
+[tool.yamlfix]
+line_length = 80
+sequence_style = "block_style"

@@ -2,7 +2,8 @@
 name: Build and Publish
 on:
   push:
-    tags: ["v*"]
+    tags:
+      - v*
 jobs:
   build_and_push:
     runs-on: ubuntu-latest
