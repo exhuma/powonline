@@ -21,11 +21,12 @@
             "password": "postgres"
         }
     ],
-    "python.analysis.typeCheckingMode": "off",
+    "python.analysis.typeCheckingMode": "basic",
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "ms-python.black-formatter",
     "python.linting.mypyEnabled": true,
     "editor.codeActionsOnSave": {
-        "source.organizeImports": true
-    }
+        "source.organizeImports": "explicit"
+    },
+    "python.analysis.diagnosticMode": "workspace"
 }
