@@ -162,9 +162,11 @@ def import_csv(filename: str, event_day: str) -> None:
 
                 team = Team(
                     name=data["name"],
-                    email=data["email"]
-                    if "@" in data["email"]
-                    else "nobody@example.com",
+                    email=(
+                        data["email"]
+                        if "@" in data["email"]
+                        else "nobody@example.com"
+                    ),
                     order=order,
                     contact=data["contact"],
                     phone=data["phone"],

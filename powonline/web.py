@@ -1,8 +1,10 @@
 import logging
 from os import environ
 
-from flask import Flask  # type: ignore
-from flask_restful import Api  # type: ignore
+from flask import Flask, jsonify  # type: ignore
+from flask_restful import Api
+
+from powonline.exc import ValidationError  # type: ignore
 
 from .config import default
 from .model import DB
@@ -40,12 +42,27 @@ from .rootbp import rootbp
 LOG = logging.getLogger(__name__)
 
 
+class CustomApi(Api):
+    """
+    Custom API class to handle exceptions
+    """
+
+    def handle_error(self, e):
+        """
+        Handle exceptions
+        """
+        if isinstance(e, ValidationError):
+            return jsonify({"message": f"Invalid User Input: {e}"}), 400
+        LOG.exception("Error in API call")
+        return super().handle_error(e)
+
+
 def make_app(config=None):
     """
     Application factory
     """
     app = Flask(__name__)
-    api = Api(app)
+    api = CustomApi(app)
 
     if not config:
         config = default()

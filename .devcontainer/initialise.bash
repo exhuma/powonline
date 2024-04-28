@@ -7,6 +7,8 @@
 
 set -xe
 
+suto apt-get update && sudo apt-get install -y entr
+
 pipx install alembic
 pipx inject alembic psycopg2-binary
 pipx install fabric

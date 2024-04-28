@@ -21,6 +21,16 @@ from flask_restful import Resource, fields, marshal_with  # type: ignore
 from PIL import ExifTags, Image
 from werkzeug.utils import secure_filename
 
+from powonline.schema import (
+    JobSchema,
+    ListResponse,
+    RoleSchema,
+    RouteSchema,
+    StationSchema,
+    TeamSchema,
+    UserSchema,
+)
+
 from . import core
 from .core import StationRelation
 from .exc import (
@@ -33,19 +43,6 @@ from .model import DB
 from .model import AuditLog as DBAuditLog
 from .model import AuditType
 from .model import Upload as DBUpload
-from .schema import (
-    JOB_SCHEMA,
-    ROLE_SCHEMA,
-    ROUTE_LIST_SCHEMA,
-    ROUTE_SCHEMA,
-    STATION_LIST_SCHEMA,
-    STATION_SCHEMA,
-    TEAM_LIST_SCHEMA,
-    TEAM_SCHEMA,
-    USER_LIST_SCHEMA,
-    USER_SCHEMA,
-    USER_SCHEMA_SAFE,
-)
 from .util import allowed_file, get_user_identity, get_user_permissions
 
 EXIF_TAGS = ExifTags.TAGS
@@ -161,40 +158,29 @@ class MyJsonEncoder(JSONEncoder):
 class UserList(Resource):
     @require_permissions("manage_permissions")
     def get(self):
-        users = list(core.User.all(DB.session))
-        output = {"items": users}
-
-        parsed_output, errors = USER_LIST_SCHEMA.dumps(output)
-        if errors:
-            raise ValidationError(f"Unable to process return value: {errors}")
-
-        output = make_response(parsed_output, 200)
+        users = core.User.all(DB.session)
+        users = [
+            UserSchema.model_dump(UserSchema.model_validate(user))
+            for user in users
+        ]
+        document = ListResponse(items=users).model_dump_json()
+        output = make_response(document, 200)
         output.content_type = "application/json"
         return output
 
     @require_permissions("manage_permissions")
     def post(self):
         data = request.get_json()
-
-        parsed_data, errors = USER_SCHEMA.load(data)
-        if errors:
-            return {
-                "error": ErrorType.INVALID_SCHEMA.value,
-                "errors": errors,
-            }, 400
-
+        parsed_data = UserSchema.model_validate(data)
         output = core.User.create_new(DB.session, parsed_data)
-        return User._single_response(output, 201)
+        return User._single_response(UserSchema.from_orm(output), 201)
 
 
 class User(Resource):
     @staticmethod
     def _single_response(output, status_code=200):
-        parsed_output, errors = USER_SCHEMA_SAFE.dumps(output)
-        if errors:
-            raise ValidationError(f"Unable to process return value: {errors}")
-
-        response = make_response(parsed_output)
+        document = UserSchema.model_dump_json(output)
+        response = make_response(document)
         response.status_code = status_code
         response.content_type = "application/json"
         return response
@@ -205,21 +191,14 @@ class User(Resource):
         if not user:
             return "No such user", 404
 
-        return User._single_response(user, 200)
+        return User._single_response(UserSchema.model_validate(user), 200)
 
     @require_permissions("manage_permissions")
     def put(self, name):
         data = request.get_json()
-
-        parsed_data, errors = USER_SCHEMA.load(data)
-        if errors:
-            return {
-                "error": ErrorType.INVALID_SCHEMA.value,
-                "errors": errors,
-            }, 400
-
+        parsed_data = UserSchema.model_validate(data)
         output = core.User.upsert(DB.session, name, parsed_data)
-        return User._single_response(output, 200)
+        return User._single_response(UserSchema.model_validate(output), 200)
 
     @require_permissions("manage_permissions")
     def delete(self, name):
@@ -242,11 +221,12 @@ class TeamList(Resource):
         else:
             teams = core.Team.all(DB.session)
 
-        output = {"items": teams}
-
-        parsed_output, errors = TEAM_LIST_SCHEMA.dumps(output)
-        if errors:
-            raise ValidationError(f"Unable to process return value: {errors}")
+        teams = [
+            TeamSchema.model_dump(TeamSchema.model_validate(team))
+            for team in teams
+        ]
+        output = ListResponse(items=teams)
+        parsed_output = output.model_dump_json()
 
         output = make_response(parsed_output, 200)
         output.content_type = "application/json"
@@ -255,25 +235,15 @@ class TeamList(Resource):
     @require_permissions("admin_teams")
     def post(self):
         data = request.get_json()
-
-        parsed_data, errors = TEAM_SCHEMA.load(data)
-        if errors:
-            return {
-                "error": ErrorType.INVALID_SCHEMA.value,
-                "errors": errors,
-            }, 400
-
-        output = core.Team.create_new(DB.session, parsed_data)
-        return Team._single_response(output, 201)
+        parsed_data = TeamSchema.model_validate(data)
+        output = core.Team.create_new(DB.session, parsed_data.model_dump())
+        return Team._single_response(TeamSchema.model_validate(output), 201)
 
 
 class Team(Resource):
     @staticmethod
     def _single_response(output, status_code=200):
-        parsed_output, errors = TEAM_SCHEMA.dumps(output)
-        if errors:
-            raise ValidationError(f"Unable to process return value: {errors}")
-
+        parsed_output = TeamSchema.model_dump_json(output)
         response = make_response(parsed_output)
         response.status_code = status_code
         response.content_type = "application/json"
@@ -282,15 +252,8 @@ class Team(Resource):
     @require_permissions("admin_teams")
     def put(self, name):
         data = request.get_json()
-
-        parsed_data, errors = TEAM_SCHEMA.load(data)
-        if errors:
-            return {
-                "error": ErrorType.INVALID_SCHEMA.value,
-                "errors": errors,
-            }, 400
-
-        output = core.Team.upsert(DB.session, name, parsed_data)
+        parsed_data = TeamSchema.model_validate(data)
+        output = core.Team.upsert(DB.session, name, parsed_data.model_dump())
         DB.session.flush()
 
         pusher_channel = current_app.localconfig.get(
@@ -302,7 +265,7 @@ class Team(Resource):
             "team-details-change", {"name": name}
         )
 
-        return Team._single_response(output, 200)
+        return Team._single_response(TeamSchema.model_validate(output), 200)
 
     @require_permissions("admin_teams")
     def delete(self, name):
@@ -320,18 +283,17 @@ class Team(Resource):
         if not team:
             return "No such team", 404
 
-        return Team._single_response(team, 200)
+        return Team._single_response(TeamSchema.model_validate(team), 200)
 
 
 class StationList(Resource):
     def get(self):
-        items = list(core.Station.all(DB.session))
-        output = {"items": items}
-
-        parsed_output, errors = STATION_LIST_SCHEMA.dumps(output)
-        if errors:
-            raise ValidationError(f"Unable to process return value: {errors}")
-
+        items = core.Station.all(DB.session)
+        items = [
+            StationSchema.model_dump(StationSchema.model_validate(item))
+            for item in items
+        ]
+        parsed_output = ListResponse(items=items).model_dump_json()
         output = make_response(parsed_output, 200)
         output.content_type = "application/json"
         return output
@@ -339,25 +301,17 @@ class StationList(Resource):
     @require_permissions("admin_stations")
     def post(self):
         data = request.get_json()
-
-        parsed_data, errors = STATION_SCHEMA.load(data)
-        if errors:
-            return {
-                "error": ErrorType.INVALID_SCHEMA.value,
-                "errors": errors,
-            }, 400
-
-        output = core.Station.create_new(DB.session, parsed_data)
-        return Station._single_response(output, 201)
+        parsed_data = StationSchema.model_validate(data)
+        output = core.Station.create_new(DB.session, parsed_data.model_dump())
+        return Station._single_response(
+            StationSchema.model_validate(output), 201
+        )
 
 
 class Station(Resource):
     @staticmethod
-    def _single_response(output, status_code=200):
-        parsed_output, errors = STATION_SCHEMA.dumps(output)
-        if errors:
-            raise ValidationError(f"Unable to process return value: {errors}")
-
+    def _single_response(output: TeamSchema, status_code=200):
+        parsed_output = StationSchema.model_dump_json(output)
         response = make_response(parsed_output)
         response.status_code = status_code
         response.content_type = "application/json"
@@ -392,16 +346,11 @@ class Station(Resource):
             return "Access denied to this station!", 401
 
         data = request.get_json()
-
-        parsed_data, errors = STATION_SCHEMA.load(data)
-        if errors:
-            return {
-                "error": ErrorType.INVALID_SCHEMA.value,
-                "errors": errors,
-            }, 400
-
-        output = core.Station.upsert(DB.session, name, parsed_data)
-        return Station._single_response(output, 200)
+        parsed_data = StationSchema.model_validate(data)
+        output = core.Station.upsert(DB.session, name, parsed_data.model_dump())
+        return Station._single_response(
+            StationSchema.model_validate(output), 200
+        )
 
     @require_permissions("admin_stations")
     def delete(self, name):
@@ -412,12 +361,11 @@ class Station(Resource):
 class RouteList(Resource):
     def get(self):
         items = list(core.Route.all(DB.session))
-        output = {"items": items}
-
-        parsed_output, errors = ROUTE_LIST_SCHEMA.dumps(output)
-        if errors:
-            raise ValidationError(f"Unable to process return value: {errors}")
-
+        items = [
+            RouteSchema.model_dump(RouteSchema.model_validate(item))
+            for item in items
+        ]
+        parsed_output = ListResponse(items=items).model_dump_json()
         output = make_response(parsed_output, 200)
         output.content_type = "application/json"
         return output
@@ -425,25 +373,15 @@ class RouteList(Resource):
     @require_permissions("admin_routes")
     def post(self):
         data = request.get_json()
-
-        parsed_data, errors = ROUTE_SCHEMA.load(data)
-        if errors:
-            return {
-                "error": ErrorType.INVALID_SCHEMA.value,
-                "errors": errors,
-            }, 400
-
-        output = core.Route.create_new(DB.session, parsed_data)
-        return Route._single_response(output, 201)
+        parsed_data = RouteSchema.model_validate(data)
+        output = core.Route.create_new(DB.session, parsed_data.model_dump())
+        return Route._single_response(RouteSchema.model_validate(output), 201)
 
 
 class Route(Resource):
     @staticmethod
     def _single_response(output, status_code=200):
-        parsed_output, errors = ROUTE_SCHEMA.dumps(output)
-        if errors:
-            raise ValidationError(f"Unable to process return value: {errors}")
-
+        parsed_output = RouteSchema.model_dump_json(output)
         response = make_response(parsed_output)
         response.status_code = status_code
         response.content_type = "application/json"
@@ -452,15 +390,9 @@ class Route(Resource):
     @require_permissions("admin_routes")
     def put(self, name):
         data = request.get_json()
-        parsed_data, errors = ROUTE_SCHEMA.load(data)
-        if errors:
-            return {
-                "error": ErrorType.INVALID_SCHEMA.value,
-                "errors": errors,
-            }, 400
-
+        parsed_data = RouteSchema.model_validate(data)
         output = core.Route.upsert(DB.session, name, parsed_data)
-        return Route._single_response(output, 200)
+        return Route._single_response(RouteSchema.model_validate(output), 200)
 
     @require_permissions("admin_routes")
     def delete(self, name):
@@ -471,15 +403,8 @@ class Route(Resource):
 class StationUserList(Resource):
     def _assign_user_to_station(self, station_name):
         data = request.get_json()
-        user, errors = USER_SCHEMA.load(data)
-        if errors:
-            return {
-                "error": ErrorType.INVALID_SCHEMA.value,
-                "errors": errors,
-            }, 400
-        success = core.Station.assign_user(
-            DB.session, station_name, user["name"]
-        )
+        user = UserSchema.model_validate(data)
+        success = core.Station.assign_user(DB.session, station_name, user.name)
         if success:
             return "", 204
         else:
@@ -487,15 +412,8 @@ class StationUserList(Resource):
 
     def _assign_station_to_user(self, user_name):
         data = request.get_json()
-        station, errors = STATION_SCHEMA.load(data)
-        if errors:
-            return {
-                "error": ErrorType.INVALID_SCHEMA.value,
-                "errors": errors,
-            }, 400
-        success = core.User.assign_station(
-            DB.session, user_name, station["name"]
-        )
+        station = StationSchema.model_validate(data)
+        success = core.User.assign_station(DB.session, user_name, station.name)
         if success:
             return "", 204
         else:
@@ -605,14 +523,8 @@ class UserRoleList(Resource):
         Assign a role to a user
         """
         data = request.get_json()
-        parsed_data, errors = ROLE_SCHEMA.load(data)
-        if errors:
-            return {
-                "error": ErrorType.INVALID_SCHEMA.value,
-                "errors": errors,
-            }, 400
-        role_name = data["name"]
-
+        parsed_data = RoleSchema.model_validate(data)
+        role_name = parsed_data.name
         success = core.User.assign_role(DB.session, user_name, role_name)
         if success:
             return "", 204
@@ -649,8 +561,8 @@ class RouteStationList(Resource):
         Assign a station to a route
         """
         data = request.get_json()
-        parsed_data, errors = STATION_SCHEMA.load(data)
-        station_name = data["name"]
+        parsed_data = StationSchema.model_validate(data)
+        station_name = parsed_data.name
 
         success = core.Route.assign_station(
             DB.session, route_name, station_name
@@ -677,14 +589,9 @@ class TeamStation(Resource):
     def get(self, team_name, station_name=None):
         if station_name is None:
             items = core.Team.stations(DB.session, team_name)
-            output = {"items": sorted(items, key=lambda x: x.name)}
-
-            parsed_output, errors = STATION_LIST_SCHEMA.dumps(output)
-            if errors:
-                raise ValidationError(
-                    f"Unable to process return value: {errors}"
-                )
-
+            parsed_output = ListResponse(
+                items=sorted(items, key=lambda x: x.name)
+            ).model_dump_json()
             output = make_response(parsed_output, 200)
             output.content_type = "application/json"
             return output
@@ -702,13 +609,15 @@ class Assignments(Resource):
         out_stations = {}
         for route_name, stations in data["stations"].items():
             out_stations[route_name] = [
-                STATION_SCHEMA.dump(station)[0] for station in stations
+                StationSchema.model_dump(StationSchema.model_validate(station))
+                for station in stations
             ]
 
         out_teams = {}
         for route_name, teams in data["teams"].items():
             out_teams[route_name] = [
-                TEAM_SCHEMA.dump(team)[0] for team in teams
+                TeamSchema.model_dump(TeamSchema.model_validate(team))
+                for team in teams
             ]
 
         output = {"stations": out_stations, "teams": out_teams}
@@ -1158,16 +1067,10 @@ class Job(Resource):
     @require_permissions("manage_station")
     def post(self):
         data = request.get_json()
-        parsed_data, errors = JOB_SCHEMA.load(data)
-        if errors:
-            return {
-                "error": ErrorType.INVALID_SCHEMA.value,
-                "errors": errors,
-            }, 400
-
-        action = parsed_data["action"]
+        parsed_data = JobSchema.model_validate(data)
+        action = parsed_data.action
         func = getattr(self, "_action_%s" % action, None)
         if not func:
-            LOG.debug("Unknown job %r requested!", parsed_data["action"])
+            LOG.debug("Unknown job %r requested!", parsed_data.action)
             return "%r is an unknown job action" % action, 400
-        return func(**parsed_data["args"])
+        return func(**parsed_data.args)
