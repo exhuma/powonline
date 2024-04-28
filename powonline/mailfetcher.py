@@ -1,14 +1,14 @@
 import email
 import logging
 import re
-from base64 import b64decode
+from email.message import Message
 from hashlib import md5
 from os import makedirs
 from os.path import dirname, exists, join
-from uuid import uuid4
+from typing import Any, Callable
 
 from gouge.colourcli import Simple
-from imapclient import FLAGGED, SEEN, IMAPClient  # type: ignore
+from imapclient import FLAGGED, SEEN, IMAPClient
 
 from powonline.config import default
 
@@ -17,12 +17,15 @@ P_FROM = re.compile(r"^.*?<(.*?)>$")
 P_IDENTIFIER_CHARS = re.compile(r"[^a-zA-Z0-9_]")
 
 
-def extract_images(eml):
+def extract_images(eml: Message) -> list[tuple[str, str, bytes, str]]:
     output = []
     sender = eml["from"]
     if "<" in sender:
         match = P_FROM.match(sender)
-        sender = match.groups()[0] if match else ""
+        if match is None:
+            LOG.debug("Unable to parse sender: %r", sender)
+            return output
+        sender = match.groups()[0]
     identifier = P_IDENTIFIER_CHARS.sub("_", eml["message-id"])
     for part in eml.walk():
         if part.get_content_maintype() != "image":
@@ -32,18 +35,18 @@ def extract_images(eml):
     return output
 
 
-class MailFetcher(object):
+class MailFetcher:
     def __init__(
         self,
-        host,
-        username,
-        password,
-        use_ssl,
-        image_folder,
-        force=False,
-        file_saved_callback=None,
-        fail_fast=False,
-    ):
+        host: str,
+        username: str,
+        password: str,
+        use_ssl: bool,
+        image_folder: str,
+        force: bool = False,
+        file_saved_callback: Callable[..., Any] | None = None,
+        fail_fast: bool = False,
+    ) -> None:
         self.host = host
         self.username = username
         self.password = password
@@ -57,14 +60,17 @@ class MailFetcher(object):
         # Hardcoded for now (was used in the old app).
         self.use_index = False
 
-    def connect(self):
+    def connect(self) -> None:
         LOG.debug("Connecting to mail host...")
         self.connection = IMAPClient(self.host, use_uid=True, ssl=self.use_ssl)
         LOG.debug("Logging in...")
         self.connection.login(self.username, self.password)
 
-    def fetch(self):
+    def fetch(self) -> bool:
         LOG.debug("Fetching mail...")
+        if self.connection is None:
+            LOG.error("e-mail connection is not established.")
+            return False
         if not exists(self.image_folder):
             makedirs(self.image_folder)
             LOG.info("Created image folder at %r" % self.image_folder)
@@ -113,6 +119,9 @@ class MailFetcher(object):
             fptr.write(md5sum + "\n")
 
     def download(self, msgid):
+        if self.connection is None:
+            LOG.error("e-mail connection is not established.")
+            return False
         LOG.debug("Downloading images for mail #%r", msgid)
         has_error = False
 
@@ -157,7 +166,9 @@ class MailFetcher(object):
         return has_error
 
     def disconnect(self):
-        self.connection.shutdown()  # type: ignore
+        if self.connection is None:
+            return
+        self.connection.shutdown()
 
 
 def run_cli():
