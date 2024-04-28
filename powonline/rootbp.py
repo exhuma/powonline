@@ -3,7 +3,6 @@ from os.path import basename, dirname, join
 from time import time
 
 import jwt
-import psycopg2
 from flask import (
     Blueprint,
     current_app,

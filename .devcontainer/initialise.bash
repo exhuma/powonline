@@ -10,7 +10,7 @@ set -xe
 suto apt-get update && sudo apt-get install -y entr
 
 pipx install alembic
-pipx inject alembic psycopg2-binary
+pipx inject alembic psycopg[binary]
 pipx install fabric
 pipx inject fabric decorator  # <- fabric bugfix
 pipx install pre-commit

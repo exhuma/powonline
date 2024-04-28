@@ -23,12 +23,12 @@ dependencies = [
     "imapclient",
     "pydantic[email]",
     "pillow",
-    "psycopg2-binary",
+    "psycopg[binary]",
     "pusher",
     "pyjwt",
     "python-dateutil",
     "requests_oauthlib",
-    "sqlalchemy < 2.0",
+    "sqlalchemy >= 2.0",
 ]
 
 [project.optional-dependencies]
@@ -38,7 +38,6 @@ dev = [
     "gouge",
     "types-Flask-SQLAlchemy",
     "types-Pillow",
-    "types-psycopg2",
     "types-python-dateutil",
 ]
 test = [
