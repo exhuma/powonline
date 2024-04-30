@@ -5,7 +5,7 @@ from functools import wraps
 from json import JSONEncoder, dumps
 from os import makedirs, stat, unlink
 from os.path import basename, dirname, join
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 import jwt
 from flask import (
@@ -41,12 +41,15 @@ from .exc import (
 )
 from .model import DB
 from .model import AuditLog as DBAuditLog
-from .model import AuditType
+from .model import AuditType, TeamState
 from .model import Upload as DBUpload
 from .util import allowed_file, get_user_identity, get_user_permissions
 
 EXIF_TAGS = ExifTags.TAGS
 LOG = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from powonline.web import MyFlask
 
 
 class ErrorType(Enum):
@@ -75,10 +78,11 @@ def upload_to_json(db_instance: DBUpload) -> dict[str, Any]:
         _scheme="https",
     )
 
-    data_folder = current_app.localconfig.get(  # type: ignore
+    app = cast("MyFlask", current_app)
+    data_folder = app.localconfig.get(  # type: ignore
         "app", "upload_folder", fallback=core.Upload.FALLBACK_FOLDER
     )
-    fullname = join(data_folder, db_instance.filename)
+    fullname = join(data_folder, db_instance.filename or "")
 
     try:
         mtime_unix = stat(fullname).st_mtime
@@ -92,7 +96,7 @@ def upload_to_json(db_instance: DBUpload) -> dict[str, Any]:
         "href": file_url,
         "thumbnail": tn_url,
         "tiny": tiny_url,
-        "name": basename(db_instance.filename),
+        "name": basename(db_instance.filename or ""),
         "when": mtime.isoformat(),
     }
 
@@ -145,14 +149,14 @@ class require_permissions:
 
 
 class MyJsonEncoder(JSONEncoder):
-    def default(self, value):
-        if isinstance(value, set):
-            return list(value)
-        elif isinstance(value, Enum):
-            return value.value
-        elif isinstance(value, datetime):
-            return value.isoformat()
-        super().default(value)
+    def default(self, o):
+        if isinstance(o, set):
+            return list(o)
+        elif isinstance(o, Enum):
+            return o.value
+        elif isinstance(o, datetime):
+            return o.isoformat()
+        super().default(o)
 
 
 class UserList(Resource):
@@ -256,26 +260,27 @@ class Team(Resource):
         output = core.Team.upsert(DB.session, name, parsed_data.model_dump())
         DB.session.flush()
 
-        pusher_channel = current_app.localconfig.get(
+        app = cast("MyFlask", current_app)
+        pusher_channel = app.localconfig.get(
             "pusher_channels",
             "team_station_state",
             fallback="team_station_state_dev",
         )
-        current_app.pusher.send_team_event(
-            "team-details-change", {"name": name}
-        )
+        app = cast("MyFlask", current_app)
+        app.pusher.send_team_event("team-details-change", {"name": name})
 
         return Team._single_response(TeamSchema.model_validate(output), 200)
 
     @require_permissions("admin_teams")
     def delete(self, name):
         core.Team.delete(DB.session, name)
-        pusher_channel = current_app.localconfig.get(
+        app = cast("MyFlask", current_app)
+        pusher_channel = app.localconfig.get(
             "pusher_channels",
             "team_station_state",
             fallback="team_station_state_dev",
         )
-        current_app.pusher.send_team_event("team-deleted", {"name": name})
+        app.pusher.send_team_event("team-deleted", {"name": name})
         return "", 204
 
     def get(self, name):
@@ -310,7 +315,7 @@ class StationList(Resource):
 
 class Station(Resource):
     @staticmethod
-    def _single_response(output: TeamSchema, status_code=200):
+    def _single_response(output: StationSchema, status_code=200):
         parsed_output = StationSchema.model_dump_json(output)
         response = make_response(parsed_output)
         response.status_code = status_code
@@ -424,7 +429,7 @@ class StationUserList(Resource):
         if not user:
             return "No such user", 404
         all_stations = core.Station.all(DB.session)
-        user_stations = {station.name for station in user.stations}
+        user_stations = {station.name for station in user.stations or []}
         output = []
         for station in all_stations:
             output.append((station.name, station.name in user_stations))
@@ -458,7 +463,7 @@ class StationUser(Resource):
         user = core.User.get(DB.session, user_name)
         if not user:
             return "No such user", 404
-        stations = {_.name for _ in user.stations}
+        stations = {_.name for _ in user.stations or []}
 
         if station_name in stations:
             return jsonify(True)
@@ -511,7 +516,7 @@ class UserRoleList(Resource):
         if not user:
             return "No such user", 404
         all_roles = core.Role.all(DB.session)
-        user_roles = {role.name for role in user.roles}
+        user_roles = {role.name for role in user.roles or []}
         output = []
         for role in all_roles:
             output.append((role.name, role.name in user_roles))
@@ -546,7 +551,7 @@ class UserRole(Resource):
         user = core.User.get(DB.session, user_name)
         if not user:
             return "No such user", 404
-        roles = {_.name for _ in user.roles}
+        roles = {_.name for _ in user.roles or []}
 
         if role_name in roles:
             return jsonify(True)
@@ -599,7 +604,10 @@ class TeamStation(Resource):
             state = core.Team.get_station_data(
                 DB.session, team_name, station_name
             )
-            return {"state": state.state.value}, 200
+            if state.state:
+                return {"state": state.state.value}, 200
+            else:
+                return {"state": TeamState.UNKNOWN}, 200
 
 
 class Assignments(Resource):
@@ -714,7 +722,8 @@ class UploadList(Resource):
     """
 
     def post(self):
-        data_folder = current_app.localconfig.get(
+        app = cast("MyFlask", current_app)
+        data_folder = app.localconfig.get(
             "app", "upload_folder", fallback=core.Upload.FALLBACK_FOLDER
         )
         identity = get_user_identity(request)
@@ -726,7 +735,7 @@ class UploadList(Resource):
         if fileobj.filename == "":
             return "No file selected", 400
 
-        if fileobj and allowed_file(fileobj.filename):
+        if fileobj and fileobj.filename and allowed_file(fileobj.filename):
             filename = secure_filename(fileobj.filename)
             try:
                 makedirs(join(data_folder, identity["username"]))
@@ -753,7 +762,7 @@ class UploadList(Resource):
             event_object = upload_to_json(db_instance)
             response.headers["Location"] = event_object["href"]
             response.status_code = 201
-            current_app.pusher.send_file_event("file-added", event_object)
+            app.pusher.send_file_event("file-added", event_object)
             return response
         return "The given file is not allowed", 400
 
@@ -849,7 +858,8 @@ class Upload(Resource):
         """
         Retrieve a single file
         """
-        data_folder = current_app.localconfig.get(
+        app = cast("MyFlask", current_app)
+        data_folder = app.localconfig.get(
             "app", "upload_folder", fallback=core.Upload.FALLBACK_FOLDER
         )
         db_instance = (
@@ -885,14 +895,16 @@ class Upload(Resource):
             and identity["username"] != db_instance.username
         ):
             return "Access Denied", 403
-        data_folder = current_app.localconfig.get(
+        app = cast("MyFlask", current_app)
+        data_folder = app.localconfig.get(
             "app", "upload_folder", fallback=core.Upload.FALLBACK_FOLDER
         )
         fullname = join(data_folder, db_instance.filename)
         unlink(fullname)
         DB.session.delete(db_instance)
         DB.session.commit()
-        current_app.pusher.send_file_event("file-deleted", {"id": uuid})
+        app = cast("MyFlask", current_app)
+        app.pusher.send_file_event("file-deleted", {"id": uuid})
         return "OK"
 
 
@@ -904,7 +916,7 @@ class AuditLog(Resource):
     @require_permissions("view_audit_log")
     def get(self):
         query = DB.session.query(DBAuditLog).order_by(
-            DBAuditLog.timestamp.desc()
+            DBAuditLog.timestamp.desc()  # type: ignore
         )
         output = []
         for row in query:
@@ -923,7 +935,8 @@ class Job(Resource):
     def _action_advance(self, station_name, team_name):
         auth, permissions = get_user_permissions(request)
 
-        pusher_channel = current_app.localconfig.get(
+        app = cast("MyFlask", current_app)
+        pusher_channel = app.localconfig.get(
             "pusher_channels",
             "team_station_state",
             fallback="team_station_state_dev",
@@ -939,7 +952,7 @@ class Job(Resource):
                 DB.session, team_name, station_name
             )
             output = {"result": {"state": new_state.value}}
-            current_app.pusher.send_team_event(
+            app.pusher.send_team_event(
                 "state-change",
                 {
                     "station": station_name,
@@ -955,7 +968,8 @@ class Job(Resource):
         score = validate_score(score)
         auth, permissions = get_user_permissions(request)
 
-        pusher_channel = current_app.localconfig.get(
+        app = cast("MyFlask", current_app)
+        pusher_channel = app.localconfig.get(
             "pusher_channels",
             "team_station_state",
             fallback="team_station_state_dev",
@@ -988,7 +1002,7 @@ class Job(Resource):
             output = {
                 "new_score": new_score,
             }
-            current_app.pusher.send_team_event(
+            app.pusher.send_team_event(
                 "score-change",
                 {
                     "station": station_name,
@@ -1004,7 +1018,8 @@ class Job(Resource):
         auth, permissions = get_user_permissions(request)
         score = validate_score(score)
 
-        pusher_channel = current_app.localconfig.get(
+        app = cast("MyFlask", current_app)
+        pusher_channel = app.localconfig.get(
             "pusher_channels",
             "team_station_state",
             fallback="team_station_state_dev",
@@ -1025,8 +1040,9 @@ class Job(Resource):
                 auth["username"],
             )
             try:
+                app = cast("MyFlask", current_app)
                 old_score, new_score = core.set_questionnaire_score(
-                    current_app.localconfig,
+                    app.localconfig,
                     DB.session,
                     team_name,
                     station_name,
@@ -1052,7 +1068,7 @@ class Job(Resource):
             output = {
                 "new_score": new_score,
             }
-            current_app.pusher.send_team_event(
+            app.pusher.send_team_event(
                 "questionnaire-score-change",
                 {
                     "stationName": station_name,

@@ -1,6 +1,7 @@
 import logging
 from os.path import basename, dirname, join
 from time import time
+from typing import TYPE_CHECKING, cast
 
 import jwt
 from flask import (
@@ -23,6 +24,9 @@ from .model import DB, Route, Station
 from .social import Social
 from .util import allowed_file, get_user_identity
 
+if TYPE_CHECKING:
+    from powonline.web import MyFlask
+
 rootbp = Blueprint("rootbp", __name__)
 
 LOG = logging.getLogger(__name__)
@@ -39,7 +43,7 @@ def handle_value_error(error):
 
 
 @rootbp.app_errorhandler(NotFound)
-def handle_unhandled_exceptions(error):
+def handle_not_found(error):
     LOG.info(error)
     return str(error), 404
 
@@ -69,13 +73,15 @@ def get_team_station_questionnaire():
     # TODO Questionnaires should not be linked to stations
     #      This is a simplifcation for the UI for now: no manual selection of
     #      the questionnaire by users.
-    output = questionnaire_scores(current_app.localconfig, DB.session)
+    app = cast("MyFlask", current_app)
+    output = questionnaire_scores(app.localconfig, DB.session)
     return jsonify(output)
 
 
 @rootbp.route("/social-login/<provider>")
 def social_login(provider):
-    client = Social.create(current_app.localconfig, provider)
+    app = cast("MyFlask", current_app)
+    client = Social.create(app.localconfig, provider)
     if not client:
         return "%s is not supported for login!" % provider
     authorization_url, state = client.process_login()
@@ -86,7 +92,8 @@ def social_login(provider):
 
 @rootbp.route("/connect/<provider>")
 def callback(provider):
-    client = Social.create(current_app.localconfig, provider)
+    app = cast("MyFlask", current_app)
+    client = Social.create(app.localconfig, provider)
     if not client:
         return "%s is not supported for login!" % provider
     user_info = client.get_user_info(session["oauth_state"], request.url)
@@ -101,7 +108,8 @@ def login():
         provider = data["social_provider"]
         token = data["token"]
         user_id = data["user_id"]
-        client = Social.create(current_app.localconfig, provider)
+        app = cast("MyFlask", current_app)
+        client = Social.create(app.localconfig, provider)
         if not client:
             return (
                 "Social provider %r not available (either not supported "
@@ -131,12 +139,11 @@ def login():
     if not user:
         return "Access Denied", 401
 
-    roles = {role.name for role in user.roles}
+    roles = {role.name for role in user.roles or []}
     # JWT token expiration time (in seconds). Default: 2 hours
+    app = cast("MyFlask", current_app)
     jwt_lifetime = int(
-        current_app.localconfig.get(
-            "security", "jwt_lifetime", fallback=(2 * 60 * 60)
-        )
+        app.localconfig.get("security", "jwt_lifetime", fallback=(2 * 60 * 60))
     )
 
     now = int(time())
@@ -146,7 +153,8 @@ def login():
         "iat": now,
         "exp": now + jwt_lifetime,
     }
-    jwt_secret = current_app.localconfig.get("security", "jwt_secret")
+    app = cast("MyFlask", current_app)
+    jwt_secret = app.localconfig.get("security", "jwt_secret")
     result = {
         "token": jwt.encode(payload, jwt_secret),
         "roles": list(roles),  # convenience for the frontend
@@ -163,6 +171,8 @@ def index():
 @rootbp.route("/routeStations", methods=["PUT"])
 def setRouteStations():
     payload = request.json
+    if payload is None:
+        return jsonify({"error": "no payload"}), 400
     query = DB.session.query(Station).filter(
         Station.name == payload["stationName"]
     )
@@ -185,12 +195,11 @@ def setRouteStations():
 def renew_token():
     data = request.get_json()
     current_token = data["token"]
-    jwt_secret = current_app.localconfig.get("security", "jwt_secret")
+    app = cast("MyFlask", current_app)
+    jwt_secret = app.localconfig.get("security", "jwt_secret")
     # JWT token expiration time (in seconds). Default: 2 hours
     jwt_lifetime = int(
-        current_app.localconfig.get(
-            "security", "jwt_lifetime", fallback=(2 * 60 * 60)
-        )
+        app.localconfig.get("security", "jwt_lifetime", fallback=(2 * 60 * 60))
     )
     try:
         token_info = jwt.decode(current_token, jwt_secret, algorithms=["HS256"])

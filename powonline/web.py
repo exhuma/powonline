@@ -1,4 +1,5 @@
 import logging
+from configparser import ConfigParser
 from os import environ
 
 from flask import Flask, jsonify  # type: ignore
@@ -57,11 +58,16 @@ class CustomApi(Api):
         return super().handle_error(e)
 
 
+class MyFlask(Flask):
+    localconfig: ConfigParser
+    pusher: PusherWrapper
+
+
 def make_app(config=None):
     """
     Application factory
     """
-    app = Flask(__name__)
+    app = MyFlask(__name__)
     api = CustomApi(app)
 
     if not config:

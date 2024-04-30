@@ -19,13 +19,7 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy.dialects.postgresql import BYTEA, UUID
-from sqlalchemy.orm import (
-    Mapped,
-    Session,
-    mapped_column,
-    relationship,
-    scoped_session,
-)
+from sqlalchemy.orm import Mapped, mapped_column, relationship, scoped_session
 
 LOG = logging.getLogger(__name__)
 DB = SQLAlchemy()
@@ -439,7 +433,7 @@ class Upload(DB.Model):  # type: ignore
 
     @staticmethod
     def get_or_create(
-        session: Session, relname: str, username: str
+        session: scoped_session, relname: str, username: str
     ) -> "Upload":
         """
         Returns an upload entity. Create it if it is missing

@@ -222,7 +222,7 @@ def fetch_mails(force, fail_fast, quiet):
         def callback(username, filename):
             user = mdl.User.get_or_create(DB.session, username)
             db_instance = mdl.Upload.get_or_create(
-                DB.session, filename, user.name
+                DB.session, filename, user.name or ""
             )
             DB.session.commit()
             pusher.trigger(

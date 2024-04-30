@@ -22,7 +22,7 @@ def extract_images(eml):
     sender = eml["from"]
     if "<" in sender:
         match = P_FROM.match(sender)
-        sender = match.groups()[0]
+        sender = match.groups()[0] if match else ""
     identifier = P_IDENTIFIER_CHARS.sub("_", eml["message-id"])
     for part in eml.walk():
         if part.get_content_maintype() != "image":
@@ -69,11 +69,11 @@ class MailFetcher(object):
             makedirs(self.image_folder)
             LOG.info("Created image folder at %r" % self.image_folder)
 
-        self.connection.select_folder("INBOX")
-        messages = self.connection.search(["NOT", "DELETED"])
-        response = self.connection.fetch(messages, ["FLAGS", "BODY"])
+        self.connection.select_folder("INBOX")  # type: ignore
+        messages = self.connection.search(["NOT", "DELETED"])  # type: ignore
+        response = self.connection.fetch(messages, ["FLAGS", "BODY"])  # type: ignore
         for msgid, data in response.items():
-            is_read = SEEN in data[b"FLAGS"]
+            is_read = SEEN in data[b"FLAGS"]  # type: ignore
             if is_read and not self.force:
                 LOG.debug("Skipping already processed message #%r", msgid)
                 continue
@@ -116,8 +116,8 @@ class MailFetcher(object):
         LOG.debug("Downloading images for mail #%r", msgid)
         has_error = False
 
-        raw_data = self.connection.fetch([msgid], "RFC822")[msgid][b"RFC822"]
-        eml = email.message_from_bytes(raw_data)
+        raw_data = self.connection.fetch([msgid], "RFC822")[msgid][b"RFC822"]  # type: ignore
+        eml = email.message_from_bytes(raw_data)  # type: ignore
         images = extract_images(eml)
         for sender, filename, data, identifier in images:
             try:
@@ -151,13 +151,13 @@ class MailFetcher(object):
                 has_error = True
 
         if has_error:
-            self.connection.add_flags([msgid], FLAGGED)
+            self.connection.add_flags([msgid], FLAGGED)  # type: ignore
         else:
-            self.connection.add_flags([msgid], SEEN)
+            self.connection.add_flags([msgid], SEEN)  # type: ignore
         return has_error
 
     def disconnect(self):
-        self.connection.shutdown()
+        self.connection.shutdown()  # type: ignore
 
 
 def run_cli():
