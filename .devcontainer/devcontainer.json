@@ -19,5 +19,12 @@
 			"label": "Database",
 			"onAutoForward": "notify"
 		}
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-python.black-formatter"
+			]
+		}
 	}
 }
