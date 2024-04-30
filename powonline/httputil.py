@@ -1,21 +1,23 @@
 import logging
+from typing import TYPE_CHECKING, cast
 
 from flask import current_app, request
 from flask.wrappers import Response
 
 LOG = logging.getLogger(__name__)
 
-
 DEFAULT_ALLOWED_ORIGINS = {"http://localhost:8080"}
+
+if TYPE_CHECKING:
+    from powonline.web import MyFlask
 
 
 def add_cors_headers(response: Response) -> None:
     """
     Modifies *response* and adds CORS headers as defined in the app-config
     """
-    cfg_data = current_app.localconfig.get(  # type: ignore
-        "app", "allowed_origins", fallback=""
-    )
+    app = cast("MyFlask", current_app)
+    cfg_data = app.localconfig.get("app", "allowed_origins", fallback="")
     elements = {line.strip() for line in cfg_data.splitlines() if line.strip()}
     allowed_origins = elements or DEFAULT_ALLOWED_ORIGINS
     origin = request.headers.get("Origin", "")

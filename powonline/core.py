@@ -8,7 +8,7 @@ from string import ascii_letters, digits, punctuation
 from typing import Generator, Optional, Tuple
 
 from sqlalchemy import and_, func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Query, scoped_session
 
 from . import model
 from .exc import NoQuestionnaireForStation, NoSuchQuestionnaire
@@ -79,7 +79,7 @@ def questionnaire_scores(config, session):
 
 
 def add_audit_log(
-    session: Session, username: str, type_: model.AuditType, message: str
+    session: scoped_session, username: str, type_: model.AuditType, message: str
 ) -> model.AuditLog:
     entry = model.AuditLog(
         timestamp=datetime.now(timezone.utc),
@@ -104,7 +104,7 @@ def set_questionnaire_score(config, session, team, station, score):
     # Config options are automatically lower-cased. We need to match that name
     # case-insensitive so the updates work
     query = session.query(model.Questionnaire).filter(
-        model.Questionnaire.name.ilike(questionnaire_name)
+        model.Questionnaire.name.ilike(questionnaire_name)  # type: ignore
     )
     existing_questionnaire = query.one_or_none()
     if not existing_questionnaire:
@@ -223,6 +223,7 @@ class Team:
         else:
             return state
 
+    @staticmethod
     def advance_on_station(session, team_name, station_name):
         state = (
             session.query(model.TeamStation)
@@ -252,7 +253,10 @@ class Team:
             state.state = TeamState.UNKNOWN
         return state.state
 
-    def set_station_score(session, team_name, station_name, score):
+    @staticmethod
+    def set_station_score(
+        session: scoped_session, team_name, station_name, score
+    ):
         state = (
             session.query(model.TeamStation)
             .filter_by(team_name=team_name, station_name=station_name)
@@ -341,7 +345,9 @@ class Station:
         return True
 
     @staticmethod
-    def team_states(session, station_name):
+    def team_states(
+        session, station_name
+    ) -> Generator[Tuple[str, TeamState, Optional[int], datetime], None, None]:
         # TODO this could be improved by just using one query
         station = (
             session.query(model.Station).filter_by(name=station_name).one()
@@ -372,8 +378,8 @@ class Station:
 
     @staticmethod
     def related_team_states(
-        session: Session, station_name: str, relation: StationRelation
-    ) -> Generator[Tuple[str, TeamState, Optional[int]], None, None]:
+        session: scoped_session, station_name: str, relation: StationRelation
+    ) -> Generator[Tuple[str, TeamState, Optional[int], datetime], None, None]:
         related_station = Station.related(session, station_name, relation)
         if not related_station:
             return
@@ -381,7 +387,7 @@ class Station:
 
     @staticmethod
     def related(
-        session: Session, station_name: str, relation: StationRelation
+        session: scoped_session, station_name: str, relation: StationRelation
     ) -> str:
         subquery = (
             session.query(model.Station.order)
@@ -398,7 +404,7 @@ class Station:
 
         query = session.query(model.Station.name).filter(relation_filter)
         if relation == StationRelation.PREVIOUS:
-            query = query.order_by(model.Station.order.desc())
+            query = query.order_by(model.Station.order.desc())  # type: ignore
         elif relation == StationRelation.NEXT:
             query = query.order_by(model.Station.order)
         first_row = query.first()
@@ -475,7 +481,9 @@ class Route:
 
 class User:
     @staticmethod
-    def by_social_connection(session, provider, user_id, defaults=None):
+    def by_social_connection(
+        session, provider, user_id, defaults=None
+    ) -> model.User:
         defaults = defaults or {}
         query = session.query(model.OauthConnection).filter_by(
             provider_id=provider, provider_user_id=user_id
@@ -502,7 +510,7 @@ class User:
         return user
 
     @staticmethod
-    def get(session, name):
+    def get(session, name) -> model.User | None:
         return session.query(model.User).filter_by(name=name).one_or_none()
 
     @staticmethod
@@ -511,13 +519,13 @@ class User:
         return None
 
     @staticmethod
-    def create_new(session, data):
+    def create_new(session, data) -> model.User:
         user = model.User(**data)
         user = session.add(user)
         return user
 
     @staticmethod
-    def all(session):
+    def all(session) -> Query[model.User]:
         return session.query(model.User)
 
     @staticmethod

@@ -1,11 +1,15 @@
 import logging
 import re
 from os.path import splitext
+from typing import TYPE_CHECKING, cast
 
 import jwt
 from flask import current_app
 
 from .exc import AccessDenied
+
+if TYPE_CHECKING:
+    from powonline.web import MyFlask
 
 P_REQUEST_LOG = re.compile(r'^(.*?) - - \[(.*?)\] "(.*?)" (\d+) (\d+|-)$')
 
@@ -107,7 +111,8 @@ def get_user_identity(request):
         LOG.debug("Authorization header does not provide " "a bearer token!")
         raise AccessDenied("Access Denied (not a bearer token)!")
     try:
-        jwt_secret = current_app.localconfig.get("security", "jwt_secret")
+        app = cast("MyFlask", current_app)
+        jwt_secret = app.localconfig.get("security", "jwt_secret")
         auth_payload = jwt.decode(token, jwt_secret, algorithms=["HS256"])
     except (jwt.exceptions.InvalidTokenError, jwt.exceptions.DecodeError):
         LOG.info("Bearer token seems to have been tampered with!")
