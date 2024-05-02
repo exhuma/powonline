@@ -2,6 +2,7 @@
 This module contains tests for features implemented mainly for helping the vuejs
 based frontens.
 """
+
 import json
 import logging
 from textwrap import dedent
@@ -43,7 +44,6 @@ def with_config(test_config):
             """\
         [security]
         jwt_secret = %s
-        secret_key = secret
         """
             % ("testing",)
         )

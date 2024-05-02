@@ -50,7 +50,6 @@ def app(test_config):
             """\
         [security]
         jwt_secret = %s
-        secret_key = testing
         """
             % ("testing",)
         )

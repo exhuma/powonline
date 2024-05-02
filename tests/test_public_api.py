@@ -74,7 +74,6 @@ class BaseAuthTestCase(TestCase):
                 """\
             [security]
             jwt_secret = testing
-            secret_key = secret
             """
             )
         )

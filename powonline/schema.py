@@ -1,11 +1,40 @@
 from datetime import datetime, timezone
+from enum import Enum
 from typing import Any
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
-class ListResponse[T](BaseModel):
-    items: list[T]
+class ErrorType(Enum):
+    INVALID_SCHEMA = "invalid-schema"
+
+
+class TeamState(Enum):
+    UNKNOWN = "unknown"
+    ARRIVED = "arrived"
+    FINISHED = "finished"
+    UNREACHABLE = "unreachable"
+
+
+class AuditType(Enum):
+    ADMIN = "admin"
+    QUESTIONNAIRE_SCORE = "questionnaire_score"
+    STATION_SCORE = "station_score"
+
+
+class StationRelation(Enum):
+    """
+    A station-relation defines how one station relates to another.
+    """
+
+    PREVIOUS = "previous"
+    NEXT = "next"
+    UNKNOWN = "unknown"
+
+
+class TeamStateInfo(BaseModel):
+    state: TeamState
 
 
 class TeamSchema(BaseModel):
@@ -86,3 +115,56 @@ class QuestionnaireSchema(BaseModel):
     updated: datetime | None = Field(
         default_factory=lambda: datetime.now(tz=timezone.utc)
     )
+
+
+class AssignmentMap(BaseModel, frozen=True):
+    teams: dict[str, list[TeamSchema]]
+    stations: dict[str, list[StationSchema]]
+
+
+class AuditLogEntry(BaseModel, frozen=True):
+    timestamp: datetime
+    username: str
+    type: str
+    message: str
+
+
+class DashboardRow(BaseModel, frozen=True):
+    team: str
+    state: TeamState
+    score: int
+    updated: datetime | None
+
+
+class GlobalDashboardStation(BaseModel, frozen=True):
+    name: str
+    score: int
+    state: TeamState
+
+
+class GlobalDashboardRow(BaseModel, frozen=True):
+    team: str
+    stations: list[GlobalDashboardStation]
+
+
+class UploadSchema(BaseModel, frozen=True):
+    uuid: UUID
+    href: str
+    thumbnail: str
+    tiny: str
+    name: str
+    when: datetime
+
+
+class PasswordCredentials(BaseModel, frozen=True):
+    username: str
+    password: str
+
+
+class SocialCredentials(BaseModel, frozen=True):
+    social_provider: str
+    token: str
+    user_id: str
+    name: str
+    email: str
+    picture: str
