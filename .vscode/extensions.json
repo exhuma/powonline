@@ -1,7 +1,8 @@
 {
     "recommendations": [
-        "mtxr.sqltools-driver-pg",
-        "mtxr.sqltools",
-        "ms-python.black-formatter"
+        "ms-python.black-formatter",
+        "ms-python.python",
+        "tamasfe.even-better-toml",
+        "charliermarsh.ruff"
     ]
 }
