@@ -1,30 +1,9 @@
 {
-    "sqltools.connections": [
-        {
-            "previewLimit": 50,
-            "server": "db",
-            "port": 5432,
-            "driver": "PostgreSQL",
-            "name": "powonline",
-            "database": "powonline",
-            "username": "postgres",
-            "password": "postgres"
-        },
-        {
-            "previewLimit": 50,
-            "server": "test-db",
-            "port": 5432,
-            "driver": "PostgreSQL",
-            "name": "powonline",
-            "database": "powonline",
-            "username": "postgres",
-            "password": "postgres"
-        }
-    ],
     "python.analysis.typeCheckingMode": "basic",
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
         "source.organizeImports": "explicit"
     },
-    "python.analysis.diagnosticMode": "workspace"
+    "python.analysis.diagnosticMode": "workspace",
+    "editor.defaultFormatter": "ms-python.black-formatter"
 }
