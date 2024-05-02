@@ -20,16 +20,11 @@ from sqlalchemy import (
     Unicode,
     UniqueConstraint,
     func,
+    select,
 )
 from sqlalchemy.dialects.postgresql import BYTEA, UUID
-from sqlalchemy.ext.asyncio import AsyncAttrs
-from sqlalchemy.orm import (
-    DeclarativeBase,
-    Mapped,
-    mapped_column,
-    relationship,
-    scoped_session,
-)
+from sqlalchemy.ext.asyncio import AsyncAttrs, AsyncSession
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from powonline.schema import AuditType, TeamState
 
@@ -316,13 +311,14 @@ class User(Base, TimestampMixin):  # type: ignore
     )
 
     @property
-    def avatar_url(self) -> str:
-        if not self.oauth_connection:
+    async def avatar_url(self) -> str:
+        oauth_connection = await self.awaitable_attrs.oauth_connection
+        if not oauth_connection:
             return ""
         try:
-            if not self.oauth_connection[0].image_url:
+            if not oauth_connection[0].image_url:
                 return ""
-            return self.oauth_connection[0].image_url
+            return oauth_connection[0].image_url
         except IndexError:
             LOG.debug(
                 "Unexpected error occurred with the avatar-url", exc_info=True
@@ -330,12 +326,13 @@ class User(Base, TimestampMixin):  # type: ignore
             return ""
 
     @staticmethod
-    def get_or_create(session: scoped_session, username: str) -> "User":
+    async def get_or_create(session: AsyncSession, username: str) -> "User":
         """
         Returns a user instance by name. Creates it if missing.
         """
-        query = session.query(User).filter_by(name=username)
-        instance = query.one_or_none()
+        query = select(User).filter_by(name=username)
+        result = await session.execute(query)
+        instance = result.scalar_one_or_none()
         if not instance:
             randbytes = encode(urandom(100), "hex")[:30]
             password = randbytes.decode("ascii")
@@ -344,7 +341,17 @@ class User(Base, TimestampMixin):  # type: ignore
             LOG.warning("User initialised with random password!")
         return instance
 
-    def __init__(self, name: str, password: str) -> None:
+    @staticmethod
+    async def get(session: AsyncSession, username: str) -> "User | None":
+        """
+        Returns a user instance by name.
+        """
+        query = select(User).filter_by(name=username)
+        result = await session.execute(query)
+        return result.scalar_one_or_none()
+
+    def __init__(self, *, name: str, password: str, **kwargs) -> None:
+        super().__init__(**kwargs)
         self.name = name
         self.password = hashpw(password.encode("utf8"), gensalt())
         self.password_is_plaintext = False
@@ -387,16 +394,17 @@ class Role(Base, TimestampMixin):  # type: ignore
         self.name = "Example Station"
 
     @staticmethod
-    def get_or_create(session: scoped_session, name: str) -> "Role":
+    async def get_or_create(session: AsyncSession, name: str) -> "Role":
         """
         Retrieves a role with name *name*.
 
         If it does not exist yet in the DB it will be created.
         """
-        query = session.query(Role).filter_by(name=name)
-        existing = query.one_or_none()
+        query = select(Role).filter_by(name=name)
+        result = await session.execute(query)
+        existing = result.scalar_one_or_none()
         if not existing:
-            output = Role()  # type: ignore
+            output = Role()
             output.name = name
             session.add(output)
         else:
@@ -548,16 +556,15 @@ class Upload(Base):  # type: ignore
         self.username = username
 
     @staticmethod
-    def get_or_create(
-        session: scoped_session, relname: str, username: str
+    async def get_or_create(
+        session: AsyncSession, relname: str, username: str
     ) -> "Upload":
         """
         Returns an upload entity. Create it if it is missing
         """
-        query = session.query(Upload).filter_by(
-            filename=relname, username=username
-        )
-        instance = query.one_or_none()
+        query = select(Upload).filter_by(filename=relname, username=username)
+        result = await session.execute(query)
+        instance = result.scalar_one_or_none()
         if not instance:
             instance = Upload(relname, username)
             session.add(instance)

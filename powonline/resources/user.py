@@ -1,18 +1,15 @@
 import logging
 from typing import Annotated
 
-from fastapi import (
-    APIRouter,
-    Body,
-    Depends,
-    Response,
-)
+from fastapi import APIRouter, Body, Depends, Path, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from powonline import core, schema
 from powonline.auth import User
 from powonline.auth import get_user as get_auth_user
+from powonline.db2api import map_user
 from powonline.dependencies import get_db
+from powonline.exc import NotFound
 
 ROUTER = APIRouter(prefix="/user", tags=["user"])
 LOG = logging.getLogger(__name__)
@@ -22,22 +19,22 @@ LOG = logging.getLogger(__name__)
 async def query_users(
     auth_user: Annotated[User, Depends(get_auth_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-):
+) -> schema.ListResult[schema.UserSchema]:
     auth_user.require_permission("manage_permissions")
     users = await core.User.all(session)
-    output = [schema.UserSchema.model_validate(user) for user in users]
-    return output
+    output = [await map_user(user) for user in users]
+    return schema.ListResult(items=output)
 
 
 @ROUTER.post("")
 async def create_user(
     auth_user: Annotated[User, Depends(get_auth_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
-    user: schema.UserSchema = Body(),
-):
+    user: schema.UserSchemaSensitive = Body(),
+) -> schema.UserSchema:
     auth_user.require_permission("manage_permissions")
     output = await core.User.create_new(session, user.model_dump())
-    return Response(schema.UserSchema.model_validate(output), 201)
+    return await map_user(output)
 
 
 @ROUTER.get("/{name}")
@@ -45,12 +42,12 @@ async def get_user(
     auth_user: Annotated[User, Depends(get_auth_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
     name: str,
-):
+) -> schema.UserSchema:
     auth_user.require_permission("manage_permissions")
     user = await core.User.get(session, name)
     if not user:
-        return Response("No such user", 404)
-    return schema.UserSchema.model_validate(user)
+        raise NotFound("No such user")
+    return await map_user(user)
 
 
 @ROUTER.put("/{name}")
@@ -85,9 +82,10 @@ async def get_user_roles(
     auth_user.require_permission("manage_permissions")
     user = await core.User.get(session, user_name)
     if not user:
-        return Response("No such user", 404)
+        raise NotFound("No such user")
     all_roles = await core.Role.all(session)
-    user_roles = {role.name for role in user.roles or []}
+    mapped_roles = await user.awaitable_attrs.roles
+    user_roles = {role.name for role in mapped_roles or []}
     output = []
     for role in all_roles:
         output.append((role.name, role.name in user_roles))
@@ -135,8 +133,46 @@ async def check_role_assignment_for_user(
     auth_user.require_permission("manage_permissions")
     user = await core.User.get(session, user_name)
     if not user:
-        return Response("No such user", 404)
-    roles = {_.name for _ in user.roles or []}
+        raise NotFound("No such user")
+    mapped_roles = await user.awaitable_attrs.roles
+    roles = {_.name for _ in mapped_roles or []}
     if role_name in roles:
         return True
     return False
+
+
+@ROUTER.get("/{user_name}/stations")
+async def query_station_by_user(
+    auth_user: Annotated[User, Depends(get_auth_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+    user_name: str = Path(),
+) -> list[tuple[str, bool]]:
+    auth_user.require_permission("manage_permissions")
+    user = await core.User.get(session, user_name)
+    if not user:
+        raise NotFound("No such user")
+    all_stations = await core.Station.all(session)
+    user_stations = await user.awaitable_attrs.stations
+    user_stations = {station.name for station in user_stations or []}
+    output = []
+    for station in all_stations:
+        output.append((station.name, station.name in user_stations))
+    return output
+
+
+@ROUTER.post("/{user_name}/stations")
+async def assign_user_to_station(
+    auth_user: Annotated[User, Depends(get_auth_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+    user_name: str,
+    station: schema.StationSchema = Body(),
+):
+    """
+    Assigns a user to a station
+    """
+    auth_user.require_permission("manage_permissions")
+    success = await core.Station.assign_user(session, station.name, user_name)
+    if success:
+        return Response("", 204)
+    else:
+        return Response("Station is already assigned to that user", 400)

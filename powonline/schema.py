@@ -40,16 +40,15 @@ class TeamStateInfo(BaseModel):
 class TeamSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     name: str
-    email: EmailStr
-    order: int
-    contact: str | None
-    phone: str | None
-    comments: str | None
-    confirmation_key: str
-    num_vegetarians: int | None
-    num_participants: int | None
-    planned_start_time: datetime | None
-    effective_start_time: datetime | None
+    order: int = 500
+    contact: str | None = None
+    phone: str | None = None
+    comments: str | None = None
+    confirmation_key: str = ""
+    num_vegetarians: int | None = None
+    num_participants: int | None = None
+    planned_start_time: datetime | None = None
+    effective_start_time: datetime | None = None
     cancelled: bool = False
     is_confirmed: bool = False
     accepted: bool = False
@@ -58,6 +57,7 @@ class TeamSchema(BaseModel):
     updated: datetime | None = None
     finish_time: datetime | None = None
     route_name: str | None = None
+    email: EmailStr = ""
 
 
 class StationSchema(BaseModel):
@@ -85,6 +85,10 @@ class UserSchema(BaseModel):
     confirmed_at: datetime | None = None
     inserted: datetime | None = None
     updated: datetime | None = None
+
+
+class UserSchemaSensitive(UserSchema):
+    password: str
 
 
 class RoleSchema(BaseModel):
@@ -165,6 +169,15 @@ class SocialCredentials(BaseModel, frozen=True):
     social_provider: str
     token: str
     user_id: str
-    name: str
-    email: str
-    picture: str
+    name: str = ""
+    email: str = ""
+    picture: str = ""
+
+
+class ErrorMessage(BaseModel, frozen=True):
+    message: str
+    detail: str = ""
+
+
+class ListResult[T](BaseModel, frozen=True):
+    items: list[T]

@@ -1,16 +1,17 @@
 import logging
 from configparser import ConfigParser
+from time import time
 from typing import Annotated
 
-from fastapi import (
-    APIRouter,
-    Body,
-    Depends,
-)
+import jwt
+from fastapi import APIRouter, Body, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from powonline import schema
+from powonline import core, model, schema
 from powonline.auth import User
 from powonline.config import default
+from powonline.dependencies import get_db
+from powonline.exc import AccessDenied, AuthDeniedReason
 from powonline.social import Social
 
 ROUTER = APIRouter(prefix="", tags=["authentication"])
@@ -40,16 +41,15 @@ def callback(config: Annotated[ConfigParser, Depends(default)], provider):
 
 
 @ROUTER.post("/login")
-def login(
+async def login(
+    session: Annotated[AsyncSession, Depends(get_db)],
     config: Annotated[ConfigParser, Depends(default)],
     auth_data: schema.SocialCredentials | schema.PasswordCredentials = Body(),
 ):
-    user = None
-    data = request.get_json()
-    if "social_provider" in data:
-        provider = data["social_provider"]
-        token = data["token"]
-        user_id = data["user_id"]
+    if isinstance(auth_data, schema.SocialCredentials):
+        provider = auth_data.social_provider
+        token = auth_data.token
+        user_id = auth_data.user_id
         client = Social.create(config, provider)
         if not client:
             return (
@@ -58,8 +58,8 @@ def login(
             ), 500
         user_info = client.get_user_info_simple(token)
         if user_info:
-            user = User.by_social_connection(
-                DB.session,
+            user = await core.User.by_social_connection(
+                session,
                 provider,
                 user_id,
                 {
@@ -69,18 +69,30 @@ def login(
                 },
             )
         else:
-            return "Access Denied", 401
-    else:
-        username = data["username"]
-        password = data["password"]
-        user = User.get(DB.session, username)
+            raise AccessDenied(
+                "Invalid social login",
+                reason=AuthDeniedReason.NOT_AUTHENTICATED,
+            )
+    elif isinstance(auth_data, schema.PasswordCredentials):
+        username = auth_data.username
+        password = auth_data.password
+        user = await model.User.get(session, username)
         if not user or not user.checkpw(password):
-            return "Access Denied", 401
+            raise AccessDenied(
+                "Access Denied!",
+                reason=AuthDeniedReason.NOT_AUTHENTICATED,
+            )
+    else:
+        raise HTTPException(400, "Invalid request")
 
     if not user:
-        return "Access Denied", 401
+        raise AccessDenied(
+            "Access Denied!",
+            reason=AuthDeniedReason.NOT_AUTHENTICATED,
+        )
 
-    roles = {role.name for role in user.roles or []}
+    user_roles = await user.awaitable_attrs.roles
+    roles = {role.name for role in user_roles or []}
     # JWT token expiration time (in seconds). Default: 2 hours
     jwt_lifetime = int(
         config.get("security", "jwt_lifetime", fallback=(2 * 60 * 60))
@@ -99,7 +111,7 @@ def login(
         "roles": list(roles),  # convenience for the frontend
         "user": user.name,  # convenience for the frontend
     }
-    return jsonify(result)
+    return result
 
 
 @ROUTER.post("/login/renew")

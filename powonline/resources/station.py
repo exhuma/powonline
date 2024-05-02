@@ -2,34 +2,36 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, Response
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from powonline import core, schema
 from powonline.auth import User, get_user
 from powonline.dependencies import get_db
+from powonline.exc import AccessDenied, AuthDeniedReason
 
-ROUTER = APIRouter(prefix="/station", tags=["station"])
+ROUTER = APIRouter(prefix="", tags=["station"])
 LOG = logging.getLogger(__name__)
 
 
 @ROUTER.get("/station")
 async def all_stations(
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> list[schema.StationSchema]:
+) -> schema.ListResult[schema.StationSchema]:
     items = await core.Station.all(session)
     items = [schema.StationSchema.model_validate(item) for item in items]
-    return items
+    return schema.ListResult(items=items)
 
 
-@ROUTER.post("/station")
+@ROUTER.post("/station", status_code=201)
 async def create_new_station(
     auth_user: Annotated[User, Depends(get_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
     station: schema.StationSchema = Body(),
-):
+) -> schema.StationSchema:
     auth_user.require_permission("admin_stations")
     output = await core.Station.create_new(session, station.model_dump())
-    return Response(schema.StationSchema.model_validate(output), 201)
+    return schema.StationSchema.model_validate(output)
 
 
 @ROUTER.get("/station/{name}")
@@ -44,19 +46,22 @@ async def query_stations(
 
 
 @ROUTER.put("/station/{name}")
-def put(
+async def put(
     auth_user: Annotated[User, Depends(get_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
     name: str,
     station: schema.StationSchema = Body(),
 ):
     auth_user.require_permission("manage_station")
-    if "admin" not in auth_user.roles and not core.User.may_access_station(
+    has_access = await core.User.may_access_station(
         session, auth_user.name, name
-    ):
-        return "Access denied to this station!", 401
-
-    output = core.Station.upsert(session, name, station.model_dump())
+    )
+    if not ("admin" in auth_user.roles or has_access):
+        raise AccessDenied(
+            "Access denied to this station!",
+            reason=AuthDeniedReason.ACCESS_DENIED,
+        )
+    output = await core.Station.upsert(session, name, station.model_dump())
     return schema.StationSchema.model_validate(output)
 
 
@@ -91,8 +96,8 @@ async def is_user_assigned_to_station(
         return False
 
 
-@ROUTER.get("/station/{station_name}/users/{user_name}")
-@ROUTER.get("/user/{user_name}/stations/{station_name}")
+@ROUTER.delete("/station/{station_name}/users/{user_name}")
+@ROUTER.delete("/user/{user_name}/stations/{station_name}")
 async def unassign_user_from_station(
     auth_user: Annotated[User, Depends(get_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
@@ -102,6 +107,24 @@ async def unassign_user_from_station(
     auth_user.require_permission("manage_permissions")
     success = await core.Station.unassign_user(session, station_name, user_name)
     if success:
-        return "", 204
+        return Response(None, 204)
     else:
-        return "Unexpected error!", 500
+        return JSONResponse("Unexpected error!", 500)
+
+
+@ROUTER.post("/station/{station_name}/users")
+async def assign_station_to_user(
+    auth_user: Annotated[User, Depends(get_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+    station_name: str,
+    user: schema.UserSchema = Body(),
+) -> Response:
+    """
+    Assigns a user to a station
+    """
+    auth_user.require_permission("manage_permissions")
+    success = await core.User.assign_station(session, user.name, station_name)
+    if success:
+        return JSONResponse("", 204)
+    else:
+        return JSONResponse("Station is already assigned to that user", 400)

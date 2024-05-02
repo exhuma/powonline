@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from powonline import core, schema
 from powonline.auth import User, get_user
 from powonline.dependencies import get_db, get_pusher
+from powonline.exc import NotFound
 from powonline.pusher import PusherWrapper
 
 ROUTER = APIRouter(prefix="", tags=["team"])
@@ -18,7 +19,7 @@ async def query_teams(
     session: Annotated[AsyncSession, Depends(get_db)],
     quickfilter: str = "",
     assigned_to_route: str = "",
-):
+) -> schema.ListResult[schema.TeamSchema]:
     if quickfilter:
         func_name = "quickfilter_%s" % quickfilter
         filter_func = getattr(core.Team, func_name, None)
@@ -31,18 +32,18 @@ async def query_teams(
         teams = await core.Team.all(session)
 
     output = [schema.TeamSchema.model_validate(item) for item in teams]
-    return output
+    return schema.ListResult(items=output)
 
 
-@ROUTER.post("/team")
+@ROUTER.post("/team", status_code=201)
 async def create_team(
     auth_user: Annotated[User, Depends(get_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
     team: schema.TeamSchema = Body(),
-):
+) -> schema.TeamSchema:
     auth_user.require_permission("admin_teams")
     output = await core.Team.create_new(session, team.model_dump())
-    return Response(schema.TeamSchema.model_validate(output), 201)
+    return schema.TeamSchema.model_validate(output)
 
 
 @ROUTER.put("/team/{name}")
@@ -79,7 +80,7 @@ async def query_team_info(
 ):
     team = await core.Team.get(session, name)
     if not team:
-        return Response("No such team", 404)
+        raise NotFound("No such team")
     return schema.TeamSchema.model_validate(team)
 
 

@@ -1,13 +1,18 @@
 import logging
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from powonline import core, schema
 from powonline.auth import User, get_user
 from powonline.dependencies import get_db, get_pusher
-from powonline.exc import NoQuestionnaireForStation
+from powonline.exc import (
+    AccessDenied,
+    AuthDeniedReason,
+    NoQuestionnaireForStation,
+)
 from powonline.pusher import PusherWrapper
 
 ROUTER = APIRouter(prefix="/job", tags=["job"])
@@ -28,13 +33,15 @@ async def _action_advance(
     permissions: set[str],
     pusher: PusherWrapper,
     args: dict[str, Any],
-) -> tuple[str | dict[str, Any], int]:
+) -> dict[str, Any]:
     station_name = args["station_name"]
     team_name = args["team_name"]
 
+    has_access = await core.User.may_access_station(
+        session, username, station_name
+    )
     if "admin_stations" in permissions or (
-        "manage_station" in permissions
-        and core.User.may_access_station(session, username, station_name)
+        "manage_station" in permissions and has_access
     ):
         new_state = await core.Team.advance_on_station(
             session, team_name, station_name
@@ -48,9 +55,8 @@ async def _action_advance(
                 "new_state": new_state.value,
             },
         )
-        return output, 200
-    else:
-        return "Access denied to this station!", 401
+        return output
+    raise AccessDenied("Access denied to this station!")
 
 
 async def _action_set_score(
@@ -59,15 +65,16 @@ async def _action_set_score(
     permissions: set[str],
     pusher: PusherWrapper,
     args: dict[str, Any],
-) -> tuple[str | dict[str, Any], int]:
-
+) -> dict[str, Any]:
     station_name = args["station_name"]
     team_name = args["team_name"]
     score = validate_score(args["score"])
 
+    has_access = await core.User.may_access_station(
+        session, username, station_name
+    )
     if "admin_stations" in permissions or (
-        "manage_station" in permissions
-        and core.User.may_access_station(session, username, station_name)
+        "manage_station" in permissions and has_access
     ):
         LOG.info(
             "Setting score of %s on %s to %s (by user: %s)",
@@ -98,9 +105,10 @@ async def _action_set_score(
                 "new_score": new_score,
             },
         )
-        return output, 200
-    else:
-        return "Access denied to this station!", 401
+        return output
+    raise AccessDenied(
+        "Access denied to this station!", reason=AuthDeniedReason.ACCESS_DENIED
+    )
 
 
 async def _action_set_questionnaire_score(
@@ -109,14 +117,16 @@ async def _action_set_questionnaire_score(
     permissions: set[str],
     pusher: PusherWrapper,
     args: dict[str, Any],
-) -> tuple[str | dict[str, Any], int]:
+) -> dict[str, Any]:
     station_name = args["station_name"]
     team_name = args["team_name"]
     score = validate_score(args["score"])
 
+    has_access = await core.User.may_access_station(
+        session, username, station_name
+    )
     if "admin_stations" in permissions or (
-        "manage_station" in permissions
-        and await core.User.may_access_station(session, username, station_name)
+        "manage_station" in permissions and has_access
     ):
         LOG.info(
             "Setting questionnaire score of %s on %s to %s (" "by user: %s)",
@@ -138,9 +148,9 @@ async def _action_set_questionnaire_score(
                 "No questionnaire assigned to station %r!",
                 station_name,
             )
-            return (
-                "No questionnaire assigned to station %r!" % station_name,
+            raise HTTPException(
                 500,
+                "No questionnaire assigned to station %r!" % station_name,
             )
         if old_score != new_score:
             core.add_audit_log(
@@ -161,9 +171,10 @@ async def _action_set_questionnaire_score(
                 "score": new_score,
             },
         )
-        return output, 200
-    else:
-        return "Access denied to this station!", 401
+        return output
+    raise AccessDenied(
+        "Access denied to this station!", reason=AuthDeniedReason.ACCESS_DENIED
+    )
 
 
 ACTION_MAP = {
@@ -179,13 +190,16 @@ async def create_new_job(
     session: Annotated[AsyncSession, Depends(get_db)],
     pusher: Annotated[PusherWrapper, Depends(get_pusher)],
     job: schema.JobSchema = Body(),
-) -> tuple[str | dict[str, Any], int]:
+) -> JSONResponse:
     auth_user.require_permission("manage_station")
     action = job.action
     func = ACTION_MAP.get(action, None)
     if not func:
         LOG.debug("Unknown job %r requested!", job.action)
-        return "%r is an unknown job action" % action, 400
-    return await func(
-        session, user.name, user.permissions, pusher, args=job.args
+        return JSONResponse("%r is an unknown job action" % action, 400)
+    else:
+        LOG.debug("Matched job %r to %r", job.action, func)
+    result = await func(
+        session, auth_user.name, auth_user.permissions, pusher, args=job.args
     )
+    return JSONResponse(result)

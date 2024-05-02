@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from powonline import core, schema
 from powonline.dependencies import get_db
 
-ROUTER = APIRouter(prefix="/assignment", tags=["assignment"])
+ROUTER = APIRouter(prefix="/assignments", tags=["assignment"])
 
 
 @ROUTER.get("")
