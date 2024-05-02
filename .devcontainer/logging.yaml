@@ -1,0 +1,23 @@
+---
+version: 1
+root:
+  level: DEBUG
+  handlers:
+    - console
+loggers:
+  # uvicorn loggers are pretty silent by default. We set some of them to INFO.
+  # This will make the messages (which are usfeul during development) appear in
+  # the console.
+  # uvicorn.error contains startup messages.
+  uvicorn.error:
+    level: INFO
+  # uvicorn.access contains access logs.
+  uvicorn.access:
+    level: INFO
+handlers:
+  console:
+    class : logging.StreamHandler
+    formatter: gouge
+formatters:
+  gouge:
+    class: "powonline.logging.LogFormatter"

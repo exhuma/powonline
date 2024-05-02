@@ -9,11 +9,11 @@ from powonline import core
 from powonline.config import default
 from powonline.dependencies import get_db
 
-ROUTER = APIRouter(prefix="/questionnaire", tags=["questionnaire"])
+ROUTER = APIRouter(prefix="", tags=["questionnaire"])
 LOG = logging.getLogger(__name__)
 
 
-@ROUTER.get("/scores")
+@ROUTER.get("/questionnaire-scores")
 async def get_team_station_questionnaire(
     session: Annotated[AsyncSession, Depends(get_db)],
     config: Annotated[ConfigParser, Depends(default)],

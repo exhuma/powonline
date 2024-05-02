@@ -136,7 +136,6 @@ async def global_dashboard(session: AsyncSession):
     teams_query = select(model.Team).order_by(model.Team.name)
     stations_query = select(model.Station).order_by(model.Station.name)
     teams = await session.execute(teams_query)
-    stations = await session.execute(stations_query)
     team_names = set()
     station_names = set()
     output: list[schema.GlobalDashboardRow] = []
@@ -151,6 +150,7 @@ async def global_dashboard(session: AsyncSession):
             }
         else:
             reachable_stations = set()
+        stations = await session.execute(stations_query)
         for station in stations.scalars():
             station_names.add(station.name)
             if station.name in reachable_stations:
@@ -387,7 +387,8 @@ class Station:
         user_query = select(model.User).filter_by(name=user_name)
         user_result = await session.execute(user_query)
         user = user_result.scalar_one()
-        station.users.add(user)
+        station_users = await station.awaitable_attrs.users
+        station_users.add(user)
         return True
 
     @staticmethod
@@ -399,7 +400,7 @@ class Station:
         station = station_result.scalar_one()
         found_user = None
         station_users = await station.awaitable_attrs.users
-        for user in await station_users:
+        for user in station_users:
             if user.name == user_name:
                 found_user = user
                 break
@@ -529,7 +530,8 @@ class Route:
     ) -> bool:
         team_query = select(model.Team).filter_by(name=team_name)
         team = (await session.execute(team_query)).scalar_one()
-        if team.route:
+        team_route = await team.awaitable_attrs.route
+        if team_route:
             return False  # A team can only be assigned to one route
         route_query = select(model.Route).filter_by(name=route_name)
         route = (await session.execute(route_query)).scalar_one()
@@ -596,7 +598,7 @@ class User:
             provider_id=provider, provider_user_id=user_id
         )
         oauth_result = await session.execute(oauth_query)
-        connection = oauth_result.one_or_none()
+        connection = oauth_result.scalar_one_or_none()
         if not connection:
             user = await User.get(session, defaults["email"])
             if not user:
@@ -604,7 +606,7 @@ class User:
                     SystemRandom().choice(ascii_letters + digits + punctuation)
                     for _ in range(64)
                 )
-                user = model.User(defaults["email"], password=random_pw)
+                user = model.User(name=defaults["email"], password=random_pw)
             new_connection = model.OauthConnection()
             new_connection.user = user
             new_connection.provider_id = provider
@@ -633,6 +635,7 @@ class User:
     async def create_new(
         session: AsyncSession, data: dict[str, Any]
     ) -> model.User:
+        data.pop("avatar_url", None)  # Avatars are not settable
         user = model.User(**data)
         session.add(user)
         return user

@@ -41,4 +41,14 @@ def run(context):
     """
     Run a development server
     """
-    context.run("./env/bin/python autoapp.py", replace_env=False, pty=True)
+    context.run(
+        (
+            "./env/bin/uvicorn "
+            "--reload "
+            "--log-level debug "
+            "--log-config .devcontainer/logging.yaml "
+            "--factory powonline.main:create_app"
+        ),
+        replace_env=False,
+        pty=True,
+    )

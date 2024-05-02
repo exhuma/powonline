@@ -35,3 +35,26 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_DB: postgres
       POSTGRES_PASSWORD: postgres
+
+  keycloak-db:
+    image: postgres:15
+    restart: unless-stopped
+    volumes:
+      - ./docker-resources/keycloak-db-init:/docker-entrypoint-initdb.d:ro
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: keycloak
+      POSTGRES_PASSWORD: postgres
+
+  idp:
+    image: quay.io/keycloak/keycloak:22.0.0
+    restart: unless-stopped
+    command:
+      - start-dev
+      - --db postgres
+      - --db-url-host keycloak-db
+      - --db-username postgres
+      - --db-password postgres
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin

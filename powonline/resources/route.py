@@ -2,6 +2,7 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, Response
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from powonline import core, schema
@@ -15,13 +16,13 @@ LOG = logging.getLogger(__name__)
 @ROUTER.get("")
 async def get(
     session: Annotated[AsyncSession, Depends(get_db)],
-) -> list[schema.RouteSchema]:
+) -> schema.ListResult[schema.RouteSchema]:
     items = await core.Route.all(session)
     items = [schema.RouteSchema.model_validate(item) for item in items]
-    return items
+    return schema.ListResult(items=items)
 
 
-@ROUTER.post("")
+@ROUTER.post("", status_code=201)
 async def post(
     auth_user: Annotated[User, Depends(get_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
@@ -55,61 +56,7 @@ async def delete(
     return Response(None, 204)
 
 
-@ROUTER.get("/user/{user_name}/stations")
-async def query_station_by_user(
-    auth_user: Annotated[User, Depends(get_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
-    user_name: str,
-) -> list[tuple[str, bool]]:
-    auth_user.require_permission("manage_permissions")
-    user = await core.User.get(session, user_name)
-    if not user:
-        return Response("User not found", 404)
-    all_stations = await core.Station.all(session)
-    user_stations = await user.awaitable_attrs.stations
-    user_stations = {station.name for station in user_stations or []}
-    output = []
-    for station in all_stations:
-        output.append((station.name, station.name in user_stations))
-    return output
-
-
-async def assign_user_to_station(
-    auth_user: Annotated[User, Depends(get_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
-    station_name: str,
-    user: schema.UserSchema,
-):
-    """
-    Assigns a user to a station
-    """
-    auth_user.require_permission("manage_permissions")
-    success = await core.Station.assign_user(session, station_name, user.name)
-    if success:
-        return Response("", 204)
-    else:
-        return Response("Station is already assigned to that user", 400)
-
-
-@ROUTER.post("/station/{station_name}/users")
-async def assign_station_to_user(
-    auth_user: Annotated[User, Depends(get_user)],
-    session: Annotated[AsyncSession, Depends(get_db)],
-    station_name: str,
-    user: schema.UserSchema = Body(),
-) -> Response:
-    """
-    Assigns a user to a station
-    """
-    auth_user.require_permission("manage_permissions")
-    success = await core.User.assign_station(session, user.name, station_name)
-    if success:
-        return Response("", 204)
-    else:
-        return Response("Station is already assigned to that user", 400)
-
-
-@ROUTER.post("/route/{route_name}/teams")
+@ROUTER.post("/{route_name}/teams")
 async def assign_team_to_route(
     auth_user: Annotated[User, Depends(get_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
@@ -122,12 +69,12 @@ async def assign_team_to_route(
     auth_user.require_permission("admin_routes")
     success = await core.Route.assign_team(session, route_name, team.name)
     if success:
-        return "", 204
+        return Response(None, 204)
     else:
-        return "Team is already assigned to a route", 400
+        return JSONResponse("Team is already assigned to a route", 400)
 
 
-@ROUTER.delete("/route/{route_name}/teams/{team_name}")
+@ROUTER.delete("/{route_name}/teams/{team_name}")
 async def unassign_team_from_route(
     auth_user: Annotated[User, Depends(get_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
@@ -137,12 +84,12 @@ async def unassign_team_from_route(
     auth_user.require_permission("admin_routes")
     success = await core.Route.unassign_team(session, route_name, team_name)
     if success:
-        return "", 204
+        return Response(None, 204)
     else:
-        return "Unexpected error!", 500
+        return JSONResponse("Unexpected error!", 500)
 
 
-@ROUTER.post("/route/{route_name}/stations")
+@ROUTER.post("/{route_name}/stations")
 async def assign_station_to_route(
     auth_user: Annotated[User, Depends(get_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
@@ -153,14 +100,14 @@ async def assign_station_to_route(
     Assign a station to a route
     """
     auth_user.require_permission("admin_routes")
-    success = core.Route.assign_station(session, route_name, station.name)
+    success = await core.Route.assign_station(session, route_name, station.name)
     if success:
-        return "", 204
+        return Response(None, 204)
     else:
-        return "Unexpected error!", 500
+        return JSONResponse("Unexpected error!", 500)
 
 
-@ROUTER.delete("/route/{route_name}/stations/{station_name}")
+@ROUTER.delete("/{route_name}/stations/{station_name}")
 async def unassign_station_from_route(
     auth_user: Annotated[User, Depends(get_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
@@ -172,12 +119,12 @@ async def unassign_station_from_route(
         session, route_name, station_name
     )
     if success:
-        return "", 204
+        return Response(None, 204)
     else:
-        return "Unexpected error!", 500
+        return JSONResponse("Unexpected error!", 500)
 
 
-@ROUTER.put("/route/{route_name}/color")
+@ROUTER.put("/{route_name}/color")
 async def set_route_color(
     auth_user: Annotated[User, Depends(get_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
@@ -193,7 +140,7 @@ async def set_route_color(
     return jsonify({"color": new_color})
 
 
-@ROUTER.put("/routeStations")
+@ROUTER.put("")
 def set_route_stations(session: Annotated[AsyncSession, Depends(get_db)]):
     payload = request.json
     if payload is None:

@@ -3,13 +3,9 @@ from os.path import exists
 from gouge.colourcli import Simple
 
 from powonline.config import default
-from powonline.util import colorize_werkzeug
-from powonline.web import make_app
+from powonline.main import create_app
 
-Simple.basicConfig(level=0)
-config = default()
-colorize_werkzeug()
-APP = make_app(config)
+APP = create_app()
 
 if not exists("cert.cert"):
     print("You don't seem to have a SSL cert available for the dev server")
