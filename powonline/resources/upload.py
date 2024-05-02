@@ -10,14 +10,7 @@ from posixpath import splitext
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import (
-    APIRouter,
-    Depends,
-    File,
-    Request,
-    Response,
-    UploadFile,
-)
+from fastapi import APIRouter, Depends, File, Request, Response, UploadFile
 from PIL import ExifTags, Image
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,6 +18,7 @@ from powonline import core, schema
 from powonline.auth import User, get_user
 from powonline.config import default
 from powonline.dependencies import get_db, get_pusher
+from powonline.exc import AccessDenied, AuthDeniedReason, NotFound
 from powonline.model import Upload
 from powonline.pusher import PusherWrapper
 
@@ -116,7 +110,6 @@ def _rotated(fullname: str):
 
 
 def _thumbnail(fullname: str, size: int):
-
     im = _rotated(fullname)
 
     # Limit the size to an upper-bound. This prevents users from enlarging
@@ -255,14 +248,14 @@ async def get_file(
     )
     db_instance = await core.Upload.by_id(session, uuid)
     if not db_instance:
-        return "File not found", 404
+        raise NotFound("File not found")
 
     fullname = join(data_folder, db_instance.filename)
     thumbnail, mediatype = _thumbnail(fullname, size)
     output = Response(thumbnail.getvalue(), media_type=mediatype)
-    output.headers["Content-Disposition"] = (
-        f"inline; filename=thn_{basename(db_instance.filename)}"
-    )
+    output.headers[
+        "Content-Disposition"
+    ] = f"inline; filename=thn_{basename(db_instance.filename)}"
     return output
 
 
@@ -280,13 +273,13 @@ async def delete_file(
     """
     db_instance = await core.Upload.by_id(session, uuid)
     if not db_instance:
-        return "File not found", 404
+        raise NotFound("File not found")
     all_permissions = user.permissions
     if (
         "admin_files" not in all_permissions
         and user.name != db_instance.username
     ):
-        return Response("Access Denied", 403)
+        return AccessDenied("Access Denied", AuthDeniedReason.ACCESS_DENIED)
     data_folder = config.get(
         "app", "upload_folder", fallback=core.Upload.FALLBACK_FOLDER
     )

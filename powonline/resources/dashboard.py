@@ -9,13 +9,14 @@ from powonline.dependencies import get_db
 ROUTER = APIRouter(prefix="", tags=["dashboard"])
 
 
-@ROUTER.get("/station/<station_name>/dashboard")
-@ROUTER.get("/station/<station_name>/<relation>/dashboard")
+@ROUTER.get("/station/{station_name}/dashboard")
+@ROUTER.get("/station/{station_name}/{relation}/dashboard")
 async def for_station(
     session: Annotated[AsyncSession, Depends(get_db)],
     station_name: str,
     relation: schema.StationRelation = schema.StationRelation.UNKNOWN,
 ) -> list[schema.DashboardRow]:
+    print(station_name, relation)
     if relation != schema.StationRelation.UNKNOWN:
         station_name = await core.Station.related(
             session, station_name, relation

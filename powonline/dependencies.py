@@ -3,10 +3,7 @@ from configparser import ConfigParser
 from typing import Annotated
 
 from fastapi import Depends
-from sqlalchemy.ext.asyncio import (
-    async_sessionmaker,
-    create_async_engine,
-)
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from powonline.config import default
 from powonline.pusher import PusherWrapper
@@ -22,6 +19,7 @@ async_session = async_sessionmaker(
 async def get_db():
     async with async_session() as session:
         yield session
+        await session.commit()
 
 
 def get_pusher(config: Annotated[ConfigParser, Depends(default)]):

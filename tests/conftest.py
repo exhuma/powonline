@@ -1,14 +1,19 @@
+import logging
 import os
 from pathlib import Path
 from textwrap import dedent
 
 import alembic.config
-from config_resolver import get_config
+from config_resolver.core import get_config
+from fastapi import FastAPI
+from httpx import ASGITransport, AsyncClient
 from pytest import fixture
 from sqlalchemy import text
 
-from powonline import model
-from powonline.web import make_app
+from powonline.dependencies import async_session
+from powonline.main import create_app
+
+LOG = logging.getLogger(__name__)
 
 
 def here(localname):
@@ -54,26 +59,33 @@ def app(test_config):
             % ("testing",)
         )
     )
-    return make_app(test_config)
+    app = create_app()
+    return app
 
 
 @fixture
-def dbsession():
-    try:
-        yield model.DB.session
-    finally:
-        model.DB.session.remove()
+def test_client(app: FastAPI) -> AsyncClient:
+    client = AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://testserver"
+    )
+    return client
 
 
 @fixture
-def seed(dbsession):
+async def dbsession():
+    session = async_session()
     with open(here("seed_cleanup.sql")) as seed:
-        try:
-            model.DB.session.execute(text(seed.read()))
-            model.DB.session.commit()
-        except Exception as exc:
-            LOG.exception("Unable to execute cleanup seed")
-            model.DB.session.rollback()
+        await session.execute(text(seed.read()))
+        await session.commit()
+    try:
+        yield session
+    finally:
+        await session.rollback()
+        await session.close()
+
+
+@fixture
+async def seed(dbsession):
     with open(here("seed.sql")) as seed:
-        model.DB.session.execute(text(seed.read()))
-        model.DB.session.commit()
+        await dbsession.execute(text(seed.read()))
+        await dbsession.commit()
