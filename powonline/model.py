@@ -1,54 +1,55 @@
 import logging
+import uuid as m_uuid
 from codecs import encode
 from datetime import datetime, timezone
-from enum import Enum
 from os import urandom
 from typing import Any
 
 import sqlalchemy.types as types
 from bcrypt import checkpw, gensalt, hashpw
-from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
     ForeignKey,
     Integer,
+    MetaData,
     Table,
     Unicode,
     func,
 )
 from sqlalchemy.dialects.postgresql import BYTEA, UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship, scoped_session
+from sqlalchemy.ext.asyncio import AsyncAttrs
+from sqlalchemy.orm import (
+    DeclarativeBase,
+    Mapped,
+    mapped_column,
+    relationship,
+    scoped_session,
+)
+
+from powonline.schema import AuditType, TeamState
 
 LOG = logging.getLogger(__name__)
-DB = SQLAlchemy()
+
+metadata = MetaData()
 
 
-class AuditType(Enum):
-    ADMIN = "admin"
-    QUESTIONNAIRE_SCORE = "questionnaire_score"
-    STATION_SCORE = "station_score"
-
-
-class TeamState(Enum):
-    UNKNOWN = "unknown"
-    ARRIVED = "arrived"
-    FINISHED = "finished"
-    UNREACHABLE = "unreachable"
+class Base(AsyncAttrs, DeclarativeBase):
+    metadata = metadata
 
 
 class TeamStateType(types.TypeDecorator):
     impl = types.Unicode
 
     def process_bind_param(self, value, dialect):
-        return value.value
+        return value.value if value else None
 
     def process_result_value(self, value, dialect):
         return TeamState(value)
 
 
-class Team(DB.Model):  # type: ignore
+class Team(Base):  # type: ignore
     __tablename__ = "team"
 
     name: Mapped[str] = mapped_column(primary_key=True)
@@ -99,7 +100,7 @@ class Team(DB.Model):  # type: ignore
         return "Team(name=%r)" % self.name
 
 
-class Station(DB.Model):  # type: ignore
+class Station(Base):  # type: ignore
     __tablename__ = "station"
     name: Mapped[str] = mapped_column(primary_key=True)
     contact: Mapped[str | None] = mapped_column()
@@ -137,7 +138,7 @@ class Station(DB.Model):  # type: ignore
         return "Station(name=%r)" % self.name
 
 
-class Route(DB.Model):  # type: ignore
+class Route(Base):  # type: ignore
     __tablename__ = "route"
 
     name: Mapped[str] = mapped_column(primary_key=True)
@@ -160,7 +161,7 @@ class Route(DB.Model):  # type: ignore
             setattr(self, k, v)
 
 
-class OauthConnection(DB.Model):  # type: ignore
+class OauthConnection(Base):  # type: ignore
     __tablename__ = "oauth_connection"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -187,7 +188,7 @@ class OauthConnection(DB.Model):  # type: ignore
     )
 
 
-class User(DB.Model):  # type: ignore
+class User(Base):  # type: ignore
     __tablename__ = "user"
 
     name: Mapped[str] = mapped_column(primary_key=True)
@@ -283,7 +284,7 @@ class User(DB.Model):  # type: ignore
     )
 
 
-class Role(DB.Model):  # type: ignore
+class Role(Base):  # type: ignore
     __tablename__ = "role"
     name: Mapped[str] = mapped_column(primary_key=True)
     users: Mapped[set["User"]] = relationship(
@@ -314,7 +315,7 @@ class Role(DB.Model):  # type: ignore
         return output  # type: ignore
 
 
-class TeamStation(DB.Model):  # type: ignore
+class TeamStation(Base):  # type: ignore
     __tablename__ = "team_station_state"
 
     team_name: Mapped[str] = mapped_column(
@@ -325,7 +326,7 @@ class TeamStation(DB.Model):  # type: ignore
         ForeignKey("station.name", onupdate="CASCADE", ondelete="CASCADE"),
         primary_key=True,
     )
-    state: Mapped[TeamStateType | None] = mapped_column(
+    state: Mapped[TeamState | None] = mapped_column(
         TeamStateType, default=TeamState.UNKNOWN
     )
     score: Mapped[int | None] = mapped_column(nullable=True, default=None)
@@ -352,7 +353,7 @@ class TeamStation(DB.Model):  # type: ignore
         self.state = state
 
 
-class Questionnaire(DB.Model):  # type: ignore
+class Questionnaire(Base):  # type: ignore
     __tablename__ = "questionnaire"
 
     name: Mapped[str] = mapped_column(nullable=False, primary_key=True)
@@ -373,7 +374,7 @@ class Questionnaire(DB.Model):  # type: ignore
         self.name = name
 
 
-class TeamQuestionnaire(DB.Model):  # type: ignore
+class TeamQuestionnaire(Base):  # type: ignore
     __tablename__ = "questionnaire_score"
 
     team_name: Mapped[str] = mapped_column(
@@ -409,7 +410,7 @@ class TeamQuestionnaire(DB.Model):  # type: ignore
         self.score = score
 
 
-class Upload(DB.Model):  # type: ignore
+class Upload(Base):  # type: ignore
     __tablename__ = "uploads"
     filename: Mapped[str] = mapped_column(Unicode, primary_key=True)
     username: Mapped[str] = mapped_column(
@@ -417,7 +418,7 @@ class Upload(DB.Model):  # type: ignore
         ForeignKey("user.name", onupdate="CASCADE", ondelete="CASCADE"),
         primary_key=True,
     )
-    uuid: Mapped[UUID] = mapped_column(
+    uuid: Mapped[m_uuid.UUID] = mapped_column(
         UUID,
         unique=True,
         nullable=False,
@@ -451,7 +452,7 @@ class Upload(DB.Model):  # type: ignore
         return instance
 
 
-class AuditLog(DB.Model):  # type: ignore
+class AuditLog(Base):  # type: ignore
     __tablename__ = "auditlog"
     timestamp: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -459,7 +460,7 @@ class AuditLog(DB.Model):  # type: ignore
         default=datetime.now(timezone.utc),
         primary_key=True,
     )
-    username: Mapped[str] = mapped_column(
+    username: Mapped[str | None] = mapped_column(
         ForeignKey("user.name", onupdate="CASCADE", ondelete="SET NULL"),
         name="user",
         primary_key=True,
@@ -480,7 +481,7 @@ class AuditLog(DB.Model):  # type: ignore
 
 route_station_table = Table(
     "route_station",
-    DB.metadata,
+    metadata,
     Column(
         "route_name",
         Unicode,
@@ -504,7 +505,7 @@ route_station_table = Table(
 
 user_station_table = Table(
     "user_station",
-    DB.metadata,
+    metadata,
     Column(
         "user_name",
         Unicode,
@@ -521,7 +522,7 @@ user_station_table = Table(
 
 user_role_table = Table(
     "user_role",
-    DB.metadata,
+    metadata,
     Column(
         "user_name",
         Unicode,

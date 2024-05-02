@@ -1,6 +1,7 @@
 ; Version History of the config file
 ; ----------------------------------
 ;
+;  2.5: Removed "security.secret_key"
 ;  2.4: Added "app.allowed_origins"
 ;  2.3: Added "pusher_channels.file"
 ;  2.2: Added [email] section
@@ -40,7 +41,6 @@ dsn = postgresql+psycopg://postgres:postgres@db/postgres
 
 [security]
 jwt_secret = foobar
-secret_key = foobar
 
 ; How long a JWT token will be accepted (in seconds)
 jwt_lifetime = 3600
