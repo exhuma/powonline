@@ -138,7 +138,6 @@ async def global_dashboard(session: AsyncSession):
     teams_query = select(model.Team).order_by(model.Team.name)
     stations_query = select(model.Station).order_by(model.Station.name)
     teams = await session.execute(teams_query)
-    stations = await session.execute(stations_query)
     team_names = set()
     station_names = set()
     output: list[schema.GlobalDashboardRow] = []
@@ -153,6 +152,7 @@ async def global_dashboard(session: AsyncSession):
             }
         else:
             reachable_stations = set()
+        stations = await session.execute(stations_query)
         for station in stations.scalars():
             station_names.add(station.name)
             if station.name in reachable_stations:
@@ -406,7 +406,7 @@ class Station:
         station = station_result.scalar_one()
         found_user = None
         station_users = await station.awaitable_attrs.users
-        for user in await station_users:
+        for user in station_users:
             if user.name == user_name:
                 found_user = user
                 break

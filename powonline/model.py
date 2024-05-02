@@ -8,7 +8,6 @@ from urllib.parse import urlparse, urlunparse
 
 import sqlalchemy.types as types
 from bcrypt import checkpw, gensalt, hashpw
-from powonline.schema import AuditType, TeamState
 from sqlalchemy import (
     Boolean,
     Column,
@@ -25,6 +24,8 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import BYTEA, UUID
 from sqlalchemy.ext.asyncio import AsyncAttrs, AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+from powonline.schema import AuditType, TeamState
 
 LOG = logging.getLogger(__name__)
 metadata = MetaData()

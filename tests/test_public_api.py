@@ -219,7 +219,6 @@ async def test_update_other_station(
 # XXX     expected = make_dummy_route_dict(name="foo")
 # XXX     assert data == expected
 
-
 async def test_create_team(dbsession: AsyncSession, red_client: AsyncClient):
     new_team = make_dummy_team_dict(name="foo", contact="new-contact")
 
@@ -434,6 +433,7 @@ async def test_show_team_station_state_inverse(
     assert response_a.status_code == response_b.status_code
     assert response_a.content == response_b.content
 
+
 async def test_advance_team_state_auto_start(
     dbsession: AsyncSession, red_client: AsyncClient
 ):
@@ -460,7 +460,6 @@ async def test_advance_team_state_auto_start(
                 "/job", headers=headers, content=json.dumps(job)
             )
         _func.now.assert_called_once()
-
     state_response = await red_client.get(
         "/station/station-start/teams/team-red"
     )
@@ -1319,5 +1318,3 @@ async def test_anon_related_station_invalid_state(test_client: AsyncClient):
 # TODO:         "/station/station-blue/questionnaires/questionnaire_1"
 # TODO:     )
 # TODO:     self.assertEqual(response.status_code, 204, response.data)
-
-

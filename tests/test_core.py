@@ -1,7 +1,6 @@
 import logging
 
 import pytest
-from pytest import fixture
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from powonline import core, schema
@@ -29,7 +28,7 @@ async def test_get_assignments(dbsession: AsyncSession):
 
 
 @pytest.mark.usefixtures("seed")
-async def test_scoreboard(dbsession: AsyncSession):
+async def test_scoreboard(dbsession: AsyncSession, seed):
     result = list(await core.scoreboard(dbsession))
     expected = [
         ("team-blue", 50),
@@ -55,6 +54,7 @@ async def test_questionnaire_scores(dbsession: AsyncSession):
 @pytest.mark.usefixtures("seed")
 async def test_set_questionnaire_score(dbsession: AsyncSession):
     _, result = await core.set_questionnaire_score(
+        dbsession, "team-red", "station-blue", 40
         dbsession, "team-red", "station-blue", 40
     )
     assert result == 40
