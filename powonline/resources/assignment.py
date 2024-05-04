@@ -10,7 +10,9 @@ ROUTER = APIRouter(prefix="/assignments", tags=["assignment"])
 
 
 @ROUTER.get("")
-async def get(session: Annotated[AsyncSession, Depends(get_db)]):
+async def get(
+    session: Annotated[AsyncSession, Depends(get_db)]
+) -> schema.AssignmentMap:
     data = await core.get_assignments(session)
 
     out_stations = {}
