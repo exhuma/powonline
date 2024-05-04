@@ -43,6 +43,7 @@ dev = [
 test = [
     "httpx",
     "pytest",
+    "pytest-asyncio",
     "pytest-catchlog",
     "pytest-coverage",
     "pytest-env",

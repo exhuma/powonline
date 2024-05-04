@@ -253,9 +253,9 @@ async def get_file(
     fullname = join(data_folder, db_instance.filename)
     thumbnail, mediatype = _thumbnail(fullname, size)
     output = Response(thumbnail.getvalue(), media_type=mediatype)
-    output.headers[
-        "Content-Disposition"
-    ] = f"inline; filename=thn_{basename(db_instance.filename)}"
+    output.headers["Content-Disposition"] = (
+        f"inline; filename=thn_{basename(db_instance.filename)}"
+    )
     return output
 
 
