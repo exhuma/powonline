@@ -14,10 +14,12 @@ requires-python = ">=3.7"
 license = {text = "BSD-3-Clause"}
 classifiers = []
 dependencies = [
+    "authlib",
     "bcrypt",
     "config-resolver >= 5.0, <6.0",
     "fastapi",
     "gouge >= 2.0",
+    "httpx",
     "imapclient",
     "pillow",
     "psycopg[binary]",
@@ -41,7 +43,6 @@ dev = [
     "types-python-dateutil",
 ]
 test = [
-    "httpx",
     "pytest",
     "pytest-asyncio",
     "pytest-catchlog",

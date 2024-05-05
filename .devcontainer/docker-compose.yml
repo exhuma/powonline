@@ -55,6 +55,8 @@ services:
       - --db-url-host keycloak-db
       - --db-username postgres
       - --db-password postgres
+    ports:
+      - 8080:8080 
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin

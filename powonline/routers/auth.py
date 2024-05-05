@@ -3,12 +3,16 @@ from configparser import ConfigParser
 from time import time
 from typing import Annotated
 
+import httpx
 import jwt
+from authlib.jose import jwt
+from authlib.oidc.discovery import get_well_known_url
 from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from powonline import core, model, schema
-from powonline.auth import User
+from powonline.auth import Bearer, User
 from powonline.config import default
 from powonline.dependencies import get_db
 from powonline.exc import AccessDenied, AuthDeniedReason
@@ -140,3 +144,36 @@ def renew_token(
     }
     new_token = jwt.encode(new_payload, jwt_secret)
     return jsonify({"token": new_token})
+
+
+@ROUTER.get("/dummy-request")
+def dummy_request(
+    auth: Annotated[HTTPAuthorizationCredentials | None, Depends(Bearer)]
+):
+    if auth is None:
+        raise HTTPException(401, "Unauthorized")
+    # issuer = "http://idp:8080/realms/localdev"
+    # issuer = "https://accounts.google.com/"
+    issuer = "https://login.microsoftonline.com/b32ede06-d7e3-48f0-b82c-20fab650f67f/v2.0"
+    wk_url = get_well_known_url(issuer, external=True)
+    response = httpx.get(wk_url)
+    jwks_uri = response.json().get("jwks_uri", "")
+    response = httpx.get(jwks_uri)
+    jwks = response.json()
+    try:
+        payload = jwt.decode(
+            auth.credentials,
+            key=jwks,
+            claims_options={
+                "iss": {
+                    "essential": True,
+                    "values": [
+                        issuer,
+                        "http://localhost:8080/realms/localdev",
+                    ],
+                }
+            },
+        )
+        payload.validate(leeway=60)
+    except Exception as exc:
+        raise HTTPException(401, str(exc))

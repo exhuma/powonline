@@ -9,6 +9,7 @@ from fastapi.security import (
     HTTPBasic,
     HTTPBasicCredentials,
     HTTPBearer,
+    OpenIdConnect,
 )
 from pydantic import BaseModel
 
