@@ -39,9 +39,8 @@ from .exc import (
     UserInputError,
     ValidationError,
 )
-from .model import DB
+from .model import DB, AuditType, TeamState
 from .model import AuditLog as DBAuditLog
-from .model import AuditType, TeamState
 from .model import Upload as DBUpload
 from .util import allowed_file, get_user_identity, get_user_permissions
 
@@ -607,7 +606,7 @@ class TeamStation(Resource):
             if state.state:
                 return {"state": state.state.value}, 200
             else:
-                return {"state": TeamState.UNKNOWN}, 200
+                return {"state": TeamState.UNKNOWN.value}, 200
 
 
 class Assignments(Resource):
