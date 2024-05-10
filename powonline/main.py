@@ -2,6 +2,7 @@ import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 
 from powonline import error_handlers, resources, routers
 
@@ -37,6 +38,9 @@ def get_cors_data() -> dict[str, list[str]]:
 def create_app():
     app = FastAPI()
     cors_info = get_cors_data()
+    app.add_middleware(
+        SessionMiddleware, secret_key="some-random-string"
+    )  # XXX
     app.add_middleware(
         CORSMiddleware,
         allow_origins=cors_info["allowed_origins"],

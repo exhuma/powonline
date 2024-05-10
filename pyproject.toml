@@ -21,6 +21,7 @@ dependencies = [
     "gouge >= 2.0",
     "httpx",
     "imapclient",
+    "itsdangerous",
     "pillow",
     "psycopg[binary]",
     "pusher",

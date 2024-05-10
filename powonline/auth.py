@@ -1,15 +1,17 @@
 import logging
 from configparser import ConfigParser
+from functools import lru_cache
 from typing import Annotated
 
 import jwt
+from authlib.integrations.starlette_client import OAuth
 from fastapi import Depends
 from fastapi.security import (
     HTTPAuthorizationCredentials,
     HTTPBasic,
     HTTPBasicCredentials,
     HTTPBearer,
-    OpenIdConnect,
+    OAuth2AuthorizationCodeBearer,
 )
 from pydantic import BaseModel
 
@@ -71,6 +73,29 @@ class User(BaseModel):
 
     def require_permission(self, permission: str) -> None:
         self.require_any_permission({permission})
+
+
+def confidential_oauth(
+    config: Annotated[ConfigParser, Depends(default)]
+) -> OAuth:
+    oauth = OAuth()
+    client_id = config.get("social:keycloak", "client_id", fallback="").strip()
+    client_secret = config.get(
+        "social:keycloak", "client_secret", fallback=""
+    ).strip()
+    if not all([client_id, client_secret]):
+        raise ValueError("Missing client_id or client_secret")
+    oauth.register(
+        name="keycloak",
+        server_metadata_url="http://idp:8080/realms/localdev/.well-known/openid-configuration",
+        client_id=client_id,
+        client_secret=client_secret,
+        # access_token_url=config.get("oauth", "access_token_url"),
+        # authorize_url=config.get("oauth", "authorize_url"),
+        # client_kwargs={'scope': 'openid email profile'},
+        client_kwargs={"scope": "openid"},
+    )
+    return oauth
 
 
 def local_dev_user(

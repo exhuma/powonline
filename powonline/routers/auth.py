@@ -5,14 +5,17 @@ from typing import Annotated
 
 import httpx
 import jwt
+from authlib.integrations.starlette_client import OAuth
 from authlib.jose import jwt
 from authlib.oidc.discovery import get_well_known_url
 from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.requests import Request
 
 from powonline import core, model, schema
-from powonline.auth import Bearer, User
+from powonline.auth import Bearer, User, confidential_oauth
 from powonline.config import default
 from powonline.dependencies import get_db
 from powonline.exc import AccessDenied, AuthDeniedReason
@@ -177,3 +180,28 @@ def dummy_request(
         payload.validate(leeway=60)
     except Exception as exc:
         raise HTTPException(401, str(exc))
+
+
+@ROUTER.get("/login/keycloak")
+async def login_via_keycloak(
+    request: Request, oauth: Annotated[OAuth, Depends(confidential_oauth)]
+):
+    keycloak = oauth.create_client("keycloak")
+    if keycloak is None:
+        raise HTTPException(500, "Keycloak not configured")
+    redirect_uri = request.url_for("auth_via_keycloak")
+    response = await keycloak.authorize_redirect(request, redirect_uri)
+    return response
+
+
+@ROUTER.get("/oidc-redirect")
+async def auth_via_keycloak(
+    request: Request, oauth: Annotated[OAuth, Depends(confidential_oauth)]
+):
+    keycloak = oauth.create_client("keycloak")
+    if keycloak is None:
+        raise HTTPException(500, "Keycloak not configured")
+    token = await keycloak.authorize_access_token(request)
+    print(token)
+    user = token["userinfo"]
+    return RedirectResponse(f"http://localhost:5173?email={user['email']}")
