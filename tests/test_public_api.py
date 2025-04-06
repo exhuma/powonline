@@ -11,6 +11,7 @@ from config_resolver import get_config
 from flask_testing import TestCase
 from sqlalchemy import text
 from util import (
+    make_dummy_questionnaire_dict,
     make_dummy_route_dict,
     make_dummy_station_dict,
     make_dummy_team_dict,
@@ -627,6 +628,64 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
                 },
             ]
             self.assertEqual(data, expected)
+
+    def test_create_questionnaire(self):
+        new_questionnaire = make_dummy_questionnaire_dict(
+            name="foo",
+            max_score=100,
+            order=200,
+        )
+
+        response = self.app.post(
+            "/questionnaire",
+            headers={"Content-Type": "application/json"},
+            data=json.dumps(new_questionnaire),
+        )
+        self.assertEqual(response.status_code, 201, response.data)
+        self.assertEqual(response.content_type, "application/json")
+        data = json.loads(response.text)
+        expected = make_dummy_questionnaire_dict(
+            name="foo",
+            max_score=100,
+            order=200,
+        )
+        expected.pop("inserted")
+        expected.pop("updated")
+        data.pop("inserted")
+        data.pop("updated")
+        self.assertEqual(data, expected)
+
+    def test_update_questionnaire(self):
+        replacement_questionnaire = make_dummy_questionnaire_dict(
+            name="foo",
+            max_score=110,
+            order=220,
+        )
+
+        response = self.app.put(
+            "/questionnaire/old-questionnaire",
+            headers={"Content-Type": "application/json"},
+            data=json.dumps(replacement_questionnaire),
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.content_type, "application/json")
+        data = json.loads(response.text)
+        expected = make_dummy_questionnaire_dict(
+            name="foo",
+            max_score=110,
+            order=220,
+        )
+        expected.pop("inserted")
+        expected.pop("updated")
+        inserted = data.pop("inserted", None)
+        updated = data.pop("updated", None)
+        self.assertIsNotNone(inserted)
+        self.assertIsNotNone(updated)
+        self.assertEqual(data, expected)
+
+    def test_delete_questionnaire(self):
+        response = self.app.delete("/questionnaire/example-questionnaire")
+        self.assertEqual(response.status_code, 204, response.data)
 
 
 class TestPublicAPIAsStationManager(BaseAuthTestCase):

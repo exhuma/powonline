@@ -15,6 +15,8 @@ from .resources import (
     Dashboard,
     GlobalDashboard,
     Job,
+    Questionnaire,
+    QuestionnaireList,
     Route,
     RouteColor,
     RouteList,
@@ -126,6 +128,8 @@ def make_app(config=None):
     api.add_resource(UploadList, "/upload")
     api.add_resource(Upload, "/upload/<uuid>", endpoint="api.get_file")
     api.add_resource(AuditLog, "/auditlog")
+    api.add_resource(QuestionnaireList, "/questionnaire")
+    api.add_resource(Questionnaire, "/questionnaire/<name>")
 
     app.config["SQLALCHEMY_DATABASE_URI"] = environ["POWONLINE_DSN"]
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False

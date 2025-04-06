@@ -373,14 +373,27 @@ class Questionnaire(DB.Model, TimestampMixin):  # type: ignore
 
     name = Column(Unicode, nullable=False, primary_key=True)
     max_score = Column(Integer)
-    order = Column(Integer, server_default="0", nullable=False)
+    order = Column(Integer, server_default="0")
 
     teams = relationship(
         "Team", secondary="questionnaire_score", viewonly=True
     )  # uses an AssociationObject
 
-    def __init__(self, name):
+    def __init__(
+        self,
+        name: str,
+        max_score: int,
+        order: int = 0,
+        inserted: datetime | None = None,
+        updated: datetime | None = None,
+    ):
         self.name = name
+        self.max_score = max_score
+        self.order = order
+        if updated:
+            self.updated = updated
+        if inserted:
+            LOG.debug("Ignoring 'inserted' timestamp (%s)", inserted)
 
 
 class TeamQuestionnaire(DB.Model, TimestampMixin):  # type: ignore

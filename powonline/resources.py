@@ -24,6 +24,7 @@ from werkzeug.utils import secure_filename
 from powonline.schema import (
     JobSchema,
     ListResponse,
+    QuestionnaireSchema,
     RoleSchema,
     RouteSchema,
     StationSchema,
@@ -1074,3 +1075,74 @@ class Job(Resource):
             LOG.debug("Unknown job %r requested!", parsed_data.action)
             return "%r is an unknown job action" % action, 400
         return func(**parsed_data.args)
+
+
+class Questionnaire(Resource):
+    @staticmethod
+    def _single_response(output, status_code=200):
+        document = QuestionnaireSchema.model_dump_json(output)
+        response = make_response(document)
+        response.status_code = status_code
+        response.content_type = "application/json"
+        return response
+
+    @require_permissions("manage_permissions")
+    def get(self, name):
+        questionnaire = core.Questionnaire.get(DB.session, name)
+        if not questionnaire:
+            return "No such questionnaire", 404
+
+        return Questionnaire._single_response(
+            QuestionnaireSchema.model_validate(questionnaire), 200
+        )
+
+    @require_permissions("manage_permissions")
+    def put(self, name):
+        data = request.get_json()
+        parsed_data = QuestionnaireSchema.model_validate(data)
+        output = core.Questionnaire.upsert(
+            DB.session, name, parsed_data.model_dump()
+        )
+        return Questionnaire._single_response(
+            QuestionnaireSchema.model_validate(output), 200
+        )
+
+    @require_permissions("manage_permissions")
+    def delete(self, name):
+        core.Questionnaire.delete(DB.session, name)
+        return "", 204
+
+
+class QuestionnaireList(Resource):
+    def get(self):
+        assigned_to_station = request.args.get("assigned_station", "")
+        if assigned_to_station:
+            questionnaires = core.Questionnaire.assigned_to_station(
+                DB.session, assigned_to_station
+            )
+        else:
+            questionnaires = core.Questionnaire.all(DB.session)
+
+        questionnaires = [
+            QuestionnaireSchema.model_dump(
+                QuestionnaireSchema.model_validate(team)
+            )
+            for team in questionnaires
+        ]
+        output = ListResponse(items=questionnaires)
+        parsed_output = output.model_dump_json()
+
+        output = make_response(parsed_output, 200)
+        output.content_type = "application/json"
+        return output
+
+    @require_permissions("admin_questionnaires")
+    def post(self):
+        data = request.get_json()
+        parsed_data = QuestionnaireSchema.model_validate(data)
+        output = core.Questionnaire.create_new(
+            DB.session, parsed_data.model_dump()
+        )
+        return Questionnaire._single_response(
+            QuestionnaireSchema.model_validate(output), 201
+        )

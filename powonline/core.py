@@ -621,3 +621,48 @@ class Upload:
             return
 
         thumbnail_folder = join(Upload.FALLBACK_FOLDER, "__thumbnails__")
+
+
+class Questionnaire:
+    @staticmethod
+    def all(session):
+        return session.query(model.Questionnaire).order_by(
+            model.Questionnaire.order
+        )
+
+    @staticmethod
+    def create_new(session, data):
+        questionnaire = model.Questionnaire(**data)
+        questionnaire = session.merge(questionnaire)
+        return questionnaire
+
+    @staticmethod
+    def get(session, name):
+        return (
+            session.query(model.Questionnaire)
+            .filter_by(name=name)
+            .one_or_none()
+        )
+
+    @staticmethod
+    def upsert(session, name, data):
+        old = session.query(model.Questionnaire).filter_by(name=name).first()
+        if not old:
+            old = Questionnaire.create_new(session, data)
+        for k, v in data.items():
+            setattr(old, k, v)
+        return old
+
+    @staticmethod
+    def delete(session, name):
+        session.query(model.Questionnaire).filter_by(name=name).delete()
+        return None
+
+    @staticmethod
+    def assigned_to_station(session, station_name):
+        station = (
+            session.query(model.Station)
+            .filter_by(name=station_name)
+            .one_or_none()
+        )
+        return station.questionnaires
