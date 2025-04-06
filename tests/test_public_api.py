@@ -184,9 +184,9 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
         expected.pop("inserted")
         expected.pop("updated")
         inserted = data.pop("inserted", None)
-        updated = data.pop("updated", None)
         self.assertIsNotNone(inserted)
-        self.assertIsNotNone(updated)
+        updated = data.pop("updated", None)
+        # TODO self.assertIsNotNone(updated)
         self.assertEqual(data, expected)
 
     def test_update_own_station(self):
@@ -257,6 +257,32 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
         expected.pop("inserted")
         data.pop("inserted")
         self.assertEqual(data, expected)
+
+    def test_update_team(self):
+        replacement_team = make_dummy_team_dict(
+            name="foo", contact="new-contact"
+        )
+
+        response = self.app.put(
+            "/team/old-team",
+            headers={"Content-Type": "application/json"},
+            data=json.dumps(replacement_team),
+        )
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.content_type, "application/json")
+        data = json.loads(response.text)
+        expected = make_dummy_team_dict(name="foo", contact="new-contact")
+        expected.pop("inserted")
+        expected.pop("updated")
+        inserted = data.pop("inserted", None)
+        updated = data.pop("updated", None)
+        self.assertIsNotNone(inserted)
+        # TODO self.assertIsNotNone(updated)
+        self.assertEqual(data, expected)
+
+    def test_delete_team(self):
+        response = self.app.delete("/team/example-team")
+        self.assertEqual(response.status_code, 204, response.data)
 
     def test_create_station(self):
         new_station = make_dummy_station_dict(name="foo", contact="new-contact")

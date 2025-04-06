@@ -15,6 +15,7 @@ from sqlalchemy import (
     Integer,
     Table,
     Unicode,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import BYTEA, UUID
@@ -37,6 +38,13 @@ class TeamState(Enum):
     UNREACHABLE = "unreachable"
 
 
+class TimestampMixin:
+    inserted = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated = Column(DateTime(timezone=True), nullable=True)
+
+
 class TeamStateType(types.TypeDecorator):
     impl = types.Unicode
 
@@ -47,8 +55,43 @@ class TeamStateType(types.TypeDecorator):
         return TeamState(value)
 
 
-class Team(DB.Model):  # type: ignore
+class Setting(DB.Model):  # type: ignore
+    __tablename__ = "setting"
+
+    key = Column(Unicode, primary_key=True, nullable=False)
+    value = Column(Unicode)
+    description = Column(Unicode)
+
+
+class Message(DB.Model, TimestampMixin):  # type: ignore
+    __tablename__ = "message"
+    id = Column(Integer, primary_key=True)
+    content = Column(Unicode)
+    user = Column(
+        Unicode,
+        ForeignKey(
+            "user.name",
+            name="message_user_fkey",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+    )
+    team = Column(
+        Unicode,
+        ForeignKey(
+            "team.name",
+            name="message_team_fkey",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+    )
+
+
+class Team(DB.Model, TimestampMixin):  # type: ignore
     __tablename__ = "team"
+    __table_args__ = (
+        UniqueConstraint("confirmation_key", name="team_confirmation_key"),
+    )
 
     name = Column(Unicode, primary_key=True, nullable=False)
     email = Column(Unicode, nullable=False)
@@ -61,8 +104,6 @@ class Team(DB.Model):  # type: ignore
     confirmation_key = Column(Unicode, nullable=False, server_default="")
     accepted = Column(Boolean, nullable=False, server_default="false")
     completed = Column(Boolean, nullable=False, server_default="false")
-    inserted = Column(DateTime, nullable=False, server_default=func.now())
-    updated = Column(DateTime, nullable=False, server_default=func.now())
     num_vegetarians = Column(Integer)
     num_participants = Column(Integer)
     planned_start_time = Column(DateTime)
@@ -72,6 +113,16 @@ class Team(DB.Model):  # type: ignore
         Unicode,
         ForeignKey("route.name", onupdate="CASCADE", ondelete="SET NULL"),
     )
+    owner = Column(
+        Unicode,
+        ForeignKey(
+            "user.name",
+            name="team_owner_fkey",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+    )
+    owner_user = relationship("User")
 
     route = relationship("Route", back_populates="teams")
     stations = relationship(
@@ -95,12 +146,12 @@ class Team(DB.Model):  # type: ignore
         return "Team(name=%r)" % self.name
 
 
-class Station(DB.Model):  # type: ignore
+class Station(DB.Model, TimestampMixin):  # type: ignore
     __tablename__ = "station"
     name = Column(Unicode, primary_key=True, nullable=False)
     contact = Column(Unicode)
     phone = Column(Unicode)
-    order = Column(Integer, nullable=False, server_default="500")
+    order = Column(Integer, server_default="500")
     is_start = Column(Boolean, nullable=False, server_default="false")
     is_end = Column(Boolean, nullable=False, server_default="false")
 
@@ -131,7 +182,7 @@ class Station(DB.Model):  # type: ignore
         return "Station(name=%r)" % self.name
 
 
-class Route(DB.Model):  # type: ignore
+class Route(DB.Model, TimestampMixin):  # type: ignore
     __tablename__ = "route"
 
     name = Column(Unicode, primary_key=True)
@@ -153,10 +204,19 @@ class Route(DB.Model):  # type: ignore
             setattr(self, k, v)
 
 
-class OauthConnection(DB.Model):  # type: ignore
+class OauthConnection(DB.Model, TimestampMixin):  # type: ignore
     __tablename__ = "oauth_connection"
     id = Column(Integer, primary_key=True)
-    user_ = Column(Unicode, ForeignKey("user.name"), name="user")
+    user_ = Column(
+        Unicode,
+        ForeignKey(
+            "user.name",
+            name="oauth_connection_user_fkey",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+        name="user",
+    )
     provider_id = Column(Unicode(255))
     provider_user_id = Column(Unicode(255))
     access_token = Column(Unicode(255))
@@ -165,24 +225,24 @@ class OauthConnection(DB.Model):  # type: ignore
     profile_url = Column(Unicode(512))
     image_url = Column(Unicode(512))
     rank = Column(Integer)
-    inserted = Column(DateTime, nullable=False, server_default=func.now())
-    updated = Column(DateTime, nullable=False, server_default=func.now())
 
     user = relationship("User", back_populates="oauth_connection")
 
 
-class User(DB.Model):  # type: ignore
+class User(DB.Model, TimestampMixin):  # type: ignore
     __tablename__ = "user"
+    __table_args__ = (UniqueConstraint("email", name="user_email_key"),)
     name = Column(Unicode, primary_key=True)
-    password = Column(BYTEA)
+    password = Column(BYTEA, nullable=False)
     password_is_plaintext = Column(
         Boolean, nullable=False, server_default="false"
     )
-    inserted = Column(DateTime(timezone=True), nullable=False)
-    updated = Column(DateTime(timezone=True), nullable=True)
     email = Column(Unicode)
-    active = Column(Boolean, default=True, server_default="true")
+    active = Column(
+        Boolean, default=True, server_default="true", nullable=False
+    )
     confirmed_at = Column(DateTime(timezone=True), nullable=True)
+    locale = Column(Unicode(2))
 
     oauth_connection = relationship("OauthConnection", back_populates="user")
     stations = relationship(
@@ -252,7 +312,7 @@ class User(DB.Model):  # type: ignore
     )
 
 
-class Role(DB.Model):  # type: ignore
+class Role(DB.Model, TimestampMixin):  # type: ignore
     __tablename__ = "role"
     name = Column(Unicode, primary_key=True)
     users = relationship(
@@ -283,7 +343,7 @@ class Role(DB.Model):  # type: ignore
         return output  # type: ignore
 
 
-class TeamStation(DB.Model):  # type: ignore
+class TeamStation(DB.Model, TimestampMixin):  # type: ignore
     __tablename__ = "team_station_state"
 
     team_name = Column(
@@ -298,12 +358,6 @@ class TeamStation(DB.Model):  # type: ignore
     )
     state = Column(TeamStateType, default=TeamState.UNKNOWN)
     score = Column(Integer, nullable=True, default=None)
-    updated = Column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=datetime.now(),
-        server_default=func.now(),
-    )
 
     team = relationship("Team")
     station = relationship("Station", back_populates="states")
@@ -314,18 +368,12 @@ class TeamStation(DB.Model):  # type: ignore
         self.state = state
 
 
-class Questionnaire(DB.Model):  # type: ignore
+class Questionnaire(DB.Model, TimestampMixin):  # type: ignore
     __tablename__ = "questionnaire"
 
     name = Column(Unicode, nullable=False, primary_key=True)
     max_score = Column(Integer)
-    order = Column(Integer, server_default="0")
-    updated = Column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=datetime.now(),
-        server_default=func.now(),
-    )
+    order = Column(Integer, server_default="0", nullable=False)
 
     teams = relationship(
         "Team", secondary="questionnaire_score", viewonly=True
@@ -335,7 +383,7 @@ class Questionnaire(DB.Model):  # type: ignore
         self.name = name
 
 
-class TeamQuestionnaire(DB.Model):  # type: ignore
+class TeamQuestionnaire(DB.Model, TimestampMixin):  # type: ignore
     __tablename__ = "questionnaire_score"
 
     team_name = Column(
@@ -353,12 +401,6 @@ class TeamQuestionnaire(DB.Model):  # type: ignore
         name="questionnaire",
     )
     score = Column(Integer, nullable=True, default=None)
-    updated = Column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=datetime.now(),
-        server_default=func.now(),
-    )
 
     team = relationship("Team")
     questionnaire = relationship("Questionnaire")
@@ -422,6 +464,7 @@ class AuditLog(DB.Model):  # type: ignore
         ForeignKey("user.name", onupdate="CASCADE", ondelete="SET NULL"),
         name="user",
         primary_key=True,
+        nullable=True,
     )
     type_ = Column("type", Unicode, nullable=False)
     message = Column("message", Unicode, nullable=False)
@@ -452,13 +495,14 @@ route_station_table = Table(
         ForeignKey("station.name", onupdate="CASCADE", ondelete="CASCADE"),
         primary_key=True,
     ),
+    Column("score", Integer),
     Column(
-        "updated",
+        "inserted",
         DateTime(timezone=True),
         nullable=False,
-        default=datetime.now(),
         server_default=func.now(),
     ),
+    Column("updated", DateTime(timezone=True), server_default="null"),
 )
 
 user_station_table = Table(
@@ -476,6 +520,8 @@ user_station_table = Table(
         ForeignKey("station.name", onupdate="CASCADE", ondelete="CASCADE"),
         primary_key=True,
     ),
+    Column("inserted", DateTime(timezone=True), server_default=func.now()),
+    Column("updated", DateTime(timezone=True), server_default="null"),
 )
 
 user_role_table = Table(
@@ -493,6 +539,8 @@ user_role_table = Table(
         ForeignKey("role.name", onupdate="CASCADE", ondelete="CASCADE"),
         primary_key=True,
     ),
+    Column("inserted", DateTime(timezone=True), server_default=func.now()),
+    Column("updated", DateTime(timezone=True), server_default="null"),
 )
 
 
