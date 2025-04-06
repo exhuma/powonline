@@ -40,7 +40,7 @@ def handle_value_error(error):
 
 
 @rootbp.app_errorhandler(NotFound)
-def handle_unhandled_exceptions(error):
+def handle_not_found_error(error):
     LOG.info(error)
     return str(error), 404
 
