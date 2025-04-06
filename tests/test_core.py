@@ -1,6 +1,7 @@
 import logging
 from textwrap import dedent
 
+import pytest
 from pytest import fixture
 
 from powonline import core, model
@@ -42,17 +43,9 @@ def test_scoreboard(dbsession):
     assert result == expected
 
 
-def test_questionnaire_scores(dbsession, test_config):
-    test_config.read_string(
-        dedent(
-            """\
-        [questionnaire-map]
-        questionnaire_1 = station-blue
-        questionnaire_2 = station-red
-        """
-        )
-    )
-    result = core.questionnaire_scores(test_config, dbsession)
+@pytest.mark.usefixtures("seed")
+def test_questionnaire_scores(dbsession):
+    result = core.questionnaire_scores(dbsession)
     expected = {
         "team-red": {
             "station-blue": {"name": "questionnaire_1", "score": 10},
@@ -63,22 +56,14 @@ def test_questionnaire_scores(dbsession, test_config):
     assert result == expected
 
 
-def test_set_questionnaire_score(dbsession, test_config):
-    test_config.read_string(
-        dedent(
-            """\
-        [questionnaire-map]
-        questionnaire_1 = station-blue
-        questionnaire_2 = station-red
-        """
-        )
-    )
+@pytest.mark.usefixtures("seed")
+def test_set_questionnaire_score(dbsession):
     _, result = core.set_questionnaire_score(
-        test_config, dbsession, "team-red", "station-blue", 40
+        dbsession, "team-red", "station-blue", 40
     )
     assert result == 40
 
-    new_data = core.questionnaire_scores(test_config, dbsession)
+    new_data = core.questionnaire_scores(dbsession)
     expected = {
         "team-red": {
             "station-blue": {"name": "questionnaire_1", "score": 40},

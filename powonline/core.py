@@ -8,10 +8,14 @@ from string import ascii_letters, digits, punctuation
 from typing import Generator, Optional, Tuple
 
 from sqlalchemy import and_, func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Query, Session
 
 from . import model
-from .exc import NoQuestionnaireForStation, NoSuchQuestionnaire
+from .exc import (
+    NoQuestionnaireForStation,
+    NoSuchQuestionnaire,
+    PowonlineException,
+)
 from .model import TeamState
 
 LOG = logging.getLogger(__name__)
@@ -56,24 +60,23 @@ def scoreboard(session):
     return output
 
 
-def questionnaire_scores(config, session):
-    mapping = {}
-    for option in config.options("questionnaire-map"):
-        mapping[option] = config.get("questionnaire-map", option).strip()
-    query = session.query(model.TeamQuestionnaire)
-    output = {}
+def questionnaire_scores(
+    session: Session,
+) -> dict[str, dict[str, dict[str, str | int]]]:
+    query: Query[model.TeamQuestionnaire] = session.query(
+        model.TeamQuestionnaire
+    ).join(model.Questionnaire)
+    output: dict[str, dict[str, dict[str, str | int]]] = {}
     for row in query:
-        if row.questionnaire_name.lower() not in mapping:
-            LOG.error(
-                "No mapped station found for questionnaire %r",
-                row.questionnaire_name,
-            )
-            continue
-        station = mapping[row.questionnaire_name.lower()]
-        team_stations = output.setdefault(row.team_name, {})
+        print(row)
+        team_name: str = row.team_name  # type: ignore
+        questionnaire_name: str = row.questionnaire_name  # type: ignore
+        score: int = row.score  # type: ignore
+        station = row.questionnaire.station.name
+        team_stations = output.setdefault(team_name, {})
         team_stations[station] = {
-            "name": row.questionnaire_name,
-            "score": row.score,
+            "name": questionnaire_name,
+            "score": score,
         }
     return output
 
@@ -92,24 +95,27 @@ def add_audit_log(
     return entry
 
 
-def set_questionnaire_score(config, session, team, station, score):
-    mapping = {}
-    for qname in config.options("questionnaire-map"):
-        mapped_station = config.get("questionnaire-map", qname).strip()
-        mapping[mapped_station] = qname
-    questionnaire_name = mapping.get(station, None)
-    if not questionnaire_name:
-        raise NoQuestionnaireForStation()
-
-    # Config options are automatically lower-cased. We need to match that name
-    # case-insensitive so the updates work
-    query = session.query(model.Questionnaire).filter(
-        model.Questionnaire.name.ilike(questionnaire_name)
+def set_questionnaire_score(
+    session: Session, team: str, station: str, score: int
+):
+    """
+    Set the team-score for a questionaire on a given station.
+    """
+    station_entity = (
+        session.query(model.Station).filter_by(name=station).one_or_none()
     )
-    existing_questionnaire = query.one_or_none()
-    if not existing_questionnaire:
-        raise NoSuchQuestionnaire()
+    if not station_entity:
+        raise PowonlineException(f"Station {station} not found")
 
+    if not station_entity.questionnaires:
+        raise NoQuestionnaireForStation(station_entity)
+
+    if len(station_entity.questionnaires) > 1:
+        raise NoQuestionnaireForStation(
+            station_entity, "Multiple questionnaires assigned"
+        )
+
+    existing_questionnaire = station_entity.questionnaires[0]
     questionnaire_name = existing_questionnaire.name
 
     query = session.query(model.TeamQuestionnaire).filter_by(
@@ -280,6 +286,10 @@ class Team:
 
 class Station:
     @staticmethod
+    def get(session, name):
+        return session.query(model.Station).filter_by(name=name).one_or_none()
+
+    @staticmethod
     def all(session):
         return session.query(model.Station).order_by(model.Station.order)
 
@@ -405,6 +415,32 @@ class Station:
         if first_row is None:
             return ""
         return first_row.name
+
+    @staticmethod
+    def assign_questionnaire(session, station_name, questionnaire_name):
+        station = (
+            session.query(model.Station).filter_by(name=station_name).one()
+        )
+        questionnaire = (
+            session.query(model.Questionnaire)
+            .filter_by(name=questionnaire_name)
+            .one()
+        )
+        station.questionnaires.append(questionnaire)
+        return True
+
+    @staticmethod
+    def unassign_questionnaire(session, station_name, questionnaire_name):
+        station = (
+            session.query(model.Station).filter_by(name=station_name).one()
+        )
+        questionnaire = (
+            session.query(model.Questionnaire)
+            .filter_by(name=questionnaire_name)
+            .one()
+        )
+        station.questionnaires.remove(questionnaire)
+        return True
 
 
 class Route:
@@ -666,3 +702,20 @@ class Questionnaire:
             .one_or_none()
         )
         return station.questionnaires
+
+    @staticmethod
+    def assign_station(session, station_name, questionnaire_name):
+        station = (
+            session.query(model.Station)
+            .filter_by(name=station_name)
+            .one_or_none()
+        )
+        questionnaire = (
+            session.query(model.Questionnaire)
+            .filter_by(name=questionnaire_name)
+            .one_or_none()
+        )
+        if not station or not questionnaire:
+            return False
+        station.questionnaires.add(questionnaire)
+        return True

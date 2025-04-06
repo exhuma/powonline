@@ -27,6 +27,8 @@ from .resources import (
     Scoreboard,
     Station,
     StationList,
+    StationQuestionnaire,
+    StationQuestionnaireList,
     StationUser,
     StationUserList,
     Team,
@@ -99,6 +101,16 @@ def make_app(config=None):
         StationUser,
         "/station/<station_name>/users/<user_name>",
         "/user/<user_name>/stations/<station_name>",
+    )
+    api.add_resource(
+        StationQuestionnaireList,
+        "/station/<station_name>/questionnaires",
+        "/questionnaire/<questionnaire_name>/stations",
+    )
+    api.add_resource(
+        StationQuestionnaire,
+        "/station/<station_name>/questionnaires/<questionnaire_name>",
+        "/questionnaire/<questionnaire_name>/stations/<station_name>",
     )
     api.add_resource(RouteTeamList, "/route/<route_name>/teams")
     api.add_resource(RouteTeam, "/route/<route_name>/teams/<team_name>")

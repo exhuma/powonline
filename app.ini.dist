@@ -1,6 +1,7 @@
 ; Version History of the config file
 ; ----------------------------------
 ;
+;  2.5: Removed [questionnaire-map] section (now handled in the database)
 ;  2.4: Added "app.allowed_origins"
 ;  2.3: Added "pusher_channels.file"
 ;  2.2: Added [email] section
@@ -53,13 +54,6 @@ jwt_lifetime = 3600
 [pusher_channels]
 team_station_state = team-station-state-dev
 file = file-events-dev
-
-[questionnaire-map]
-; Maps questionnaires to stations. When opening a station dashboard, the
-; edit-box for questionnaire scores will be linked to the mapped questionnaire
-; on that station
-questionnaire_1 = Station 1
-questionnaire_2 = Station 2
 
 [social:google]
 client_id = <client-id>

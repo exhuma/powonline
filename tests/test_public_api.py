@@ -687,6 +687,21 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
         response = self.app.delete("/questionnaire/example-questionnaire")
         self.assertEqual(response.status_code, 204, response.data)
 
+    def test_assign_questionnaire_to_station(self):
+        simplestation = {"name": "questionnaire_2", "max_score": 100}
+        response = self.app.post(
+            "/station/station-red/questionnaires",
+            headers={"Content-Type": "application/json"},
+            data=json.dumps(simplestation),
+        )
+        self.assertEqual(response.status_code, 204, response.data)
+
+    def test_unassign_questionnaire_from_station(self):
+        response = self.app.delete(
+            "/station/station-blue/questionnaires/questionnaire_1"
+        )
+        self.assertEqual(response.status_code, 204, response.data)
+
 
 class TestPublicAPIAsStationManager(BaseAuthTestCase):
     USERNAME = "user-station-manager"

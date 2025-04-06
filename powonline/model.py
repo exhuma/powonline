@@ -172,7 +172,10 @@ class Station(DB.Model, TimestampMixin):  # type: ignore
     teams = relationship(
         "Team", secondary="team_station_state", viewonly=True
     )  # uses an AssociationObject
+
     states = relationship("TeamStation", back_populates="station")
+
+    questionnaires = relationship("Questionnaire", back_populates="station")
 
     def update(self, **kwargs):
         for k, v in kwargs.items():
@@ -374,10 +377,21 @@ class Questionnaire(DB.Model, TimestampMixin):  # type: ignore
     name = Column(Unicode, nullable=False, primary_key=True)
     max_score = Column(Integer)
     order = Column(Integer, server_default="0")
+    station_name = Column(
+        Unicode,
+        ForeignKey(
+            "station.name",
+            name="for_station",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+        nullable=True,
+    )
 
     teams = relationship(
         "Team", secondary="questionnaire_score", viewonly=True
     )  # uses an AssociationObject
+    station = relationship("Station")
 
     def __init__(
         self,

@@ -1146,3 +1146,113 @@ class QuestionnaireList(Resource):
         return Questionnaire._single_response(
             QuestionnaireSchema.model_validate(output), 201
         )
+
+
+class StationQuestionnaireList(Resource):
+    def _assign_questionnaire_to_station(self, station_name):
+        data = request.get_json()
+        questionnaire = QuestionnaireSchema.model_validate(data)
+        success = core.Station.assign_questionnaire(
+            DB.session, station_name, questionnaire.name
+        )
+        if success:
+            return "", 204
+        else:
+            return "Questionnaire is already assigned to that station", 400
+
+    def _assign_station_to_questionnaire(self, questionnaire_name):
+        data = request.get_json()
+        station = StationSchema.model_validate(data)
+        success = core.Questionnaire.assign_station(
+            DB.session, questionnaire_name, station.name
+        )
+        if success:
+            return "", 204
+        else:
+            return "Station is already assigned to that questionnaire", 400
+
+    def _list_station_by_questionnaire(self, questionnaire_name):
+        questionnaire = core.Questionnaire.get(DB.session, questionnaire_name)
+        if not questionnaire:
+            return "No such questionnaire", 404
+        all_stations = core.Station.all(DB.session)
+        questionnaire_stations = {
+            station.name for station in questionnaire.stations
+        }
+        output = []
+        for station in all_stations:
+            output.append(
+                (station.name, station.name in questionnaire_stations)
+            )
+        return jsonify(output)
+
+    def _list_questionnaire_by_station(self, station_name):
+        station = core.Station.get(DB.session, station_name)
+        if not station:
+            return "No such station", 404
+        all_questionnaires = core.Questionnaire.all(DB.session)
+        station_questionnaires = {
+            questionnaire.name for questionnaire in station.questionnaires
+        }
+        output = []
+        for questionnaire in all_questionnaires:
+            output.append(
+                (
+                    questionnaire.name,
+                    questionnaire.name in station_questionnaires,
+                )
+            )
+        return jsonify(output)
+
+    @require_permissions("manage_permissions")
+    def get(self, station_name=None, questionnaire_name=None):
+        if questionnaire_name and not station_name:
+            return self._list_station_by_questionnaire(questionnaire_name)
+        elif station_name and not questionnaire_name:
+            return self._list_questionnaire_by_station(station_name)
+        else:
+            return "Unexpected input!", 400
+
+    @require_permissions("manage_permissions")
+    def post(self, station_name=None, questionnaire_name=None):
+        """
+        Assigns a questionnaire to a station
+        """
+        if questionnaire_name and not station_name:
+            return self._assign_station_to_questionnaire(questionnaire_name)
+        elif station_name and not questionnaire_name:
+            return self._assign_questionnaire_to_station(station_name)
+        else:
+            return "Unexpected input!", 400
+
+
+class StationQuestionnaire(Resource):
+    @require_permissions("manage_permissions")
+    def get(self, questionnaire_name=None, station_name=None):
+        questionnaire = core.Questionnaire.get(DB.session, questionnaire_name)
+        if not questionnaire:
+            return "No such questionnaire", 404
+        stations = {_.name for _ in questionnaire.stations}
+
+        if station_name in stations:
+            return jsonify(True)
+        else:
+            return jsonify(False)
+
+    @require_permissions("manage_permissions")
+    def delete(self, station_name, questionnaire_name):
+        success = core.Station.unassign_questionnaire(
+            DB.session, station_name, questionnaire_name
+        )
+        try:
+            DB.session.flush()
+        except Exception as exc:
+            print(exc)
+            DB.session.rollback()
+            return "Questionnaire is still assigned to a station", 400
+        if success:
+            print(1)
+            return "", 204
+        else:
+            print(2)
+            return "Unexpected error!", 500
