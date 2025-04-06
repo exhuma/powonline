@@ -298,6 +298,10 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
         expected = make_dummy_station_dict(name="foo", contact="new-contact")
         self.assertEqual(data, expected)
 
+    def test_delete_station(self):
+        response = self.app.delete("/station/example-station")
+        self.assertEqual(response.status_code, 204, response.data)
+
     def test_create_route(self):
         new_route = make_dummy_route_dict(name="foo", contact="new-contact")
 
@@ -311,14 +315,6 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
         data = json.loads(response.text)
         expected = make_dummy_route_dict(name="foo")
         self.assertEqual(data, expected)
-
-    def test_delete_team(self):
-        response = self.app.delete("/team/example-team")
-        self.assertEqual(response.status_code, 204, response.data)
-
-    def test_delete_station(self):
-        response = self.app.delete("/station/example-station")
-        self.assertEqual(response.status_code, 204, response.data)
 
     def test_delete_route(self):
         response = self.app.delete("/route/example-route")
