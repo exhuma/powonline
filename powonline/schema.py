@@ -79,6 +79,7 @@ class QuestionnaireSchema(BaseModel):
     name: str
     max_score: int
     order: int = 0
+    station_name: str | None = None
     inserted: datetime | None = Field(
         default_factory=lambda: datetime.now(tz=timezone.utc)
     )

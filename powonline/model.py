@@ -398,12 +398,14 @@ class Questionnaire(DB.Model, TimestampMixin):  # type: ignore
         name: str,
         max_score: int,
         order: int = 0,
+        station_name: str | None = None,
         inserted: datetime | None = None,
         updated: datetime | None = None,
     ):
         self.name = name
         self.max_score = max_score
         self.order = order
+        self.station_name = station_name or None
         if updated:
             self.updated = updated
         if inserted:

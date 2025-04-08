@@ -4,6 +4,7 @@ from os import environ
 from flask import Flask, jsonify  # type: ignore
 from flask_restful import Api
 
+from powonline import custom_routes
 from powonline.exc import ValidationError  # type: ignore
 
 from .config import default
@@ -74,6 +75,7 @@ def make_app(config=None):
     app.localconfig = config
     app.secret_key = config.get("security", "secret_key")
     app.register_blueprint(rootbp)
+    app.register_blueprint(custom_routes.ROUTER)
     app.pusher = PusherWrapper.create(
         config,
         config.get("pusher", "app_id", fallback=""),

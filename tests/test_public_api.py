@@ -648,6 +648,7 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
             name="foo",
             max_score=100,
             order=200,
+            station_name=None,
         )
         expected.pop("inserted")
         expected.pop("updated")
@@ -674,6 +675,7 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
             name="foo",
             max_score=110,
             order=220,
+            station_name=None,
         )
         expected.pop("inserted")
         expected.pop("updated")
@@ -688,11 +690,11 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
         self.assertEqual(response.status_code, 204, response.data)
 
     def test_assign_questionnaire_to_station(self):
-        simplestation = {"name": "questionnaire_2", "max_score": 100}
+        questionnaire = {"name": "questionnaire_2", "max_score": 100}
         response = self.app.post(
             "/station/station-red/questionnaires",
             headers={"Content-Type": "application/json"},
-            data=json.dumps(simplestation),
+            data=json.dumps(questionnaire),
         )
         self.assertEqual(response.status_code, 204, response.data)
 

@@ -426,6 +426,10 @@ class Station:
             .filter_by(name=questionnaire_name)
             .one()
         )
+        if len(station.questionnaires) >= 1:
+            raise PowonlineException(
+                "Station already has a questionnaire assigned"
+            )
         station.questionnaires.append(questionnaire)
         return True
 
@@ -686,7 +690,10 @@ class Questionnaire:
         if not old:
             old = Questionnaire.create_new(session, data)
         for k, v in data.items():
-            setattr(old, k, v)
+            if k == "station_name" and not v:
+                setattr(old, k, None)
+            else:
+                setattr(old, k, v)
         return old
 
     @staticmethod
@@ -717,5 +724,25 @@ class Questionnaire:
         )
         if not station or not questionnaire:
             return False
+        if len(station.questionnaires) > 1:
+            raise PowonlineException(
+                "Station already has a questionnaire assigned"
+            )
+        if questionnaire.station and questionnaire.station != station:
+            raise PowonlineException(
+                "Questionnaire already assigned to another station"
+            )
         station.questionnaires.add(questionnaire)
+        return True
+
+    @staticmethod
+    def unassign_station(session, questionnaire_name):
+        questionnaire = (
+            session.query(model.Questionnaire)
+            .filter_by(name=questionnaire_name)
+            .one_or_none()
+        )
+        if not questionnaire:
+            return False
+        questionnaire.station = None
         return True

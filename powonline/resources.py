@@ -1027,7 +1027,6 @@ class Job(Resource):
             )
             try:
                 old_score, new_score = core.set_questionnaire_score(
-                    current_app.localconfig,
                     DB.session,
                     team_name,
                     station_name,
@@ -1247,12 +1246,9 @@ class StationQuestionnaire(Resource):
         try:
             DB.session.flush()
         except Exception as exc:
-            print(exc)
             DB.session.rollback()
             return "Questionnaire is still assigned to a station", 400
         if success:
-            print(1)
             return "", 204
         else:
-            print(2)
             return "Unexpected error!", 500

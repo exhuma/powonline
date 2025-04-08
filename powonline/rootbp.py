@@ -70,7 +70,7 @@ def get_team_station_questionnaire():
     # TODO Questionnaires should not be linked to stations
     #      This is a simplifcation for the UI for now: no manual selection of
     #      the questionnaire by users.
-    output = questionnaire_scores(current_app.localconfig, DB.session)
+    output = questionnaire_scores(DB.session)
     return jsonify(output)
 
 
