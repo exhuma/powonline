@@ -16,6 +16,8 @@ jobs:
       - name: Build Image
         run: "docker buildx build \
               -t \"${{secrets.DOCKER_REGISTRY_URL}}/\
+                   powonline-api:dev\"
+              -t \"${{secrets.DOCKER_REGISTRY_URL}}/\
                    powonline-api:${PROJECT_VERSION}\"
               ."
       - name: Login to Private Docker Registry
