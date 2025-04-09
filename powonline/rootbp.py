@@ -18,7 +18,7 @@ from sqlalchemy.exc import IntegrityError
 from werkzeug.exceptions import NotFound
 
 from .core import User, questionnaire_scores
-from .exc import AccessDenied, UserInputError
+from .exc import AccessDenied, PowonlineException, UserInputError
 from .httputil import add_cors_headers
 from .model import DB, Route, Station
 from .social import Social
@@ -52,6 +52,12 @@ def handle_not_found(error):
 def handle_unhandled_exceptions(error):
     LOG.exception(error)
     return "Internal Server Error", 500
+
+
+@rootbp.app_errorhandler(PowonlineException)
+def handle_app_error(error):
+    LOG.error(error)
+    return str(error), 500
 
 
 @rootbp.after_app_request
