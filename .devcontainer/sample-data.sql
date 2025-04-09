@@ -39,7 +39,10 @@ TRUNCATE
     public.team
 CASCADE;
 
-INSERT INTO public."user" VALUES ('admin', 'admin', true, NULL, NULL, NULL, NULL, true, NULL);
+INSERT INTO public."user"
+    (name, password, password_is_plaintext)
+VALUES
+    ('admin', 'admin', true);
 
 
 --

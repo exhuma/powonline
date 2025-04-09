@@ -74,7 +74,7 @@ def get_team_station_questionnaire():
     #      This is a simplifcation for the UI for now: no manual selection of
     #      the questionnaire by users.
     app = cast("MyFlask", current_app)
-    output = questionnaire_scores(app.localconfig, DB.session)
+    output = questionnaire_scores(DB.session)
     return jsonify(output)
 
 

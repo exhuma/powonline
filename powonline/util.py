@@ -17,6 +17,7 @@ LOG = logging.getLogger("werkzeug")
 PERMISSION_MAP = {
     "admin": {
         "admin_files",
+        "admin_questionnaires",
         "admin_routes",
         "admin_stations",
         "admin_teams",

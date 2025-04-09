@@ -24,6 +24,7 @@ from werkzeug.utils import secure_filename
 from powonline.schema import (
     JobSchema,
     ListResponse,
+    QuestionnaireSchema,
     RoleSchema,
     RouteSchema,
     StationSchema,
@@ -1042,7 +1043,6 @@ class Job(Resource):
             try:
                 app = cast("MyFlask", current_app)
                 old_score, new_score = core.set_questionnaire_score(
-                    app.localconfig,
                     DB.session,
                     team_name,
                     station_name,
@@ -1090,3 +1090,181 @@ class Job(Resource):
             LOG.debug("Unknown job %r requested!", parsed_data.action)
             return "%r is an unknown job action" % action, 400
         return func(**parsed_data.args)
+
+
+class Questionnaire(Resource):
+    @staticmethod
+    def _single_response(output, status_code=200):
+        document = QuestionnaireSchema.model_dump_json(output)
+        response = make_response(document)
+        response.status_code = status_code
+        response.content_type = "application/json"
+        return response
+
+    @require_permissions("manage_permissions")
+    def get(self, name):
+        questionnaire = core.Questionnaire.get(DB.session, name)
+        if not questionnaire:
+            return "No such questionnaire", 404
+
+        return Questionnaire._single_response(
+            QuestionnaireSchema.model_validate(questionnaire), 200
+        )
+
+    @require_permissions("manage_permissions")
+    def put(self, name):
+        data = request.get_json()
+        parsed_data = QuestionnaireSchema.model_validate(data)
+        output = core.Questionnaire.upsert(
+            DB.session, name, parsed_data.model_dump()
+        )
+        return Questionnaire._single_response(
+            QuestionnaireSchema.model_validate(output), 200
+        )
+
+    @require_permissions("manage_permissions")
+    def delete(self, name):
+        core.Questionnaire.delete(DB.session, name)
+        return "", 204
+
+
+class QuestionnaireList(Resource):
+    def get(self):
+        assigned_to_station = request.args.get("assigned_station", "")
+        if assigned_to_station:
+            questionnaires = core.Questionnaire.assigned_to_station(
+                DB.session, assigned_to_station
+            )
+        else:
+            questionnaires = core.Questionnaire.all(DB.session)
+
+        questionnaires = [
+            QuestionnaireSchema.model_dump(
+                QuestionnaireSchema.model_validate(team)
+            )
+            for team in questionnaires
+        ]
+        output = ListResponse(items=questionnaires)
+        parsed_output = output.model_dump_json()
+
+        output = make_response(parsed_output, 200)
+        output.content_type = "application/json"
+        return output
+
+    @require_permissions("admin_questionnaires")
+    def post(self):
+        data = request.get_json()
+        parsed_data = QuestionnaireSchema.model_validate(data)
+        output = core.Questionnaire.create_new(
+            DB.session, parsed_data.model_dump()
+        )
+        return Questionnaire._single_response(
+            QuestionnaireSchema.model_validate(output), 201
+        )
+
+
+class StationQuestionnaireList(Resource):
+    def _assign_questionnaire_to_station(self, station_name):
+        data = request.get_json()
+        questionnaire = QuestionnaireSchema.model_validate(data)
+        success = core.Station.assign_questionnaire(
+            DB.session, station_name, questionnaire.name
+        )
+        if success:
+            return "", 204
+        else:
+            return "Questionnaire is already assigned to that station", 400
+
+    def _assign_station_to_questionnaire(self, questionnaire_name):
+        data = request.get_json()
+        station = StationSchema.model_validate(data)
+        success = core.Questionnaire.assign_station(
+            DB.session, questionnaire_name, station.name
+        )
+        if success:
+            return "", 204
+        else:
+            return "Station is already assigned to that questionnaire", 400
+
+    def _list_station_by_questionnaire(self, questionnaire_name):
+        questionnaire = core.Questionnaire.get(DB.session, questionnaire_name)
+        if not questionnaire:
+            return "No such questionnaire", 404
+        all_stations = core.Station.all(DB.session)
+        questionnaire_stations = {
+            station.name for station in questionnaire.stations
+        }
+        output = []
+        for station in all_stations:
+            output.append(
+                (station.name, station.name in questionnaire_stations)
+            )
+        return jsonify(output)
+
+    def _list_questionnaire_by_station(self, station_name):
+        station = core.Station.get(DB.session, station_name)
+        if not station:
+            return "No such station", 404
+        all_questionnaires = core.Questionnaire.all(DB.session)
+        station_questionnaires = {
+            questionnaire.name for questionnaire in station.questionnaires
+        }
+        output = []
+        for questionnaire in all_questionnaires:
+            output.append(
+                (
+                    questionnaire.name,
+                    questionnaire.name in station_questionnaires,
+                )
+            )
+        return jsonify(output)
+
+    @require_permissions("manage_permissions")
+    def get(self, station_name=None, questionnaire_name=None):
+        if questionnaire_name and not station_name:
+            return self._list_station_by_questionnaire(questionnaire_name)
+        elif station_name and not questionnaire_name:
+            return self._list_questionnaire_by_station(station_name)
+        else:
+            return "Unexpected input!", 400
+
+    @require_permissions("manage_permissions")
+    def post(self, station_name=None, questionnaire_name=None):
+        """
+        Assigns a questionnaire to a station
+        """
+        if questionnaire_name and not station_name:
+            return self._assign_station_to_questionnaire(questionnaire_name)
+        elif station_name and not questionnaire_name:
+            return self._assign_questionnaire_to_station(station_name)
+        else:
+            return "Unexpected input!", 400
+
+
+class StationQuestionnaire(Resource):
+    @require_permissions("manage_permissions")
+    def get(self, questionnaire_name=None, station_name=None):
+        questionnaire = core.Questionnaire.get(DB.session, questionnaire_name)
+        if not questionnaire:
+            return "No such questionnaire", 404
+        stations = {_.name for _ in questionnaire.stations}
+
+        if station_name in stations:
+            return jsonify(True)
+        else:
+            return jsonify(False)
+
+    @require_permissions("manage_permissions")
+    def delete(self, station_name, questionnaire_name):
+        success = core.Station.unassign_questionnaire(
+            DB.session, station_name, questionnaire_name
+        )
+        try:
+            DB.session.flush()
+        except Exception as exc:
+            DB.session.rollback()
+            return "Questionnaire is still assigned to a station", 400
+        if success:
+            return "", 204
+        else:
+            return "Unexpected error!", 500

@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class ListResponse[T](BaseModel):
@@ -72,3 +72,17 @@ class JobSchema(BaseModel):
 class UserSchemaLeaky(UserSchema):
     model_config = ConfigDict(from_attributes=True)
     password: str = ""
+
+
+class QuestionnaireSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    name: str
+    max_score: int
+    order: int = 0
+    station_name: str | None = None
+    inserted: datetime | None = Field(
+        default_factory=lambda: datetime.now(tz=timezone.utc)
+    )
+    updated: datetime | None = Field(
+        default_factory=lambda: datetime.now(tz=timezone.utc)
+    )

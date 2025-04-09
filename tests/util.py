@@ -93,3 +93,28 @@ def make_dummy_route_dict(as_mock=False, **overlay):
         return mock
     else:
         return output
+
+
+def make_dummy_questionnaire_dict(as_mock=False, **overlay):
+    """
+    Creates a new dict as it might be returned by the backend. This should only
+    contain JSON serialisable values!
+
+    Using the "overlay" kwargs, you can change default values.
+    """
+    tstamp = (
+        datetime(2017, 1, 1, 10, 0) if as_mock else "2017-01-01T10:00:00+00:00"
+    )
+    output = {
+        "name": "Example Questionnaire",
+        "inserted": tstamp,
+        "updated": tstamp,
+    }
+    output.update(**overlay)
+    if as_mock:
+        mock = create_autospec(mdl.Questionnaire)
+        for k, v in output.items():
+            setattr(mock, k, v)
+        return mock
+    else:
+        return output

@@ -16,6 +16,7 @@ from sqlalchemy import (
     Integer,
     Table,
     Unicode,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.dialects.postgresql import BYTEA, UUID
@@ -38,6 +39,13 @@ class TeamState(Enum):
     UNREACHABLE = "unreachable"
 
 
+class TimestampMixin:
+    inserted = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated = Column(DateTime(timezone=True), nullable=True)
+
+
 class TeamStateType(types.TypeDecorator):
     impl = types.Unicode
 
@@ -48,8 +56,43 @@ class TeamStateType(types.TypeDecorator):
         return TeamState(value)
 
 
-class Team(DB.Model):  # type: ignore
+class Setting(DB.Model):  # type: ignore
+    __tablename__ = "setting"
+
+    key = Column(Unicode, primary_key=True, nullable=False)
+    value = Column(Unicode)
+    description = Column(Unicode)
+
+
+class Message(DB.Model, TimestampMixin):  # type: ignore
+    __tablename__ = "message"
+    id = Column(Integer, primary_key=True)
+    content = Column(Unicode)
+    user = Column(
+        Unicode,
+        ForeignKey(
+            "user.name",
+            name="message_user_fkey",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+    )
+    team = Column(
+        Unicode,
+        ForeignKey(
+            "team.name",
+            name="message_team_fkey",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+    )
+
+
+class Team(DB.Model, TimestampMixin):  # type: ignore
     __tablename__ = "team"
+    __table_args__ = (
+        UniqueConstraint("confirmation_key", name="team_confirmation_key"),
+    )
 
     name: Mapped[str] = mapped_column(primary_key=True)
     email: Mapped[str] = mapped_column()
@@ -72,6 +115,16 @@ class Team(DB.Model):  # type: ignore
     route_name: Mapped[str | None] = mapped_column(
         ForeignKey("route.name", onupdate="CASCADE", ondelete="SET NULL")
     )
+    owner = Column(
+        Unicode,
+        ForeignKey(
+            "user.name",
+            name="team_owner_fkey",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+    )
+    owner_user = relationship("User")
 
     route: Mapped["Route"] = relationship("Route", back_populates="teams")
     stations: Mapped[list["Station"]] = relationship(
@@ -99,7 +152,7 @@ class Team(DB.Model):  # type: ignore
         return "Team(name=%r)" % self.name
 
 
-class Station(DB.Model):  # type: ignore
+class Station(DB.Model, TimestampMixin):  # type: ignore
     __tablename__ = "station"
     name: Mapped[str] = mapped_column(primary_key=True)
     contact: Mapped[str | None] = mapped_column()
@@ -129,6 +182,8 @@ class Station(DB.Model):  # type: ignore
         "TeamStation", back_populates="station"
     )
 
+    questionnaires = relationship("Questionnaire", back_populates="station")
+
     def update(self, **kwargs: Any) -> None:
         for k, v in kwargs.items():
             setattr(self, k, v)
@@ -137,7 +192,7 @@ class Station(DB.Model):  # type: ignore
         return "Station(name=%r)" % self.name
 
 
-class Route(DB.Model):  # type: ignore
+class Route(DB.Model, TimestampMixin):  # type: ignore
     __tablename__ = "route"
 
     name: Mapped[str] = mapped_column(primary_key=True)
@@ -160,12 +215,18 @@ class Route(DB.Model):  # type: ignore
             setattr(self, k, v)
 
 
-class OauthConnection(DB.Model):  # type: ignore
+class OauthConnection(DB.Model, TimestampMixin):  # type: ignore
     __tablename__ = "oauth_connection"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_: Mapped[str | None] = mapped_column(
-        ForeignKey("user.name"), name="user"
+        ForeignKey(
+            "user.name",
+            name="oauth_connection_user_fkey",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+        name="user",
     )
     provider_id: Mapped[str | None] = mapped_column(Unicode(255))
     provider_user_id: Mapped[str | None] = mapped_column(Unicode(255))
@@ -187,8 +248,9 @@ class OauthConnection(DB.Model):  # type: ignore
     )
 
 
-class User(DB.Model):  # type: ignore
+class User(DB.Model, TimestampMixin):  # type: ignore
     __tablename__ = "user"
+    __table_args__ = (UniqueConstraint("email", name="user_email_key"),)
 
     name: Mapped[str] = mapped_column(primary_key=True)
     password: Mapped[bytes | None] = mapped_column(BYTEA)
@@ -208,6 +270,7 @@ class User(DB.Model):  # type: ignore
     confirmed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    locale: Mapped[str] = mapped_column(Unicode(2))
 
     oauth_connection: Mapped[list["OauthConnection"]] = relationship(
         "OauthConnection", back_populates="user"
@@ -283,7 +346,7 @@ class User(DB.Model):  # type: ignore
     )
 
 
-class Role(DB.Model):  # type: ignore
+class Role(DB.Model, TimestampMixin):  # type: ignore
     __tablename__ = "role"
     name: Mapped[str] = mapped_column(primary_key=True)
     users: Mapped[set["User"]] = relationship(
@@ -314,7 +377,7 @@ class Role(DB.Model):  # type: ignore
         return output  # type: ignore
 
 
-class TeamStation(DB.Model):  # type: ignore
+class TeamStation(DB.Model, TimestampMixin):  # type: ignore
     __tablename__ = "team_station_state"
 
     team_name: Mapped[str] = mapped_column(
@@ -352,7 +415,7 @@ class TeamStation(DB.Model):  # type: ignore
         self.state = state
 
 
-class Questionnaire(DB.Model):  # type: ignore
+class Questionnaire(DB.Model, TimestampMixin):  # type: ignore
     __tablename__ = "questionnaire"
 
     name: Mapped[str] = mapped_column(nullable=False, primary_key=True)
@@ -364,16 +427,42 @@ class Questionnaire(DB.Model):  # type: ignore
         default=datetime.now(),
         server_default=func.now(),
     )
+    station_name: Mapped[str] = mapped_column(
+        Unicode,
+        ForeignKey(
+            "station.name",
+            name="for_station",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+        nullable=True,
+    )
 
     teams: Mapped[set["Team"]] = relationship(
         "Team", secondary="questionnaire_score", viewonly=True
     )  # uses an AssociationObject
+    station = relationship("Station")
 
-    def __init__(self, name: str) -> None:
+    def __init__(
+        self,
+        name: str,
+        max_score: int,
+        order: int = 0,
+        station_name: str | None = None,
+        inserted: datetime | None = None,
+        updated: datetime | None = None,
+    ):
         self.name = name
+        self.max_score = max_score
+        self.order = order
+        self.station_name = station_name or None
+        if updated:
+            self.updated = updated
+        if inserted:
+            LOG.debug("Ignoring 'inserted' timestamp (%s)", inserted)
 
 
-class TeamQuestionnaire(DB.Model):  # type: ignore
+class TeamQuestionnaire(DB.Model, TimestampMixin):  # type: ignore
     __tablename__ = "questionnaire_score"
 
     team_name: Mapped[str] = mapped_column(
@@ -463,6 +552,7 @@ class AuditLog(DB.Model):  # type: ignore
         ForeignKey("user.name", onupdate="CASCADE", ondelete="SET NULL"),
         name="user",
         primary_key=True,
+        nullable=True,
     )
     type_: Mapped[str] = mapped_column(name="type", nullable=False)
     message: Mapped[str] = mapped_column(name="message", nullable=False)
@@ -493,13 +583,14 @@ route_station_table = Table(
         ForeignKey("station.name", onupdate="CASCADE", ondelete="CASCADE"),
         primary_key=True,
     ),
+    Column("score", Integer),
     Column(
-        "updated",
+        "inserted",
         DateTime(timezone=True),
         nullable=False,
-        default=datetime.now(),
         server_default=func.now(),
     ),
+    Column("updated", DateTime(timezone=True), server_default="null"),
 )
 
 user_station_table = Table(
@@ -517,6 +608,8 @@ user_station_table = Table(
         ForeignKey("station.name", onupdate="CASCADE", ondelete="CASCADE"),
         primary_key=True,
     ),
+    Column("inserted", DateTime(timezone=True), server_default=func.now()),
+    Column("updated", DateTime(timezone=True), server_default="null"),
 )
 
 user_role_table = Table(
@@ -534,6 +627,8 @@ user_role_table = Table(
         ForeignKey("role.name", onupdate="CASCADE", ondelete="CASCADE"),
         primary_key=True,
     ),
+    Column("inserted", DateTime(timezone=True), server_default=func.now()),
+    Column("updated", DateTime(timezone=True), server_default="null"),
 )
 
 
