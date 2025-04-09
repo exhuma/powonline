@@ -32,6 +32,6 @@ jobs:
           docker push "${{ secrets.DOCKER_REGISTRY_URL }}/powonline-api:\
           ${GITHUB_REF_NAME}"
       - name: Push Docker Image (dev-build)
-        if: github.ref == 'refs/heads/develop'
+        if: github.ref == 'refs/heads/develop-2025'
         run: |
           docker push "${{ secrets.DOCKER_REGISTRY_URL }}/powonline-api:dev"
