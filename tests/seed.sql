@@ -37,7 +37,8 @@ INSERT INTO route_station (route_name, station_name) VALUES
     ('route-blue', 'station-end');
 INSERT INTO questionnaire (name, station_name) VALUES
     ('questionnaire_1', 'station-blue'),
-    ('questionnaire_2', 'station-red')
+    ('questionnaire_2', 'station-red'),
+    ('questionnaire_3', null)
 ;
 INSERT INTO questionnaire_score (questionnaire, team, score) VALUES
     ('questionnaire_1', 'team-red', 10),

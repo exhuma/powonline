@@ -1,10 +1,9 @@
 import logging
-from textwrap import dedent
 
 import pytest
 from pytest import fixture
 
-from powonline import core, model
+from powonline import core
 
 LOG = logging.getLogger(__name__)
 
@@ -15,6 +14,7 @@ def app_context(app):
         yield
 
 
+@pytest.mark.usefixtures("seed")
 def test_get_assignments(dbsession):
     result = core.get_assignments(dbsession)
     result_stations_a = {_.name for _ in result["stations"]["route-blue"]}
@@ -33,6 +33,7 @@ def test_get_assignments(dbsession):
     assert result_stations_b == expected_stations_b
 
 
+@pytest.mark.usefixtures("seed")
 def test_scoreboard(dbsession):
     result = list(core.scoreboard(dbsession))
     expected = [

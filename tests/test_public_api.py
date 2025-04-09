@@ -690,9 +690,9 @@ class TestPublicAPIAsAdmin(BaseAuthTestCase):
         self.assertEqual(response.status_code, 204, response.data)
 
     def test_assign_questionnaire_to_station(self):
-        questionnaire = {"name": "questionnaire_2", "max_score": 100}
+        questionnaire = {"name": "questionnaire_3", "max_score": 100}
         response = self.app.post(
-            "/station/station-red/questionnaires",
+            "/station/station-end/questionnaires",
             headers={"Content-Type": "application/json"},
             data=json.dumps(questionnaire),
         )
