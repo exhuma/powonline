@@ -11,14 +11,13 @@ suto apt-get update && sudo apt-get install -y entr
 
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-uv tool install --with psycopg[binary] alembic
 uv tool install fabric
 uv tool install pre-commit
 
 fab develop
 
-(cd database && alembic upgrade head)
-(cd database && alembic show head)
+(cd database && uv run alembic upgrade head)
+(cd database && uv run alembic show head)
 
 psql -v ON_ERROR_STOP=1 -X1qf \
     .devcontainer/sample-data.sql \
