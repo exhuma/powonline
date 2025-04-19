@@ -16,11 +16,10 @@ LOG = logging.getLogger(__name__)
 @ROUTER.get("/questionnaire-scores")
 async def get_team_station_questionnaire(
     session: Annotated[AsyncSession, Depends(get_db)],
-    config: Annotated[ConfigParser, Depends(default)],
 ):
     # TODO this is a quick hack to get finished in time. This route should move
     # TODO Questionnaires should not be linked to stations
     #      This is a simplifcation for the UI for now: no manual selection of
     #      the questionnaire by users.
-    output = await core.questionnaire_scores(config, session)
+    output = await core.questionnaire_scores(session)
     return output
