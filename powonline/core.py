@@ -68,7 +68,6 @@ def questionnaire_scores(
     ).join(model.Questionnaire)
     output: dict[str, dict[str, dict[str, str | int]]] = {}
     for row in query:
-        print(row)
         team_name: str = row.team_name  # type: ignore
         questionnaire_name: str = row.questionnaire_name  # type: ignore
         score: int = row.score  # type: ignore
