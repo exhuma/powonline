@@ -3,7 +3,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from powonline import error_handlers, resources, routers
+from powonline import __version__, error_handlers, resources, routers
 
 LOG = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ def get_cors_data() -> dict[str, list[str]]:
 
 
 def create_app():
-    app = FastAPI()
+    app = FastAPI(title="powonline", version=__version__)
     cors_info = get_cors_data()
     app.add_middleware(
         CORSMiddleware,
