@@ -28,16 +28,31 @@ extension. The latter is well integrated and allows for seamless project setup.
 
 All the required files are located in the ``.devcontainer`` folder in the
 project root. This is picked up by VS-Code and you can simply select the
-"Reopen in Container" option from the command pallette (normally also provided
+"Reopen in Container" option from the command palette (normally also provided
 via a small popup when the project is loaded).
+
+Authentication Setup
+--------------------
+
+1. Obtain OAuth2 credentials for Google and Facebook:
+   - For Google, create credentials in the Google Cloud Console and note the
+     client ID, client secret, and redirect URI.
+   - For Facebook, create an app in the Facebook Developer Console and note the
+     client ID, client secret, and redirect URI.
+
+2. Add the credentials to your environment variables or configuration file
+   (e.g., ``app.ini``).
+
+3. Ensure the redirect URIs match the ones configured in the respective
+   developer consoles.
 
 Database Migrations
 -------------------
 
-The dev-container initialises everything automatically and no additional step
+The dev-container initializes everything automatically, and no additional step
 is needed.
 
-During development, all ``alembic`` tasks can simply be executed from whithin
+During development, all ``alembic`` tasks can simply be executed from within
 the ``database`` subfolder.
 
 The production application container contains a separate entry-point
@@ -51,6 +66,14 @@ whenever needed::
         <image-id>
 
 On k8s style deployments, this can be executed in init-containters for example.
+
+Running the Application
+-----------------------
+
+1. Start the development container in VS Code.
+2. Ensure all required environment variables are set.
+3. Run the application using the provided scripts (e.g., ``run-api.sh``).
+4. Access the application in your browser at the specified URL.
 
 
 Development Setup (legacy)
@@ -84,19 +107,30 @@ following command::
 Authentication
 ==============
 
-The frontent authenticates using an OAuth provider like Google or Facebook. If
-a user does not exist yet it will be automatically created in the DB with
-default (no) permissions. In order to make the application usable at least one
-user needs the "admin" role.
+Local Development Users
+-----------------------
 
-This can be done on the CLI with the following command::
+For local development, the application supports HTTP Basic Authentication via
+the `local_dev_user` function. This method is intended **only** for development
+purposes and provides **zero security**. It should never be used in production.
 
-    flask grant-admin <username>
+To use this feature:
 
-The permission can be revoked again using::
+1. When prompted for a username, use the format:
+   ```
+   username#role1,role2,...
+   ```
+   - Replace `username` with the desired username.
+   - Replace `role1,role2,...` with a comma-separated list of roles. Valid roles include:
+     - `admin`
+     - `staff`
+     - `station_manager`
 
-    flask revoke-admin <username>
+2. Any invalid roles will be ignored.
 
-Existing users can be listed with::
+3. Example:
+   - Username: `devuser#admin,staff`
+   - Password: Any value (not validated).
 
-    flask list-users
+This will create a development user with the specified roles, allowing you to
+test role-based access control in the application.
