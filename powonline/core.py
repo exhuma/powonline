@@ -71,7 +71,11 @@ def questionnaire_scores(
         team_name: str = row.team_name  # type: ignore
         questionnaire_name: str = row.questionnaire_name  # type: ignore
         score: int = row.score  # type: ignore
-        station = row.questionnaire.station.name
+        station = (
+            row.questionnaire.station.name
+            if row.questionnaire and row.questionnaire.station
+            else ""
+        )
         team_stations = output.setdefault(team_name, {})
         team_stations[station] = {
             "name": questionnaire_name,
