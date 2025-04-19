@@ -22,7 +22,7 @@ from powonline.exc import AccessDenied, AuthDeniedReason, NotFound
 from powonline.model import Upload
 from powonline.pusher import PusherWrapper
 
-ROUTER = APIRouter(prefix="", tags=["team"])
+ROUTER = APIRouter(prefix="", tags=["files", "uploads"])
 LOG = logging.getLogger(__name__)
 
 
@@ -190,7 +190,7 @@ async def _get_private(
     user: User,
     request: Request,
     data_folder: str,
-) -> dict[str, list[schema.UploadSchema]]:
+) -> list[schema.UploadSchema]:
     """
     Return files for a private request (f.ex. manageing uploads)
     """
@@ -211,7 +211,9 @@ async def _get_private(
             if json_data:
                 output_files.append(json_data)
         output["self"] = output_files
-    return output
+    return (
+        output  # TODO: Align return type of both "private" and "public" uploads
+    )
 
 
 @ROUTER.get("/upload")
@@ -221,7 +223,7 @@ async def query_uploads(
     request: Request,
     config: Annotated[ConfigParser, Depends(default)],
     public: bool = False,
-):
+) -> list[schema.UploadSchema]:
     """
     Retrieve a list of uploads
     """

@@ -27,7 +27,6 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from powonline.schema import AuditType, TeamState
 
 LOG = logging.getLogger(__name__)
-
 metadata = MetaData()
 
 
@@ -36,10 +35,10 @@ class Base(AsyncAttrs, DeclarativeBase):
 
 
 class TimestampMixin:
-    inserted: datetime = mapped_column(
+    inserted: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
-    updated: datetime | None = mapped_column(
+    updated: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 

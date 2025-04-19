@@ -1,7 +1,6 @@
 import logging
 
 import pytest
-from pytest import fixture
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from powonline import core, schema

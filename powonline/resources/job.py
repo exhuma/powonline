@@ -137,7 +137,6 @@ async def _action_set_questionnaire_score(
         )
         try:
             old_score, new_score = await core.set_questionnaire_score(
-                app.localconfig,
                 session,
                 team_name,
                 station_name,

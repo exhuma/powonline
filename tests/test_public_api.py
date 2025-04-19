@@ -434,6 +434,7 @@ async def test_show_team_station_state_inverse(
     assert response_a.status_code == response_b.status_code
     assert response_a.content == response_b.content
 
+
 async def test_advance_team_state_auto_start(
     dbsession: AsyncSession, red_client: AsyncClient
 ):
@@ -1251,7 +1252,7 @@ async def test_anon_related_station_invalid_state(test_client: AsyncClient):
 # TODO:         max_score=100,
 # TODO:         order=200,
 # TODO:     )
-# TODO: 
+# TODO:
 # TODO:     response = self.app.post(
 # TODO:         "/questionnaire",
 # TODO:         headers={"Content-Type": "application/json"},
@@ -1271,14 +1272,14 @@ async def test_anon_related_station_invalid_state(test_client: AsyncClient):
 # TODO:     data.pop("inserted")
 # TODO:     data.pop("updated")
 # TODO:     self.assertEqual(data, expected)
-# TODO: 
+# TODO:
 # TODO: def test_update_questionnaire(self):
 # TODO:     replacement_questionnaire = make_dummy_questionnaire_dict(
 # TODO:         name="foo",
 # TODO:         max_score=110,
 # TODO:         order=220,
 # TODO:     )
-# TODO: 
+# TODO:
 # TODO:     response = self.app.put(
 # TODO:         "/questionnaire/old-questionnaire",
 # TODO:         headers={"Content-Type": "application/json"},
@@ -1300,11 +1301,11 @@ async def test_anon_related_station_invalid_state(test_client: AsyncClient):
 # TODO:     self.assertIsNotNone(inserted)
 # TODO:     self.assertIsNotNone(updated)
 # TODO:     self.assertEqual(data, expected)
-# TODO: 
+# TODO:
 # TODO: def test_delete_questionnaire(self):
 # TODO:     response = self.app.delete("/questionnaire/example-questionnaire")
 # TODO:     self.assertEqual(response.status_code, 204, response.data)
-# TODO: 
+# TODO:
 # TODO: def test_assign_questionnaire_to_station(self):
 # TODO:     questionnaire = {"name": "questionnaire_3", "max_score": 100}
 # TODO:     response = self.app.post(
@@ -1313,11 +1314,9 @@ async def test_anon_related_station_invalid_state(test_client: AsyncClient):
 # TODO:         data=json.dumps(questionnaire),
 # TODO:     )
 # TODO:     self.assertEqual(response.status_code, 204, response.data)
-# TODO: 
+# TODO:
 # TODO: def test_unassign_questionnaire_from_station(self):
 # TODO:     response = self.app.delete(
 # TODO:         "/station/station-blue/questionnaires/questionnaire_1"
 # TODO:     )
 # TODO:     self.assertEqual(response.status_code, 204, response.data)
-
-

@@ -62,24 +62,19 @@ async def scoreboard(session: AsyncSession) -> Iterator[tuple[str, int]]:
 
 
 async def questionnaire_scores(
-    session: AsyncSession
+    session: AsyncSession,
 ) -> dict[str, dict[str, dict[str, str | int]]]:
     output: dict[str, dict[str, dict[str, str | int]]] = {}
     query = select(model.TeamQuestionnaire).join(model.Questionnaire)
     result = await session.execute(query)
     for row in result.scalars():
-        questionnaire_name: str = row.questionnaire_name  # type: ignore
-        score: int = row.score  # type: ignore
-        station = (
-            row.questionnaire.station.name
-            if row.questionnaire and row.questionnaire.station
-            else ""
-        )
+        questionnaire = await row.awaitable_attrs.questionnaire
+        station = await questionnaire.awaitable_attrs.station
+        station = station.name if questionnaire and station else ""
         team_stations = output.setdefault(row.team_name, {})
-
         team_stations[station] = {
-            "name": questionnaire_name,
-            "score": score,
+            "name": questionnaire.name,
+            "score": row.score or 0,
         }
     return output
 
@@ -105,8 +100,7 @@ async def set_questionnaire_score(
     Set the team-score for a questionaire on a given station.
     """
     station_query = select(model.Station).filter_by(name=station)
-    station_entity = session.execute(station_query).scalar_one_or_none()
-    )
+    station_entity = (await session.execute(station_query)).scalar_one_or_none()
     if not station_entity:
         raise PowonlineException(f"Station {station} not found")
 
@@ -336,8 +330,9 @@ class Team:
 
 class Station:
     @staticmethod
-    def get(session, name):
-        return session.query(model.Station).filter_by(name=name).one_or_none()
+    async def get(session: AsyncSession, name: str):
+        query = select(model.Station).filter_by(name=name)
+        return await session.execute(query).scalar_one_or_none()
 
     @staticmethod
     async def all(session: AsyncSession) -> ScalarResult[model.Station]:
