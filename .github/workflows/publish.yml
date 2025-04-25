@@ -1,37 +1,44 @@
 ---
 name: Build and Publish
 "on":
-  push:
+  workflow_dispatch:
+  push: null
 jobs:
-  build-and-push:
+  build_and_push:
+    if: "${{ startsWith(github.ref, 'refs/tags/release-') \
+        || github.ref == 'refs/heads/develop' }}"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Install "tomlq" (via yq)
+      - name: Add build dependencies
         run: pip install yq
       - name: Get Version
         run: echo "PROJECT_VERSION=$(tomlq -r .project.version pyproject.toml)"
-             >> "${GITHUB_ENV}"
+          >> "${GITHUB_ENV}"
       - name: Build Image
-        run: "docker buildx build \
-              -t \"${{secrets.DOCKER_REGISTRY_URL}}/\
-                   powonline-api:dev\"
-              -t \"${{secrets.DOCKER_REGISTRY_URL}}/\
-                   powonline-api:${PROJECT_VERSION}\"
-              ."
+        run: "
+          docker buildx build
+          -t \"${{secrets.DOCKER_REGISTRY}}/\
+          ${{secrets.DOCKER_REGISTRY_NAMESPACE}}/\
+          powonline-api:${PROJECT_VERSION}\"
+          -t \"${{secrets.DOCKER_REGISTRY}}/\
+          ${{secrets.DOCKER_REGISTRY_NAMESPACE}}/\
+          powonline-api:dev\"
+          ."
       - name: Login to Private Docker Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ secrets.DOCKER_REGISTRY_URL }}
+          registry: ${{ secrets.DOCKER_REGISTRY }}
           username: ${{ secrets.DOCKER_REGISTRY_USER }}
           password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
       - name: Push Docker Image (release)
         if: startsWith(github.ref, 'refs/tags/v')
-        run: |
-          docker push "${{ secrets.DOCKER_REGISTRY_URL }}/powonline-api:\
-          ${GITHUB_REF_NAME}"
-      - name: Push Docker Image (dev-build)
-        if: github.ref == 'refs/heads/develop-2025'
-        run: |
-          docker push "${{ secrets.DOCKER_REGISTRY_URL }}/powonline-api:dev"
+        run: "docker push \"${{secrets.DOCKER_REGISTRY}}/\
+          ${{secrets.DOCKER_REGISTRY_NAMESPACE}}/\
+          powonline-api:${PROJECT_VERSION}\""
+      - name: Push dev-build
+        if: github.ref == 'refs/heads/develop'
+        run: "docker push \"${{secrets.DOCKER_REGISTRY}}/\
+          ${{secrets.DOCKER_REGISTRY_NAMESPACE}}/\
+          powonline-api:dev\""
