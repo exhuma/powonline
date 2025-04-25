@@ -14,7 +14,7 @@ Required Environment Variables
 ==============================
 
 POWONLINE_DSN
-    The database DSN (f.ex.: ``postgresl://user:password@host/dbname``)
+    The database DSN (f.ex.: ``postgresql://user:password@host/dbname``)
 
 
 Development Setup (Recommended)

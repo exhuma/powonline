@@ -9,7 +9,7 @@ from powonline import custom_routes
 from powonline.exc import ValidationError  # type: ignore
 
 from .config import default
-from .model import DB
+from .model import DB, get_dsn
 from .pusher import PusherWrapper
 from .resources import (
     Assignments,
@@ -151,7 +151,7 @@ def make_app(config=None):
     api.add_resource(QuestionnaireList, "/questionnaire")
     api.add_resource(Questionnaire, "/questionnaire/<name>")
 
-    app.config["SQLALCHEMY_DATABASE_URI"] = environ["POWONLINE_DSN"]
+    app.config["SQLALCHEMY_DATABASE_URI"] = get_dsn()
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     DB.init_app(app)
 

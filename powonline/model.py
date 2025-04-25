@@ -2,8 +2,9 @@ import logging
 from codecs import encode
 from datetime import datetime, timezone
 from enum import Enum
-from os import urandom
+from os import environ, urandom
 from typing import Any
+from urllib.parse import urlparse, urlunparse
 
 import sqlalchemy.types as types
 from bcrypt import checkpw, gensalt, hashpw
@@ -24,6 +25,15 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship, scoped_session
 
 LOG = logging.getLogger(__name__)
 DB = SQLAlchemy()
+
+
+def get_dsn():
+    dsn = environ.get("POWONLINE_DSN", "").strip()
+    if dsn:
+        parsed = urlparse(dsn)
+        if parsed.scheme == "postgresql":
+            dsn = urlunparse(parsed._replace(scheme="postgresql+psycopg"))
+    return dsn
 
 
 class AuditType(Enum):
