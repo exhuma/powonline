@@ -16,6 +16,17 @@ jobs:
       - name: Get Version
         run: echo "PROJECT_VERSION=$(tomlq -r .project.version pyproject.toml)"
           >> "${GITHUB_ENV}"
+      - name: Build Database
+        run: "
+          cd database &&
+          docker buildx build
+          -t \"${{secrets.DOCKER_REGISTRY}}/\
+          ${{secrets.DOCKER_REGISTRY_NAMESPACE}}/\
+          powonline-db:${PROJECT_VERSION}\"
+          -t \"${{secrets.DOCKER_REGISTRY}}/\
+          ${{secrets.DOCKER_REGISTRY_NAMESPACE}}/\
+          powonline-db:dev\"
+          ."
       - name: Build Image
         run: "
           docker buildx build
@@ -42,3 +53,13 @@ jobs:
         run: "docker push \"${{secrets.DOCKER_REGISTRY}}/\
           ${{secrets.DOCKER_REGISTRY_NAMESPACE}}/\
           powonline-api:dev\""
+      - name: Push Database Image (release)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: "docker push \"${{secrets.DOCKER_REGISTRY}}/\
+          ${{secrets.DOCKER_REGISTRY_NAMESPACE}}/\
+          powonline-db:${PROJECT_VERSION}\""
+      - name: Push database dev-build
+        if: github.ref == 'refs/heads/develop'
+        run: "docker push \"${{secrets.DOCKER_REGISTRY}}/\
+          ${{secrets.DOCKER_REGISTRY_NAMESPACE}}/\
+          powonline-db:dev\""
