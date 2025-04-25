@@ -16,17 +16,6 @@ jobs:
       - name: Get Version
         run: echo "PROJECT_VERSION=$(tomlq -r .project.version pyproject.toml)"
           >> "${GITHUB_ENV}"
-      - name: Build Database
-        run: "
-          cd database &&
-          docker buildx build
-          -t \"${{secrets.DOCKER_REGISTRY}}/\
-          ${{secrets.DOCKER_REGISTRY_NAMESPACE}}/\
-          powonline-db:${PROJECT_VERSION}\"
-          -t \"${{secrets.DOCKER_REGISTRY}}/\
-          ${{secrets.DOCKER_REGISTRY_NAMESPACE}}/\
-          powonline-db:dev\"
-          ."
       - name: Build Image
         run: "
           docker buildx build
@@ -53,6 +42,31 @@ jobs:
         run: "docker push \"${{secrets.DOCKER_REGISTRY}}/\
           ${{secrets.DOCKER_REGISTRY_NAMESPACE}}/\
           powonline-api:dev\""
+
+  build_and_push_db:
+    if: "${{ startsWith(github.ref, 'refs/tags/release-') \
+        || github.ref == 'refs/heads/develop' }}"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build Database
+        run: "
+          cd database &&
+          docker buildx build
+          -t \"${{secrets.DOCKER_REGISTRY}}/\
+          ${{secrets.DOCKER_REGISTRY_NAMESPACE}}/\
+          powonline-db:${PROJECT_VERSION}\"
+          -t \"${{secrets.DOCKER_REGISTRY}}/\
+          ${{secrets.DOCKER_REGISTRY_NAMESPACE}}/\
+          powonline-db:dev\"
+          ."
+      - name: Login to Private Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.DOCKER_REGISTRY }}
+          username: ${{ secrets.DOCKER_REGISTRY_USER }}
+          password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }}
       - name: Push Database Image (release)
         if: startsWith(github.ref, 'refs/tags/v')
         run: "docker push \"${{secrets.DOCKER_REGISTRY}}/\
