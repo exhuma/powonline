@@ -31,7 +31,7 @@ dependencies = [
     "sqlalchemy >= 2.0",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "alembic",
     "blessings",
