@@ -16,7 +16,6 @@ async def for_station(
     station_name: str,
     relation: schema.StationRelation = schema.StationRelation.UNKNOWN,
 ) -> list[schema.DashboardRow]:
-    print(station_name, relation)
     if relation != schema.StationRelation.UNKNOWN:
         station_name = await core.Station.related(
             session, station_name, relation
