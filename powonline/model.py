@@ -2,13 +2,13 @@ import logging
 import uuid as m_uuid
 from codecs import encode
 from datetime import datetime, timezone
-from enum import Enum
 from os import environ, urandom
 from typing import Any
 from urllib.parse import urlparse, urlunparse
 
 import sqlalchemy.types as types
 from bcrypt import checkpw, gensalt, hashpw
+from powonline.schema import AuditType, TeamState
 from sqlalchemy import (
     Boolean,
     Column,
@@ -26,10 +26,7 @@ from sqlalchemy.dialects.postgresql import BYTEA, UUID
 from sqlalchemy.ext.asyncio import AsyncAttrs, AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-from powonline.schema import AuditType, TeamState
-
 LOG = logging.getLogger(__name__)
-
 metadata = MetaData()
 
 
@@ -40,19 +37,6 @@ def get_dsn():
         if parsed.scheme == "postgresql":
             dsn = urlunparse(parsed._replace(scheme="postgresql+psycopg"))
     return dsn
-
-
-class AuditType(Enum):
-    ADMIN = "admin"
-    QUESTIONNAIRE_SCORE = "questionnaire_score"
-    STATION_SCORE = "station_score"
-
-
-class TeamState(Enum):
-    UNKNOWN = "unknown"
-    ARRIVED = "arrived"
-    FINISHED = "finished"
-    UNREACHABLE = "unreachable"
 
 
 class Base(AsyncAttrs, DeclarativeBase):
