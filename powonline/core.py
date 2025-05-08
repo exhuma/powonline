@@ -62,7 +62,7 @@ async def scoreboard(session: AsyncSession) -> Iterator[tuple[str, int]]:
 
 
 async def questionnaire_scores(
-    session: AsyncSession
+    session: AsyncSession,
 ) -> dict[str, dict[str, dict[str, str | int]]]:
     output: dict[str, dict[str, dict[str, str | int]]] = {}
     query = select(model.TeamQuestionnaire).join(model.Questionnaire)
@@ -106,7 +106,6 @@ async def set_questionnaire_score(
     """
     station_query = select(model.Station).filter_by(name=station)
     station_entity = session.execute(station_query).scalar_one_or_none()
-    )
     if not station_entity:
         raise PowonlineException(f"Station {station} not found")
 
