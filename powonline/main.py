@@ -6,12 +6,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from powonline import error_handlers, resources, routers
 
 LOG = logging.getLogger(__name__)
-DEFAULT_ALLOWED_ORIGINS = {"http://localhost:8080"}
 
 
 def get_cors_data() -> dict[str, list[str]]:
     # TODO cfg_data = app.localconfig.get("app", "allowed_origins", fallback="")
-    allowed_origins = ["http://localhost:5173"]
+    allowed_origins = ["*"]
     # TODO origin = request.headers.get("Origin", "")
     # TODO if current_app.debug and origin not in allowed_origins:
     # TODO     LOG.info(
