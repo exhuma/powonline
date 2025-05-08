@@ -26,7 +26,6 @@ dependencies = [
     "pyjwt",
     "python-dateutil",
     "python-multipart",
-    "pyyaml",
     "requests_oauthlib",
     "sqlalchemy >= 2.0",
     "uvicorn",
