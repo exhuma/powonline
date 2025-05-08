@@ -1,10 +1,10 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
+from powonline.dependencies import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from powonline import core, schema
-from powonline.dependencies import get_db
 
 ROUTER = APIRouter(prefix="", tags=["dashboard"])
 
