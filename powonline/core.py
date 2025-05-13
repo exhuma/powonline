@@ -1,6 +1,5 @@
 import logging
 import uuid
-from configparser import ConfigParser
 from datetime import datetime, timezone
 from os import unlink
 from os.path import join
