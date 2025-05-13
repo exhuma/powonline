@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "powonline"
-version = "2025.05.25"
+version = "2025.05.13"
 authors = [
     {name = "Michel Albert", email = "michel@albert.lu"},
 ]
