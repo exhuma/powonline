@@ -3,9 +3,6 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.responses import JSONResponse
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from powonline import core, schema
 from powonline.auth import User, get_user
 from powonline.dependencies import get_db, get_pusher
 from powonline.exc import (
@@ -14,6 +11,9 @@ from powonline.exc import (
     NoQuestionnaireForStation,
 )
 from powonline.pusher import PusherWrapper
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from powonline import core, schema
 
 ROUTER = APIRouter(prefix="/job", tags=["job"])
 LOG = logging.getLogger(__name__)
@@ -137,7 +137,6 @@ async def _action_set_questionnaire_score(
         )
         try:
             old_score, new_score = await core.set_questionnaire_score(
-                app.localconfig,
                 session,
                 team_name,
                 station_name,

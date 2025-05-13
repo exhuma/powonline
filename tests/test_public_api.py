@@ -9,6 +9,7 @@ import pytest
 from config_resolver.core import get_config
 from fastapi import FastAPI
 from httpx import AsyncClient
+from powonline.auth import User, get_user
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from util import (
@@ -19,7 +20,6 @@ from util import (
 )
 
 from powonline import schema
-from powonline.auth import User, get_user
 
 LOG = logging.getLogger(__name__)
 
@@ -218,6 +218,7 @@ async def test_update_other_station(
 # XXX     data = json.loads(response.text)
 # XXX     expected = make_dummy_route_dict(name="foo")
 # XXX     assert data == expected
+
 
 async def test_create_team(dbsession: AsyncSession, red_client: AsyncClient):
     new_team = make_dummy_team_dict(name="foo", contact="new-contact")
@@ -1250,7 +1251,7 @@ async def test_anon_related_station_invalid_state(test_client: AsyncClient):
 # TODO:         max_score=100,
 # TODO:         order=200,
 # TODO:     )
-# TODO: 
+# TODO:
 # TODO:     response = self.app.post(
 # TODO:         "/questionnaire",
 # TODO:         headers={"Content-Type": "application/json"},
@@ -1270,14 +1271,14 @@ async def test_anon_related_station_invalid_state(test_client: AsyncClient):
 # TODO:     data.pop("inserted")
 # TODO:     data.pop("updated")
 # TODO:     self.assertEqual(data, expected)
-# TODO: 
+# TODO:
 # TODO: def test_update_questionnaire(self):
 # TODO:     replacement_questionnaire = make_dummy_questionnaire_dict(
 # TODO:         name="foo",
 # TODO:         max_score=110,
 # TODO:         order=220,
 # TODO:     )
-# TODO: 
+# TODO:
 # TODO:     response = self.app.put(
 # TODO:         "/questionnaire/old-questionnaire",
 # TODO:         headers={"Content-Type": "application/json"},
@@ -1299,11 +1300,11 @@ async def test_anon_related_station_invalid_state(test_client: AsyncClient):
 # TODO:     self.assertIsNotNone(inserted)
 # TODO:     self.assertIsNotNone(updated)
 # TODO:     self.assertEqual(data, expected)
-# TODO: 
+# TODO:
 # TODO: def test_delete_questionnaire(self):
 # TODO:     response = self.app.delete("/questionnaire/example-questionnaire")
 # TODO:     self.assertEqual(response.status_code, 204, response.data)
-# TODO: 
+# TODO:
 # TODO: def test_assign_questionnaire_to_station(self):
 # TODO:     questionnaire = {"name": "questionnaire_3", "max_score": 100}
 # TODO:     response = self.app.post(
@@ -1312,7 +1313,7 @@ async def test_anon_related_station_invalid_state(test_client: AsyncClient):
 # TODO:         data=json.dumps(questionnaire),
 # TODO:     )
 # TODO:     self.assertEqual(response.status_code, 204, response.data)
-# TODO: 
+# TODO:
 # TODO: def test_unassign_questionnaire_from_station(self):
 # TODO:     response = self.app.delete(
 # TODO:         "/station/station-blue/questionnaires/questionnaire_1"

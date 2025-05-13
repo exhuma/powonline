@@ -3,11 +3,10 @@ from configparser import ConfigParser
 from typing import Annotated
 
 from fastapi import Depends
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-
 from powonline.config import default
-from powonline.pusher import PusherWrapper
 from powonline.model import get_dsn
+from powonline.pusher import PusherWrapper
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 SQLALCHEMY_DATABASE_URL = get_dsn()
 

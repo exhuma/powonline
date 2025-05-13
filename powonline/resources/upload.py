@@ -211,7 +211,9 @@ async def _get_private(
             if json_data:
                 output_files.append(json_data)
         output["self"] = output_files
-    return output   # TODO: Align return type of both "private" and "public" uploads
+    return (
+        output  # TODO: Align return type of both "private" and "public" uploads
+    )
 
 
 @ROUTER.get("/upload")
@@ -253,9 +255,9 @@ async def get_file(
     fullname = join(data_folder, db_instance.filename)
     thumbnail, mediatype = _thumbnail(fullname, size)
     output = Response(thumbnail.getvalue(), media_type=mediatype)
-    output.headers["Content-Disposition"] = (
-        f"inline; filename=thn_{basename(db_instance.filename)}"
-    )
+    output.headers[
+        "Content-Disposition"
+    ] = f"inline; filename=thn_{basename(db_instance.filename)}"
     return output
 
 

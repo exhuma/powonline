@@ -28,7 +28,7 @@ async def test_get_assignments(dbsession: AsyncSession):
 
 
 @pytest.mark.usefixtures("seed")
-async def test_scoreboard(dbsession: AsyncSession, seed):
+async def test_scoreboard(dbsession: AsyncSession):
     result = list(await core.scoreboard(dbsession))
     expected = [
         ("team-blue", 50),

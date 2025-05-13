@@ -332,8 +332,9 @@ class Team:
 
 class Station:
     @staticmethod
-    def get(session, name):
-        return session.query(model.Station).filter_by(name=name).one_or_none()
+    async def get(session: AsyncSession, name: str):
+        query = select(model.Station).filter_by(name=name)
+        return await session.execute(query).scalar_one_or_none()
 
     @staticmethod
     async def all(session: AsyncSession) -> ScalarResult[model.Station]:
