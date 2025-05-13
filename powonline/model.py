@@ -8,6 +8,7 @@ from urllib.parse import urlparse, urlunparse
 
 import sqlalchemy.types as types
 from bcrypt import checkpw, gensalt, hashpw
+from powonline.schema import AuditType, TeamState
 from sqlalchemy import (
     Boolean,
     Column,
@@ -24,8 +25,6 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import BYTEA, UUID
 from sqlalchemy.ext.asyncio import AsyncAttrs, AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-
-from powonline.schema import AuditType, TeamState
 
 LOG = logging.getLogger(__name__)
 metadata = MetaData()
@@ -45,10 +44,10 @@ class Base(AsyncAttrs, DeclarativeBase):
 
 
 class TimestampMixin:
-    inserted: datetime = mapped_column(
+    inserted: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
-    updated: datetime | None = mapped_column(
+    updated: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
