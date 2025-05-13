@@ -13,6 +13,7 @@ from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
+    FetchedValue,
     ForeignKey,
     Integer,
     Table,
@@ -51,7 +52,10 @@ class TeamState(Enum):
 
 class TimestampMixin:
     inserted = Column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
+        DateTime(timezone=True),
+        FetchedValue(),
+        nullable=False,
+        server_default=func.now(),
     )
     updated = Column(DateTime(timezone=True), nullable=True)
 
@@ -115,8 +119,6 @@ class Team(DB.Model, TimestampMixin):  # type: ignore
     confirmation_key: Mapped[str] = mapped_column(server_default="")
     accepted: Mapped[bool] = mapped_column(server_default="false")
     completed: Mapped[bool] = mapped_column(server_default="false")
-    inserted: Mapped[datetime] = mapped_column(server_default=func.now())
-    updated: Mapped[datetime] = mapped_column(server_default=func.now())
     num_vegetarians: Mapped[int | None] = mapped_column()
     num_participants: Mapped[int | None] = mapped_column()
     planned_start_time: Mapped[datetime | None] = mapped_column()
@@ -246,12 +248,6 @@ class OauthConnection(DB.Model, TimestampMixin):  # type: ignore
     profile_url: Mapped[str | None] = mapped_column(Unicode(512))
     image_url: Mapped[str | None] = mapped_column(Unicode(512))
     rank: Mapped[int | None] = mapped_column()
-    inserted: Mapped[datetime] = mapped_column(
-        nullable=False, server_default=func.now()
-    )
-    updated: Mapped[datetime] = mapped_column(
-        nullable=False, server_default=func.now()
-    )
 
     user: Mapped["User"] = relationship(
         "User", back_populates="oauth_connection"
@@ -266,12 +262,6 @@ class User(DB.Model, TimestampMixin):  # type: ignore
     password: Mapped[bytes | None] = mapped_column(BYTEA)
     password_is_plaintext: Mapped[bool] = mapped_column(
         nullable=False, server_default="false"
-    )
-    inserted: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
-    updated: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
     )
     email: Mapped[str | None] = mapped_column()
     active: Mapped[bool] = mapped_column(

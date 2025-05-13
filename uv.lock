@@ -1780,7 +1780,7 @@ wheels = [
 
 [[package]]
 name = "powonline"
-version = "2024.4.28"
+version = "2025.5.13"
 source = { editable = "." }
 dependencies = [
     { name = "bcrypt", version = "4.2.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
@@ -1810,7 +1810,7 @@ dependencies = [
     { name = "sqlalchemy" },
 ]
 
-[package.optional-dependencies]
+[package.dev-dependencies]
 dev = [
     { name = "alembic", version = "1.12.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
     { name = "alembic", version = "1.14.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.8.*'" },
@@ -1837,35 +1837,40 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "alembic", marker = "extra == 'dev'" },
     { name = "bcrypt" },
-    { name = "blessings", marker = "extra == 'dev'" },
     { name = "config-resolver", specifier = ">=5.0,<6.0" },
     { name = "flask" },
     { name = "flask-restful" },
     { name = "flask-sqlalchemy" },
-    { name = "flask-testing", marker = "extra == 'test'" },
     { name = "gouge", specifier = ">=2.0" },
-    { name = "gouge", marker = "extra == 'dev'" },
     { name = "imapclient" },
     { name = "pillow" },
     { name = "psycopg", extras = ["binary"] },
     { name = "pusher" },
     { name = "pydantic", extras = ["email"] },
     { name = "pyjwt" },
-    { name = "pytest", marker = "extra == 'test'" },
-    { name = "pytest-catchlog", marker = "extra == 'test'" },
-    { name = "pytest-coverage", marker = "extra == 'test'" },
-    { name = "pytest-env", marker = "extra == 'test'" },
-    { name = "pytest-xdist", marker = "extra == 'test'" },
     { name = "python-dateutil" },
     { name = "requests-oauthlib" },
     { name = "sqlalchemy", specifier = ">=2.0" },
-    { name = "types-flask-sqlalchemy", marker = "extra == 'dev'" },
-    { name = "types-pillow", marker = "extra == 'dev'" },
-    { name = "types-python-dateutil", marker = "extra == 'dev'" },
 ]
-provides-extras = ["dev", "test"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "alembic" },
+    { name = "blessings" },
+    { name = "gouge" },
+    { name = "types-flask-sqlalchemy" },
+    { name = "types-pillow" },
+    { name = "types-python-dateutil" },
+]
+test = [
+    { name = "flask-testing" },
+    { name = "pytest" },
+    { name = "pytest-catchlog" },
+    { name = "pytest-coverage" },
+    { name = "pytest-env" },
+    { name = "pytest-xdist" },
+]
 
 [[package]]
 name = "psycopg"

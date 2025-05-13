@@ -1,5 +1,3 @@
-import os
-
 from fabric import task
 
 
@@ -8,7 +6,7 @@ def develop(context):
     """
     Set up a development environment
     """
-    context.run("uv sync --extra dev --extra test", replace_env=False, pty=True)
+    context.run("uv sync --group test", replace_env=False, pty=True)
     context.run("mkdir -p .mamerwiselen/powonline")
     context.run("cp app.ini.dist .mamerwiselen/powonline/app.ini")
     context.run("pre-commit install -f")
