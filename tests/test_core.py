@@ -55,7 +55,6 @@ async def test_questionnaire_scores(dbsession: AsyncSession):
 async def test_set_questionnaire_score(dbsession: AsyncSession):
     _, result = await core.set_questionnaire_score(
         dbsession, "team-red", "station-blue", 40
-        dbsession, "team-red", "station-blue", 40
     )
     assert result == 40
 
