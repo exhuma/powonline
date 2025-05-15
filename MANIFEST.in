@@ -1,1 +1,1 @@
-recursive-include powonline/templates *.html
+recursive-include src/powonline/templates *.html
