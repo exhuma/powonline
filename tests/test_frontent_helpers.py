@@ -2,15 +2,12 @@
 This module contains tests for features implemented mainly for helping the vuejs
 based frontens.
 """
+
 import json
 import logging
-from textwrap import dedent
+from unittest import TestCase
 
-from flask_testing import TestCase
-from pytest import fixture
-
-import powonline.model as model
-from powonline.web import make_app
+from httpx import AsyncClient
 
 LOG = logging.getLogger(__name__)
 
@@ -30,51 +27,8 @@ def drop_all_except(dct, *keep):
             del dct[key]
 
 
-def here(localname):
-    from os.path import dirname, join
-
-    return join(dirname(__file__), localname)
-
-
-@fixture
-def with_config(test_config):
-    test_config.read_string(
-        dedent(
-            """\
-        [security]
-        jwt_secret = %s
-        secret_key = secret
-        """
-            % ("testing",)
-        )
-    )
-    return make_app(test_config).test_client()
-
-
-class TestFrontendHelpers(TestCase):
-    def setUp(self):
-        self.app = self.client  # <-- avoiding unrelated diffs for now.
-        #     Can be removed in a later commit
-
-        with open(here("seed_cleanup.sql")) as seed:
-            try:
-                model.DB.session.execute(seed.read())
-                model.DB.session.commit()
-            except Exception as exc:
-                LOG.exception("Unable to execute cleanup seed")
-                model.DB.session.rollback()
-        with open(here("seed.sql")) as seed:
-            model.DB.session.execute(seed.read())
-            model.DB.session.commit()
-
-        self.maxDiff = None
-
-    def tearDown(self):
-        model.DB.session.remove()
-
-
-def test_fetch_assignments_api(with_config):
-    response = with_config.get("/assignments")
+async def test_fetch_assignments_api(test_client: AsyncClient):
+    response = await test_client.get("/assignments")
     assert response.status_code == 200, response.text
     result_data = json.loads(response.text)
 

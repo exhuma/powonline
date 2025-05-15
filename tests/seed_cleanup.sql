@@ -14,4 +14,4 @@ TRUNCATE
     user_station,
     questionnaire,
     questionnaire_score
-;
+CASCADE;

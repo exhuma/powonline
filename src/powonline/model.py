@@ -1,14 +1,13 @@
 import logging
+import uuid as m_uuid
 from codecs import encode
 from datetime import datetime, timezone
-from enum import Enum
 from os import environ, urandom
 from typing import Any
 from urllib.parse import urlparse, urlunparse
 
 import sqlalchemy.types as types
 from bcrypt import checkpw, gensalt, hashpw
-from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import (
     Boolean,
     Column,
@@ -16,16 +15,21 @@ from sqlalchemy import (
     FetchedValue,
     ForeignKey,
     Integer,
+    MetaData,
     Table,
     Unicode,
     UniqueConstraint,
     func,
+    select,
 )
 from sqlalchemy.dialects.postgresql import BYTEA, UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship, scoped_session
+from sqlalchemy.ext.asyncio import AsyncAttrs, AsyncSession
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+from powonline.schema import AuditType, TeamState
 
 LOG = logging.getLogger(__name__)
-DB = SQLAlchemy()
+metadata = MetaData()
 
 
 def get_dsn():
@@ -37,52 +41,45 @@ def get_dsn():
     return dsn
 
 
-class AuditType(Enum):
-    ADMIN = "admin"
-    QUESTIONNAIRE_SCORE = "questionnaire_score"
-    STATION_SCORE = "station_score"
-
-
-class TeamState(Enum):
-    UNKNOWN = "unknown"
-    ARRIVED = "arrived"
-    FINISHED = "finished"
-    UNREACHABLE = "unreachable"
+class Base(AsyncAttrs, DeclarativeBase):
+    metadata = metadata
 
 
 class TimestampMixin:
-    inserted = Column(
+    inserted: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         FetchedValue(),
         nullable=False,
         server_default=func.now(),
     )
-    updated = Column(DateTime(timezone=True), nullable=True)
+    updated: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
 
 class TeamStateType(types.TypeDecorator):
     impl = types.Unicode
 
     def process_bind_param(self, value, dialect):
-        return value.value
+        return value.value if value else None
 
     def process_result_value(self, value, dialect):
         return TeamState(value)
 
 
-class Setting(DB.Model):  # type: ignore
+class Setting(Base):  # type: ignore
     __tablename__ = "setting"
 
-    key = Column(Unicode, primary_key=True, nullable=False)
-    value = Column(Unicode)
-    description = Column(Unicode)
+    key = mapped_column(Unicode, primary_key=True, nullable=False)
+    value = mapped_column(Unicode)
+    description = mapped_column(Unicode)
 
 
-class Message(DB.Model, TimestampMixin):  # type: ignore
+class Message(Base, TimestampMixin):  # type: ignore
     __tablename__ = "message"
-    id = Column(Integer, primary_key=True)
-    content = Column(Unicode)
-    user = Column(
+    id = mapped_column(Integer, primary_key=True)
+    content = mapped_column(Unicode)
+    user = mapped_column(
         Unicode,
         ForeignKey(
             "user.name",
@@ -91,7 +88,7 @@ class Message(DB.Model, TimestampMixin):  # type: ignore
             ondelete="CASCADE",
         ),
     )
-    team = Column(
+    team = mapped_column(
         Unicode,
         ForeignKey(
             "team.name",
@@ -102,7 +99,7 @@ class Message(DB.Model, TimestampMixin):  # type: ignore
     )
 
 
-class Team(DB.Model, TimestampMixin):  # type: ignore
+class Team(Base, TimestampMixin):  # type: ignore
     __tablename__ = "team"
     __table_args__ = (
         UniqueConstraint("confirmation_key", name="team_confirmation_key"),
@@ -127,7 +124,7 @@ class Team(DB.Model, TimestampMixin):  # type: ignore
     route_name: Mapped[str | None] = mapped_column(
         ForeignKey("route.name", onupdate="CASCADE", ondelete="SET NULL")
     )
-    owner = Column(
+    owner = mapped_column(
         Unicode,
         ForeignKey(
             "user.name",
@@ -164,7 +161,7 @@ class Team(DB.Model, TimestampMixin):  # type: ignore
         return "Team(name=%r)" % self.name
 
 
-class Station(DB.Model, TimestampMixin):  # type: ignore
+class Station(Base, TimestampMixin):  # type: ignore
     __tablename__ = "station"
     name: Mapped[str] = mapped_column(primary_key=True)
     contact: Mapped[str | None] = mapped_column()
@@ -204,7 +201,7 @@ class Station(DB.Model, TimestampMixin):  # type: ignore
         return "Station(name=%r)" % self.name
 
 
-class Route(DB.Model, TimestampMixin):  # type: ignore
+class Route(Base, TimestampMixin):  # type: ignore
     __tablename__ = "route"
 
     name: Mapped[str] = mapped_column(primary_key=True)
@@ -227,7 +224,7 @@ class Route(DB.Model, TimestampMixin):  # type: ignore
             setattr(self, k, v)
 
 
-class OauthConnection(DB.Model, TimestampMixin):  # type: ignore
+class OauthConnection(Base, TimestampMixin):  # type: ignore
     __tablename__ = "oauth_connection"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -254,7 +251,7 @@ class OauthConnection(DB.Model, TimestampMixin):  # type: ignore
     )
 
 
-class User(DB.Model, TimestampMixin):  # type: ignore
+class User(Base, TimestampMixin):  # type: ignore
     __tablename__ = "user"
     __table_args__ = (UniqueConstraint("email", name="user_email_key"),)
 
@@ -289,13 +286,14 @@ class User(DB.Model, TimestampMixin):  # type: ignore
     )
 
     @property
-    def avatar_url(self) -> str:
-        if not self.oauth_connection:
+    async def avatar_url(self) -> str:
+        oauth_connection = await self.awaitable_attrs.oauth_connection
+        if not oauth_connection:
             return ""
         try:
-            if not self.oauth_connection[0].image_url:
+            if not oauth_connection[0].image_url:
                 return ""
-            return self.oauth_connection[0].image_url
+            return oauth_connection[0].image_url
         except IndexError:
             LOG.debug(
                 "Unexpected error occurred with the avatar-url", exc_info=True
@@ -303,12 +301,13 @@ class User(DB.Model, TimestampMixin):  # type: ignore
             return ""
 
     @staticmethod
-    def get_or_create(session: scoped_session, username: str) -> "User":
+    async def get_or_create(session: AsyncSession, username: str) -> "User":
         """
         Returns a user instance by name. Creates it if missing.
         """
-        query = session.query(User).filter_by(name=username)
-        instance = query.one_or_none()
+        query = select(User).filter_by(name=username)
+        result = await session.execute(query)
+        instance = result.scalar_one_or_none()
         if not instance:
             randbytes = encode(urandom(100), "hex")[:30]
             password = randbytes.decode("ascii")
@@ -317,7 +316,17 @@ class User(DB.Model, TimestampMixin):  # type: ignore
             LOG.warning("User initialised with random password!")
         return instance
 
-    def __init__(self, name: str, password: str) -> None:
+    @staticmethod
+    async def get(session: AsyncSession, username: str) -> "User | None":
+        """
+        Returns a user instance by name.
+        """
+        query = select(User).filter_by(name=username)
+        result = await session.execute(query)
+        return result.scalar_one_or_none()
+
+    def __init__(self, *, name: str, password: str, **kwargs) -> None:
+        super().__init__(**kwargs)
         self.name = name
         self.password = hashpw(password.encode("utf8"), gensalt())
         self.password_is_plaintext = False
@@ -346,7 +355,7 @@ class User(DB.Model, TimestampMixin):  # type: ignore
     )
 
 
-class Role(DB.Model, TimestampMixin):  # type: ignore
+class Role(Base, TimestampMixin):  # type: ignore
     __tablename__ = "role"
     name: Mapped[str] = mapped_column(primary_key=True)
     users: Mapped[set["User"]] = relationship(
@@ -360,16 +369,17 @@ class Role(DB.Model, TimestampMixin):  # type: ignore
         self.name = "Example Station"
 
     @staticmethod
-    def get_or_create(session: scoped_session, name: str) -> "Role":
+    async def get_or_create(session: AsyncSession, name: str) -> "Role":
         """
         Retrieves a role with name *name*.
 
         If it does not exist yet in the DB it will be created.
         """
-        query = session.query(Role).filter_by(name=name)
-        existing = query.one_or_none()
+        query = select(Role).filter_by(name=name)
+        result = await session.execute(query)
+        existing = result.scalar_one_or_none()
         if not existing:
-            output = Role()  # type: ignore
+            output = Role()
             output.name = name
             session.add(output)
         else:
@@ -377,7 +387,7 @@ class Role(DB.Model, TimestampMixin):  # type: ignore
         return output  # type: ignore
 
 
-class TeamStation(DB.Model, TimestampMixin):  # type: ignore
+class TeamStation(Base, TimestampMixin):  # type: ignore
     __tablename__ = "team_station_state"
 
     team_name: Mapped[str] = mapped_column(
@@ -388,7 +398,7 @@ class TeamStation(DB.Model, TimestampMixin):  # type: ignore
         ForeignKey("station.name", onupdate="CASCADE", ondelete="CASCADE"),
         primary_key=True,
     )
-    state: Mapped[TeamStateType | None] = mapped_column(
+    state: Mapped[TeamState | None] = mapped_column(
         TeamStateType, default=TeamState.UNKNOWN
     )
     score: Mapped[int | None] = mapped_column(nullable=True, default=None)
@@ -415,7 +425,7 @@ class TeamStation(DB.Model, TimestampMixin):  # type: ignore
         self.state = state
 
 
-class Questionnaire(DB.Model, TimestampMixin):  # type: ignore
+class Questionnaire(Base, TimestampMixin):  # type: ignore
     __tablename__ = "questionnaire"
 
     name: Mapped[str] = mapped_column(nullable=False, primary_key=True)
@@ -462,7 +472,7 @@ class Questionnaire(DB.Model, TimestampMixin):  # type: ignore
             LOG.debug("Ignoring 'inserted' timestamp (%s)", inserted)
 
 
-class TeamQuestionnaire(DB.Model, TimestampMixin):  # type: ignore
+class TeamQuestionnaire(Base, TimestampMixin):  # type: ignore
     __tablename__ = "questionnaire_score"
 
     team_name: Mapped[str] = mapped_column(
@@ -498,7 +508,7 @@ class TeamQuestionnaire(DB.Model, TimestampMixin):  # type: ignore
         self.score = score
 
 
-class Upload(DB.Model):  # type: ignore
+class Upload(Base):  # type: ignore
     __tablename__ = "uploads"
     filename: Mapped[str] = mapped_column(Unicode, primary_key=True)
     username: Mapped[str] = mapped_column(
@@ -506,7 +516,7 @@ class Upload(DB.Model):  # type: ignore
         ForeignKey("user.name", onupdate="CASCADE", ondelete="CASCADE"),
         primary_key=True,
     )
-    uuid: Mapped[UUID] = mapped_column(
+    uuid: Mapped[m_uuid.UUID] = mapped_column(
         UUID,
         unique=True,
         nullable=False,
@@ -521,16 +531,15 @@ class Upload(DB.Model):  # type: ignore
         self.username = username
 
     @staticmethod
-    def get_or_create(
-        session: scoped_session, relname: str, username: str
+    async def get_or_create(
+        session: AsyncSession, relname: str, username: str
     ) -> "Upload":
         """
         Returns an upload entity. Create it if it is missing
         """
-        query = session.query(Upload).filter_by(
-            filename=relname, username=username
-        )
-        instance = query.one_or_none()
+        query = select(Upload).filter_by(filename=relname, username=username)
+        result = await session.execute(query)
+        instance = result.scalar_one_or_none()
         if not instance:
             instance = Upload(relname, username)
             session.add(instance)
@@ -540,7 +549,7 @@ class Upload(DB.Model):  # type: ignore
         return instance
 
 
-class AuditLog(DB.Model):  # type: ignore
+class AuditLog(Base):  # type: ignore
     __tablename__ = "auditlog"
     timestamp: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -548,7 +557,7 @@ class AuditLog(DB.Model):  # type: ignore
         default=datetime.now(timezone.utc),
         primary_key=True,
     )
-    username: Mapped[str] = mapped_column(
+    username: Mapped[str | None] = mapped_column(
         ForeignKey("user.name", onupdate="CASCADE", ondelete="SET NULL"),
         name="user",
         primary_key=True,
@@ -570,7 +579,7 @@ class AuditLog(DB.Model):  # type: ignore
 
 route_station_table = Table(
     "route_station",
-    DB.metadata,
+    metadata,
     Column(
         "route_name",
         Unicode,
@@ -595,7 +604,7 @@ route_station_table = Table(
 
 user_station_table = Table(
     "user_station",
-    DB.metadata,
+    metadata,
     Column(
         "user_name",
         Unicode,
@@ -614,7 +623,7 @@ user_station_table = Table(
 
 user_role_table = Table(
     "user_role",
-    DB.metadata,
+    metadata,
     Column(
         "user_name",
         Unicode,

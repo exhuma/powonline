@@ -21,14 +21,20 @@
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"ms-python.black-formatter"
+				"ms-python.black-formatter",
+				"tamasfe.even-better-toml",
+				"ms-python.python",
+				"charliermarsh.ruff"
 			]
 		}
 	},
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"ms-python.black-formatter"
+				"ms-python.black-formatter",
+				"tamasfe.even-better-toml",
+				"ms-python.python",
+				"charliermarsh.ruff"
 			]
 		}
 	}

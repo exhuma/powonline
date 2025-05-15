@@ -1,14 +1,16 @@
 import logging
+import uuid
 from datetime import datetime, timezone
-from enum import Enum, auto
-from os import makedirs
-from os.path import basename, dirname, join
+from os import unlink
+from os.path import join
 from random import SystemRandom
 from string import ascii_letters, digits, punctuation
-from typing import Generator, Optional, Tuple
+from typing import Any, AsyncGenerator, Iterator, Optional, Tuple
 
-from sqlalchemy import and_, func
-from sqlalchemy.orm import Query, Session, scoped_session
+from sqlalchemy import ScalarResult, and_, delete, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from powonline import schema
 
 from . import model
 from .exc import (
@@ -21,26 +23,18 @@ from .model import TeamState
 LOG = logging.getLogger(__name__)
 
 
-class StationRelation(Enum):
-    """
-    A station-relation defines how one station relates to another.
-    """
-
-    PREVIOUS = auto()
-    NEXT = auto()
-
-
-def get_assignments(session):
-    routes = session.query(model.Route)
+async def get_assignments(session: AsyncSession):
+    routes = select(model.Route)
 
     output = {
         "teams": {},
         "stations": {},
     }
 
-    for route in routes:
-        output["teams"][route.name] = route.teams
-        output["stations"][route.name] = route.stations
+    result = await session.execute(routes)
+    for route in result.scalars():
+        output["teams"][route.name] = await route.awaitable_attrs.teams
+        output["stations"][route.name] = await route.awaitable_attrs.stations
 
     return output
 
@@ -49,35 +43,38 @@ def make_default_team_state():
     return {"state": TeamState.UNKNOWN}
 
 
-def scoreboard(session):
-    teams = session.query(model.Team)
-    scores = {}
-    for row in teams:
-        station_score = sum(state.score for state in row.station_states)
-        quest_score = sum(quest.score for quest in row.questionnaire_scores)
+async def scoreboard(session: AsyncSession) -> Iterator[tuple[str, int]]:
+    query = select(model.Team)
+    teams = await session.execute(query)
+    scores: dict[str, int] = {}
+    for row in teams.scalars():
+        station_score = sum(
+            state.score for state in await row.awaitable_attrs.station_states
+        )
+        quest_score = sum(
+            quest.score
+            for quest in await row.awaitable_attrs.questionnaire_scores
+        )
         scores[row.name] = sum([station_score, quest_score])
     output = reversed(sorted(scores.items(), key=lambda x: x[1]))
     return output
 
 
-def questionnaire_scores(
-    session: Session,
+async def questionnaire_scores(
+    session: AsyncSession,
 ) -> dict[str, dict[str, dict[str, str | int]]]:
-    query: Query[model.TeamQuestionnaire] = session.query(
-        model.TeamQuestionnaire
-    ).join(model.Questionnaire)
     output: dict[str, dict[str, dict[str, str | int]]] = {}
-    for row in query:
-        team_name: str = row.team_name  # type: ignore
+    query = select(model.TeamQuestionnaire).join(model.Questionnaire)
+    result = await session.execute(query)
+    for row in result.scalars():
         questionnaire_name: str = row.questionnaire_name  # type: ignore
         score: int = row.score  # type: ignore
-        station = (
-            row.questionnaire.station.name
-            if row.questionnaire and row.questionnaire.station
-            else ""
-        )
-        team_stations = output.setdefault(team_name, {})
-        team_stations[station] = {
+        questionnaire = await row.awaitable_attrs.questionnaire
+        station = await questionnaire.awaitable_attrs.station
+        station_name = station.name if questionnaire and station else ""
+        team_stations = output.setdefault(row.team_name, {})
+
+        team_stations[station_name] = {
             "name": questionnaire_name,
             "score": score,
         }
@@ -85,7 +82,7 @@ def questionnaire_scores(
 
 
 def add_audit_log(
-    session: scoped_session, username: str, type_: model.AuditType, message: str
+    session: AsyncSession, username: str, type_: model.AuditType, message: str
 ) -> model.AuditLog:
     entry = model.AuditLog(
         timestamp=datetime.now(timezone.utc),
@@ -98,33 +95,34 @@ def add_audit_log(
     return entry
 
 
-def set_questionnaire_score(
-    session: Session, team: str, station: str, score: int
+async def set_questionnaire_score(
+    session: AsyncSession, team: str, station: str, score: int
 ):
     """
     Set the team-score for a questionaire on a given station.
     """
-    station_entity = (
-        session.query(model.Station).filter_by(name=station).one_or_none()
-    )
+    station_query = select(model.Station).filter_by(name=station)
+    station_entity = (await session.execute(station_query)).scalar_one_or_none()
     if not station_entity:
         raise PowonlineException(f"Station {station} not found")
 
-    if not station_entity.questionnaires:
+    questionnaires = await station_entity.awaitable_attrs.questionnaires
+    if not questionnaires:
         raise NoQuestionnaireForStation(station_entity)
 
-    if len(station_entity.questionnaires) > 1:
+    if len(questionnaires) > 1:
         raise NoQuestionnaireForStation(
             station_entity, "Multiple questionnaires assigned"
         )
 
-    existing_questionnaire = station_entity.questionnaires[0]
+    existing_questionnaire = questionnaires[0]
     questionnaire_name = existing_questionnaire.name
 
-    query = session.query(model.TeamQuestionnaire).filter_by(
+    query = select(model.TeamQuestionnaire).filter_by(
         team_name=team, questionnaire_name=questionnaire_name
     )
-    state = query.one_or_none()
+    result = await session.execute(query)
+    state = result.scalar_one_or_none()
     if not state:
         state = model.TeamQuestionnaire(team, questionnaire_name, score)
         session.add(state)
@@ -133,31 +131,36 @@ def set_questionnaire_score(
     return old_score, score
 
 
-def global_dashboard(session):
-    teams = session.query(model.Team).order_by(model.Team.name)
-    stations = session.query(model.Station).order_by(model.Station.name)
+async def global_dashboard(session: AsyncSession):
+    teams_query = select(model.Team).order_by(model.Team.name)
+    stations_query = select(model.Station).order_by(model.Station.name)
+    teams = await session.execute(teams_query)
     team_names = set()
     station_names = set()
-    output = []
-    for team in teams:
+    output: list[schema.GlobalDashboardRow] = []
+    for team in teams.scalars():
         team_names.add(team.name)
-        team_data = {"stations": [], "team": team.name}
-        if team.route:
+        team_data = schema.GlobalDashboardRow(stations=[], team=team.name)
+        team_route = await team.awaitable_attrs.route
+        if team_route:
             reachable_stations = {
-                station.name for station in team.route.stations
+                station.name
+                for station in await team_route.awaitable_attrs.stations
             }
         else:
             reachable_stations = set()
-        for station in stations:
+        stations = await session.execute(stations_query)
+        for station in stations.scalars():
             station_names.add(station.name)
             if station.name in reachable_stations:
-                team_states = session.query(model.TeamStation).filter(
+                team_states_query = select(model.TeamStation).filter(
                     and_(
                         model.TeamStation.team == team,
                         model.TeamStation.station == station,
                     )
                 )
-                dbstate = team_states.one_or_none()
+                result = await session.execute(team_states_query)
+                dbstate = result.scalar_one_or_none()
                 if dbstate:
                     cell_state = dbstate.state
                     cell_score = dbstate.score
@@ -167,8 +170,12 @@ def global_dashboard(session):
             else:
                 cell_state = TeamState.UNREACHABLE
                 cell_score = 0
-            team_data["stations"].append(
-                {"name": station.name, "score": cell_score, "state": cell_state}
+            team_data.stations.append(
+                schema.GlobalDashboardStation(
+                    name=station.name,
+                    score=cell_score or 0,
+                    state=cell_state or TeamState.UNKNOWN,
+                )
             )
         output.append(team_data)
     return output
@@ -176,55 +183,76 @@ def global_dashboard(session):
 
 class Team:
     @staticmethod
-    def all(session):
-        return session.query(model.Team).order_by(
-            model.Team.effective_start_time
+    async def all(session: AsyncSession) -> ScalarResult[model.Team]:
+        query = select(model.Team).order_by(model.Team.effective_start_time)
+        result = await session.execute(query)
+        return result.scalars()
+
+    @staticmethod
+    async def get(session: AsyncSession, name: str) -> model.Team | None:
+        query = select(model.Team).filter_by(name=name)
+        result = await session.execute(query)
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def quickfilter_without_route(
+        session: AsyncSession,
+    ) -> ScalarResult[model.Team]:
+        query = select(model.Team).filter(
+            model.Team.route == None  # noqa: E711
         )
+        result = await session.execute(query)
+        return result.scalars()
 
     @staticmethod
-    def get(session, name):
-        return session.query(model.Team).filter_by(name=name).one_or_none()
+    async def assigned_to_route(
+        session: AsyncSession, route_name: str
+    ) -> list[model.Team]:
+        query = select(model.Route).filter_by(name=route_name)
+        result = await session.execute(query)
+        route = result.scalar_one()
+        return await route.awaitable_attrs.teams
 
     @staticmethod
-    def quickfilter_without_route(session):
-        return session.query(model.Team).filter(model.Team.route == None)
-
-    @staticmethod
-    def assigned_to_route(session, route_name):
-        route = session.query(model.Route).filter_by(name=route_name).one()
-        return route.teams
-
-    @staticmethod
-    def create_new(session, data):
+    async def create_new(
+        session: AsyncSession, data: dict[str, Any]
+    ) -> model.Team:
         team = model.Team(**data)
         if not data.get("confirmation_key"):
             team.reset_confirmation_key()
-        team = session.merge(team)
+        team = await session.merge(team)
         return team
 
     @staticmethod
-    def upsert(session, name, data):
+    async def upsert(
+        session: AsyncSession, name: str, data: dict[str, Any]
+    ) -> model.Team:
         data.pop("inserted", None)
         data.pop("updated", None)
-        old = session.query(model.Team).filter_by(name=name).first()
+        old_query = select(model.Team).filter_by(name=name)
+        old_result = await session.execute(old_query)
+        old = old_result.scalar_one_or_none()
         if not old:
-            old = Team.create_new(session, data)
+            old = await Team.create_new(session, data)
         for k, v in data.items():
             setattr(old, k, v)
         return old
 
     @staticmethod
-    def delete(session, name):
-        session.query(model.Team).filter_by(name=name).delete()
+    async def delete(session: AsyncSession, name: str) -> None:
+        query = delete(model.Team).filter_by(name=name)
+        await session.execute(query)
         return None
 
     @staticmethod
-    def get_station_data(session, team_name, station_name):
-        state = (
-            session.query(model.TeamStation)
-            .filter_by(team_name=team_name, station_name=station_name)
-            .one_or_none()
+    async def get_station_data(
+        session: AsyncSession, team_name: str, station_name: str
+    ) -> model.TeamStation:
+        query = select(model.TeamStation).filter_by(
+            team_name=team_name, station_name=station_name
         )
+        result = await session.execute(query)
+        state = result.scalar_one_or_none()
         if not state:
             return model.TeamStation(
                 team_name=team_name, station_name=station_name
@@ -233,145 +261,174 @@ class Team:
             return state
 
     @staticmethod
-    def advance_on_station(session, team_name, station_name):
-        state = (
-            session.query(model.TeamStation)
-            .filter_by(team_name=team_name, station_name=station_name)
-            .one_or_none()
+    async def advance_on_station(
+        session: AsyncSession, team_name: str, station_name: str
+    ) -> TeamState:
+        query = select(model.TeamStation).filter_by(
+            team_name=team_name, station_name=station_name
         )
+        result = await session.execute(query)
+        state = result.scalar_one_or_none()
         if not state:
             state = model.TeamStation(
                 team_name=team_name, station_name=station_name
             )
-            state = session.merge(state)
-            session.flush()
+            state = await session.merge(state)
+            await session.flush()
 
+        state_team = await state.awaitable_attrs.team
+        state_station = await state.awaitable_attrs.station
         if state.state == TeamState.UNKNOWN:
             state.state = TeamState.ARRIVED
             # Teams which arrive at the finish station will have their
             # finish-time set
-            if not state.team.finish_time and state.station.is_end:
-                state.team.finish_time = func.now()
+            if not state_team.finish_time and state_station.is_end:
+                state_team.finish_time = func.now()
         elif state.state == TeamState.ARRIVED:
             # Teams which leave the departure station will have their
             # start-time set
-            if not state.team.effective_start_time and state.station.is_start:
-                state.team.effective_start_time = func.now()
+            if not state_team.effective_start_time and state_station.is_start:
+                state_team.effective_start_time = func.now()
             state.state = TeamState.FINISHED
         else:
             state.state = TeamState.UNKNOWN
         return state.state
 
     @staticmethod
-    def set_station_score(
-        session: scoped_session, team_name, station_name, score
-    ):
-        state = (
-            session.query(model.TeamStation)
-            .filter_by(team_name=team_name, station_name=station_name)
-            .one_or_none()
+    async def set_station_score(
+        session: AsyncSession, team_name: str, station_name: str, score: int
+    ) -> tuple[int | None, int]:
+        query = select(model.TeamStation).filter_by(
+            team_name=team_name, station_name=station_name
         )
+        result = await session.execute(query)
+        state = result.scalar_one_or_none()
+
         if not state:
             state = model.TeamStation(
                 team_name=team_name, station_name=station_name
             )
-            state = session.merge(state)
+            state = await session.merge(state)
         old_score = state.score
         state.score = score
         return old_score, state.score
 
     @staticmethod
-    def stations(session, team_name):
-        team = session.query(model.Team).filter_by(name=team_name).one_or_none()
+    async def stations(
+        session: AsyncSession, team_name: str
+    ) -> list[model.Station]:
+        query = select(model.Team).filter_by(name=team_name)
+        result = await session.execute(query)
+        team = result.scalar_one_or_none()
         if not team:
             LOG.debug("Team %r not found!", team_name)
             return []
         if not team.route:
             return []
-        return team.route.stations
+        route = await team.awaitable_attrs.route
+        stations = await route.awaitable_attrs.stations
+        return stations
 
 
 class Station:
     @staticmethod
-    def get(session, name):
-        return session.query(model.Station).filter_by(name=name).one_or_none()
+    async def get(session: AsyncSession, name: str):
+        query = select(model.Station).filter_by(name=name)
+        return await session.execute(query).scalar_one_or_none()
 
     @staticmethod
-    def all(session):
-        return session.query(model.Station).order_by(model.Station.order)
+    async def all(session: AsyncSession) -> ScalarResult[model.Station]:
+        query = select(model.Station).order_by(model.Station.order)
+        return (await session.execute(query)).scalars()
 
     @staticmethod
-    def create_new(session, data):
+    async def create_new(
+        session: AsyncSession, data: dict[str, Any]
+    ) -> model.Station:
         station = model.Station(**data)
-        station = session.merge(station)
+        station = await session.merge(station)
         return station
 
     @staticmethod
-    def upsert(session, name, data):
-        old = session.query(model.Station).filter_by(name=name).first()
+    async def upsert(
+        session: AsyncSession, name: str, data: dict[str, Any]
+    ) -> model.Station:
+        query = select(model.Station).filter_by(name=name)
+        result = await session.execute(query)
+        old = result.scalar_one()
         if not old:
-            old = Station.create_new(session, data)
+            old = await Station.create_new(session, data)
         for k, v in data.items():
             setattr(old, k, v)
         return old
 
     @staticmethod
-    def delete(session, name):
-        session.query(model.Station).filter_by(name=name).delete()
+    async def delete(session: AsyncSession, name: str) -> None:
+        query = delete(model.Station).filter_by(name=name)
+        await session.execute(query)
         return None
 
     @staticmethod
-    def assigned_to_route(session, route_name):
-        route = (
-            session.query(model.Route).filter_by(name=route_name).one_or_none()
-        )
-        return route.stations
+    async def assigned_to_route(
+        session: AsyncSession, route_name: str
+    ) -> list[model.Station]:
+        query = select(model.Route).filter_by(name=route_name)
+        result = await session.execute(query)
+        route = result.scalar_one()
+        return await route.awaitable_attrs.stations
 
     @staticmethod
-    def assign_user(session, station_name, user_name):
+    async def assign_user(
+        session: AsyncSession, station_name: str, user_name: str
+    ) -> bool:
         """
         Returns true if the operation worked, false if the use is already
         assigned to another station.
         """
-        station = (
-            session.query(model.Station).filter_by(name=station_name).one()
-        )
-        user = session.query(model.User).filter_by(name=user_name).one()
-        station.users.add(user)
+        station_query = select(model.Station).filter_by(name=station_name)
+        station_result = await session.execute(station_query)
+        station = station_result.scalar_one()
+        user_query = select(model.User).filter_by(name=user_name)
+        user_result = await session.execute(user_query)
+        user = user_result.scalar_one()
+        station_users = await station.awaitable_attrs.users
+        station_users.add(user)
         return True
 
     @staticmethod
-    def unassign_user(session, station_name, user_name):
-        station = (
-            session.query(model.Station).filter_by(name=station_name).one()
-        )
-
+    async def unassign_user(
+        session: AsyncSession, station_name: str, user_name: str
+    ) -> bool:
+        station_query = select(model.Station).filter_by(name=station_name)
+        station_result = await session.execute(station_query)
+        station = station_result.scalar_one()
         found_user = None
-        for user in station.users:
+        station_users = await station.awaitable_attrs.users
+        for user in station_users:
             if user.name == user_name:
                 found_user = user
                 break
 
         if found_user:
-            station.users.remove(found_user)
+            station_users.remove(found_user)
 
         return True
 
     @staticmethod
-    def team_states(
-        session, station_name
-    ) -> Generator[Tuple[str, TeamState, Optional[int], datetime], None, None]:
+    async def team_states(
+        session: AsyncSession, station_name: str
+    ) -> AsyncGenerator[Tuple[str, TeamState, Optional[int], datetime], None]:
         # TODO this could be improved by just using one query
-        station = (
-            session.query(model.Station).filter_by(name=station_name).one()
-        )
-        states = session.query(model.TeamStation).filter_by(
+        station_query = select(model.Station).filter_by(name=station_name)
+        station = (await session.execute(station_query)).scalars().one()
+        states_query = select(model.TeamStation).filter_by(
             station_name=station_name
         )
-        mapping = {state.team_name: state for state in states}
+        states = await session.execute(states_query)
+        mapping = {state.team_name: state for state in states.scalars()}
 
-        for route in station.routes:
-            for team in route.teams:
+        for route in await station.awaitable_attrs.routes:
+            for team in await route.awaitable_attrs.teams:
                 state = mapping.get(
                     team.name,
                     model.TeamStation(
@@ -380,47 +437,60 @@ class Station:
                         state=TeamState.UNKNOWN,
                     ),
                 )
-                yield (team.name, state.state, state.score, state.updated)
+                yield (
+                    team.name,
+                    state.state or TeamState.UNKNOWN,
+                    state.score,
+                    state.updated,
+                )
 
     @staticmethod
-    def accessible_by(session, username):
-        user = session.query(model.User).filter_by(name=username).one_or_none()
+    async def accessible_by(session: AsyncSession, username: str) -> set[str]:
+        query = select(model.User).filter_by(name=username)
+        result = await session.execute(query)
+        user = result.scalar_one_or_none()
         if not user:
             return set()
-        return {station.name for station in user.stations}
+        return {station.name for station in await user.awaitable_attrs.stations}
 
     @staticmethod
-    def related_team_states(
-        session: scoped_session, station_name: str, relation: StationRelation
-    ) -> Generator[Tuple[str, TeamState, Optional[int], datetime], None, None]:
-        related_station = Station.related(session, station_name, relation)
+    async def related_team_states(
+        session: AsyncSession,
+        station_name: str,
+        relation: schema.StationRelation,
+    ) -> AsyncGenerator[Tuple[str, TeamState, Optional[int], datetime], None]:
+        related_station = await Station.related(session, station_name, relation)
         if not related_station:
             return
-        yield from Station.team_states(session, related_station)
+        async for state in Station.team_states(session, related_station):
+            yield state
 
     @staticmethod
-    def related(
-        session: scoped_session, station_name: str, relation: StationRelation
+    async def related(
+        session: AsyncSession,
+        station_name: str,
+        relation: schema.StationRelation,
     ) -> str:
         subquery = (
-            session.query(model.Station.order)
+            select(model.Station.order)
             .filter_by(name=station_name)
             .scalar_subquery()
         )
-
-        if relation == StationRelation.PREVIOUS:
+        if relation == schema.StationRelation.PREVIOUS:
             relation_filter = model.Station.order < subquery
-        elif relation == StationRelation.NEXT:
+        elif relation == schema.StationRelation.NEXT:
             relation_filter = model.Station.order > subquery
         else:
             raise ValueError(f"Unsupported station-relation: {relation}")
 
-        query = session.query(model.Station.name).filter(relation_filter)
-        if relation == StationRelation.PREVIOUS:
-            query = query.order_by(model.Station.order.desc())  # type: ignore
-        elif relation == StationRelation.NEXT:
+        query = select(model.Station.name).filter(relation_filter)
+        if relation == schema.StationRelation.PREVIOUS:
+            query = query.order_by(model.Station.order.desc())
+        elif relation == schema.StationRelation.NEXT:
             query = query.order_by(model.Station.order)
-        first_row = query.first()
+
+        result = await session.execute(query)
+        first_row = result.first()
         if first_row is None:
             return ""
         return first_row.name
@@ -458,88 +528,119 @@ class Station:
 
 class Route:
     @staticmethod
-    def all(session):
-        return session.query(model.Route)
+    async def all(session: AsyncSession) -> ScalarResult[model.Route]:
+        return (await session.execute(select(model.Route))).scalars()
 
     @staticmethod
-    def create_new(session, data):
+    async def create_new(
+        session: AsyncSession, data: dict[str, Any]
+    ) -> model.Route:
         route = model.Route(**data)
-        route = session.merge(route)
+        route = await session.merge(route)
         return route
 
     @staticmethod
-    def upsert(session, name, data):
-        old = session.query(model.Route).filter_by(name=name).first()
+    async def upsert(
+        session: AsyncSession, name: str, data: dict[str, Any]
+    ) -> model.Route:
+        old_query = select(model.Route).filter_by(name=name)
+        old_result = await session.execute(old_query)
+        old = old_result.scalar_one_or_none()
         if not old:
-            old = Route.create_new(session, data)
+            old = await Route.create_new(session, data)
         for k, v in data.items():
             setattr(old, k, v)
         return old
 
     @staticmethod
-    def delete(session, name):
-        session.query(model.Route).filter_by(name=name).delete()
+    async def delete(session: AsyncSession, name: str) -> None:
+        delete_query = delete(model.Route).filter_by(name=name)
+        await session.execute(delete_query)
         return None
 
     @staticmethod
-    def assign_team(session, route_name, team_name):
-        team = session.query(model.Team).filter_by(name=team_name).one()
-        if team.route:
+    async def assign_team(
+        session: AsyncSession, route_name: str, team_name: str
+    ) -> bool:
+        team_query = select(model.Team).filter_by(name=team_name)
+        team = (await session.execute(team_query)).scalar_one()
+        team_route = await team.awaitable_attrs.route
+        if team_route:
             return False  # A team can only be assigned to one route
-        route = session.query(model.Route).filter_by(name=route_name).one()
-        route.teams.add(team)
+        route_query = select(model.Route).filter_by(name=route_name)
+        route = (await session.execute(route_query)).scalar_one()
+        route_teams = await route.awaitable_attrs.teams
+        route_teams.add(team)
         return True
 
     @staticmethod
-    def unassign_team(session, route_name, team_name):
-        route = session.query(model.Route).filter_by(name=route_name).one()
-        team = session.query(model.Team).filter_by(name=team_name).one()
-        route.teams.remove(team)
+    async def unassign_team(
+        session: AsyncSession, route_name: str, team_name: str
+    ) -> bool:
+        route_query = select(model.Route).filter_by(name=route_name)
+        route = (await session.execute(route_query)).scalar_one()
+        team_query = select(model.Team).filter_by(name=team_name)
+        team = (await session.execute(team_query)).scalar_one()
+        route_teams = await route.awaitable_attrs.teams
+        route_teams.remove(team)
         return True
 
     @staticmethod
-    def assign_station(session, route_name, station_name):
-        route = session.query(model.Route).filter_by(name=route_name).one()
-        station = (
-            session.query(model.Station).filter_by(name=station_name).one()
-        )
-        route.stations.add(station)
+    async def assign_station(
+        session: AsyncSession, route_name: str, station_name: str
+    ) -> bool:
+        route_query = select(model.Route).filter_by(name=route_name)
+        route = (await session.execute(route_query)).scalar_one()
+        station_query = select(model.Station).filter_by(name=station_name)
+        station = (await session.execute(station_query)).scalar_one()
+        route_stations = await route.awaitable_attrs.stations
+        route_stations.add(station)
         return True
 
     @staticmethod
-    def unassign_station(session, route_name, station_name):
-        route = session.query(model.Route).filter_by(name=route_name).one()
-        station = (
-            session.query(model.Station).filter_by(name=station_name).one()
-        )
-        route.stations.remove(station)
+    async def unassign_station(
+        session: AsyncSession, route_name: str, station_name: str
+    ) -> bool:
+        route_query = select(model.Route).filter_by(name=route_name)
+        route = (await session.execute(route_query)).scalar_one()
+        station_query = select(model.Station).filter_by(name=station_name)
+        station = (await session.execute(station_query)).scalar_one()
+        route_stations = await route.awaitable_attrs.stations
+        route_stations.remove(station)
         return True
 
     @staticmethod
-    def update_color(session, route_name, color_value):
-        route = session.query(model.Route).filter_by(name=route_name).one()
+    async def update_color(
+        session: AsyncSession, route_name: str, color_value: str
+    ) -> bool:
+        route_query = select(model.Route).filter_by(name=route_name)
+        route = (await session.execute(route_query)).scalar_one()
         route.color = color_value
         return True
 
 
 class User:
     @staticmethod
-    def by_social_connection(
-        session, provider, user_id, defaults=None
+    async def by_social_connection(
+        session: AsyncSession,
+        provider: str,
+        user_id: str,
+        defaults: dict[str, Any] | None = None,
     ) -> model.User:
         defaults = defaults or {}
-        query = session.query(model.OauthConnection).filter_by(
+        oauth_query = select(model.OauthConnection).filter_by(
             provider_id=provider, provider_user_id=user_id
         )
-        connection = query.one_or_none()
+        oauth_result = await session.execute(oauth_query)
+        connection = oauth_result.scalar_one_or_none()
         if not connection:
-            user = User.get(session, defaults["email"])
+            user = await User.get(session, defaults["email"])
             if not user:
                 random_pw = "".join(
                     SystemRandom().choice(ascii_letters + digits + punctuation)
                     for _ in range(64)
                 )
-                user = model.User(defaults["email"], password=random_pw)
+                user = model.User(name=defaults["email"], password=random_pw)
             new_connection = model.OauthConnection()
             new_connection.user = user
             new_connection.provider_id = provider
@@ -547,131 +648,208 @@ class User:
             new_connection.display_name = defaults.get("display_name")
             new_connection.image_url = defaults.get("avatar_url")
             session.add(new_connection)
-            session.commit()
+            await session.commit()
         else:
-            user = connection.user
+            user = await connection.awaitable_attrs.user
         return user
 
     @staticmethod
-    def get(session, name) -> model.User | None:
-        return session.query(model.User).filter_by(name=name).one_or_none()
+    async def get(session: AsyncSession, name: str) -> model.User | None:
+        query = select(model.User).filter_by(name=name)
+        user = (await session.execute(query)).scalar_one_or_none()
+        return user
 
     @staticmethod
-    def delete(session, name):
-        session.query(model.User).filter_by(name=name).delete()
+    async def delete(session: AsyncSession, name: str) -> None:
+        query = delete(model.User).filter_by(name=name)
+        await session.execute(query)
         return None
 
     @staticmethod
-    def create_new(session, data) -> model.User:
+    async def create_new(
+        session: AsyncSession, data: dict[str, Any]
+    ) -> model.User:
+        data.pop("avatar_url", None)  # Avatars are not settable
         user = model.User(**data)
-        user = session.add(user)
+        session.add(user)
         return user
 
     @staticmethod
-    def all(session) -> Query[model.User]:
-        return session.query(model.User)
+    async def all(session: AsyncSession) -> ScalarResult[model.User]:
+        query = select(model.User)
+        result = await session.execute(query)
+        return result.scalars()
 
     @staticmethod
-    def assign_role(session, user_name, role_name):
-        user = session.query(model.User).filter_by(name=user_name).one()
-        role = session.query(model.Role).filter_by(name=role_name).one()
-        user.roles.add(role)
+    async def assign_role(
+        session: AsyncSession, user_name: str, role_name: str
+    ) -> bool:
+        user_query = select(model.User).filter_by(name=user_name)
+        user = (await session.execute(user_query)).scalar_one()
+        role_query = select(model.Role).filter_by(name=role_name)
+        role = (await session.execute(role_query)).scalar_one()
+        user_roles = await user.awaitable_attrs.roles
+        user_roles.add(role)
         return True
 
     @staticmethod
-    def unassign_role(session, user_name, role_name):
-        user = session.query(model.User).filter_by(name=user_name).one()
-        role = session.query(model.Role).filter_by(name=role_name).one_or_none()
-        if role and role in user.roles:
+    async def unassign_role(
+        session: AsyncSession, user_name: str, role_name: str
+    ) -> bool:
+        user_query = select(model.User).filter_by(name=user_name)
+        user = (await session.execute(user_query)).scalar_one()
+        role_query = select(model.Role).filter_by(name=role_name)
+        role = (await session.execute(role_query)).scalar_one_or_none()
+        user_roles = await user.awaitable_attrs.roles
+        if role and role in user_roles:
             user.roles.remove(role)
         return True
 
     @staticmethod
-    def roles(session, user_name):
-        user = session.query(model.User).filter_by(name=user_name).one()
-        return user.roles
+    async def roles(session: AsyncSession, user_name: str) -> set[model.Role]:
+        user_query = select(model.User).filter_by(name=user_name)
+        user = (await session.execute(user_query)).scalar_one()
+        roles = await user.awaitable_attrs.roles
+        return roles
 
     @staticmethod
-    def assign_station(session, user_name, station_name):
+    async def assign_station(
+        session: AsyncSession, user_name: str, station_name: str
+    ) -> bool:
         """
         Returns true if the operation worked, false if the use is already
         assigned to another station.
         """
-        station = (
-            session.query(model.Station).filter_by(name=station_name).one()
-        )
-        user = session.query(model.User).filter_by(name=user_name).one()
-        station.users.add(user)
+        station_query = select(model.Station).filter_by(name=station_name)
+        station = (await session.execute(station_query)).scalar_one()
+        user_query = select(model.User).filter_by(name=user_name)
+        user = (await session.execute(user_query)).scalar_one()
+        station_users = await station.awaitable_attrs.users
+        station_users.add(user)
         return True
 
     @staticmethod
-    def unassign_station(session, user_name, station_name):
-        station = (
-            session.query(model.Station).filter_by(name=station_name).one()
-        )
+    async def unassign_station(
+        session: AsyncSession, user_name: str, station_name: str
+    ) -> bool:
+        station_query = select(model.Station).filter_by(name=station_name)
+        station = (await session.execute(station_query)).scalar_one()
+        station_users = await station.awaitable_attrs.users
 
         found_user = None
-        for user in station.users:
+        for user in station_users:
             if user.name == user_name:
                 found_user = user
                 break
 
         if found_user:
-            station.users.remove(found_user)
+            station_users.remove(found_user)
 
         return True
 
     @staticmethod
-    def may_access_station(session, user_name, station_name):
-        user = session.query(model.User).filter_by(name=user_name).one_or_none()
+    async def may_access_station(
+        session: AsyncSession, user_name: str, station_name: str
+    ) -> bool:
+        user_query = select(model.User).filter_by(name=user_name)
+        user = (await session.execute(user_query)).scalar_one()
         if not user:
             return False
-        user_stations = {_.name for _ in user.stations}
+        user_stations = {_.name for _ in await user.awaitable_attrs.stations}
         return station_name in user_stations
 
 
 class Role:
     @staticmethod
-    def get(session, name):
-        return session.query(model.Role).filter_by(name=name).one_or_none()
+    async def get(session: AsyncSession, name: str) -> model.Role | None:
+        query = select(model.Role).filter_by(name=name)
+        result = await session.execute(query)
+        return result.scalar_one_or_none()
 
     @staticmethod
-    def delete(session, name):
-        session.query(model.Role).filter_by(name=name).delete()
+    async def delete(session: AsyncSession, name: str) -> None:
+        query = delete(model.Role).filter_by(name=name)
+        await session.execute(query)
         return None
 
     @staticmethod
-    def create_new(session, data):
+    async def create_new(
+        session: AsyncSession, data: dict[str, Any]
+    ) -> model.Role:
         role = model.Role(**data)
-        role = session.add(role)
+        session.add(role)
         return role
 
     @staticmethod
-    def all(session):
-        return session.query(model.Role)
+    async def all(session: AsyncSession) -> ScalarResult[model.Role]:
+        query = select(model.Role)
+        result = await session.execute(query)
+        return result.scalars()
 
 
 class Upload:
     FALLBACK_FOLDER = "/tmp/uploads"
 
     @staticmethod
-    def all(session):
-        query = session.query(model.Upload)
-        return query
+    async def all(session: AsyncSession) -> ScalarResult[model.Upload]:
+        query = select(model.Upload)
+        result = await session.execute(query)
+        return result.scalars()
 
     @staticmethod
-    def list(session, username):
-        query = session.query(model.Upload).filter_by(username=username)
-        return query
+    async def list(
+        session: AsyncSession, username: str
+    ) -> ScalarResult[model.Upload]:
+        query = select(model.Upload).filter_by(username=username)
+        result = await session.execute(query)
+        return result.scalars()
 
     @staticmethod
-    def make_thumbnail(session, uuid):
-        query = session.query(model.Upload).filter_by(uuid=uuid)
-        instance = query.one_or_none()
+    async def make_thumbnail(
+        session: AsyncSession, uuid: str
+    ) -> model.Upload | None:
+        query = select(model.Upload).filter_by(uuid=uuid)
+        result = await session.execute(query)
+        instance = result.scalar_one_or_none()
         if not instance:
             return
-
         thumbnail_folder = join(Upload.FALLBACK_FOLDER, "__thumbnails__")
+
+    @staticmethod
+    async def store(
+        session: AsyncSession, user_name: str, relative_target: str
+    ) -> model.Upload:
+        query = select(model.Upload).filter_by(
+            filename=relative_target, username=user_name
+        )
+        result = await session.execute(query)
+        db_instance = result.scalar_one_or_none()
+        if not db_instance:
+            db_instance = model.Upload(relative_target, user_name)
+            session.add(db_instance)
+            await session.flush()
+        return db_instance
+
+    @staticmethod
+    async def by_id(
+        session: AsyncSession, uuid: uuid.UUID
+    ) -> model.Upload | None:
+        """
+        Returns an upload entity by its UUID
+        """
+        query = select(model.Upload).filter_by(uuid=uuid)
+        result = await session.execute(query)
+        instance = result.scalar_one_or_none()
+        return instance
+
+    @staticmethod
+    async def delete(
+        session: AsyncSession, data_folder: str, instance: model.Upload
+    ):
+        fullname = join(data_folder, instance.filename)
+        unlink(fullname)
+        await session.delete(instance)
+        await session.commit()
 
 
 class Questionnaire:

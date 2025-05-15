@@ -16,19 +16,20 @@ classifiers = []
 dependencies = [
     "bcrypt",
     "config-resolver >= 5.0, <6.0",
-    "flask",
-    "flask-restful",
-    "flask-sqlalchemy",
+    "fastapi",
     "gouge >= 2.0",
     "imapclient",
-    "pydantic[email]",
     "pillow",
     "psycopg[binary]",
     "pusher",
+    "pydantic[email]",
     "pyjwt",
     "python-dateutil",
+    "python-multipart",
+    "pyyaml",
     "requests_oauthlib",
     "sqlalchemy >= 2.0",
+    "uvicorn",
 ]
 
 [dependency-groups]
@@ -36,17 +37,16 @@ dev = [
     "alembic",
     "blessings",
     "gouge",
-    "types-Flask-SQLAlchemy",
     "types-Pillow",
     "types-python-dateutil",
 ]
 test = [
-    "flask-testing",
+    "httpx",
     "pytest",
+    "pytest-asyncio",
     "pytest-catchlog",
     "pytest-coverage",
     "pytest-env",
-    "pytest-xdist",
 ]
 
 [tool.setuptools.packages.find]

@@ -4,9 +4,8 @@ import sys
 from logging.config import fileConfig
 
 from alembic import context
+from powonline.model import get_dsn, metadata
 from sqlalchemy import create_engine
-
-from powonline.model import DB, get_dsn
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -19,7 +18,7 @@ fileConfig(config.config_file_name)
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
-target_metadata = DB.metadata
+target_metadata = metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
