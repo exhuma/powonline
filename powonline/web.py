@@ -1,13 +1,15 @@
 import logging
+from configparser import ConfigParser
 from os import environ
 
 from flask import Flask, jsonify  # type: ignore
 from flask_restful import Api
 
+from powonline import custom_routes
 from powonline.exc import ValidationError  # type: ignore
 
 from .config import default
-from .model import DB
+from .model import DB, get_dsn
 from .pusher import PusherWrapper
 from .resources import (
     Assignments,
@@ -15,6 +17,8 @@ from .resources import (
     Dashboard,
     GlobalDashboard,
     Job,
+    Questionnaire,
+    QuestionnaireList,
     Route,
     RouteColor,
     RouteList,
@@ -25,6 +29,8 @@ from .resources import (
     Scoreboard,
     Station,
     StationList,
+    StationQuestionnaire,
+    StationQuestionnaireList,
     StationUser,
     StationUserList,
     Team,
@@ -57,11 +63,16 @@ class CustomApi(Api):
         return super().handle_error(e)
 
 
+class MyFlask(Flask):
+    localconfig: ConfigParser
+    pusher: PusherWrapper
+
+
 def make_app(config=None):
     """
     Application factory
     """
-    app = Flask(__name__)
+    app = MyFlask(__name__)
     api = CustomApi(app)
 
     if not config:
@@ -70,6 +81,7 @@ def make_app(config=None):
     app.localconfig = config
     app.secret_key = config.get("security", "secret_key")
     app.register_blueprint(rootbp)
+    app.register_blueprint(custom_routes.ROUTER)
     app.pusher = PusherWrapper.create(
         config,
         config.get("pusher", "app_id", fallback=""),
@@ -97,6 +109,16 @@ def make_app(config=None):
         StationUser,
         "/station/<station_name>/users/<user_name>",
         "/user/<user_name>/stations/<station_name>",
+    )
+    api.add_resource(
+        StationQuestionnaireList,
+        "/station/<station_name>/questionnaires",
+        "/questionnaire/<questionnaire_name>/stations",
+    )
+    api.add_resource(
+        StationQuestionnaire,
+        "/station/<station_name>/questionnaires/<questionnaire_name>",
+        "/questionnaire/<questionnaire_name>/stations/<station_name>",
     )
     api.add_resource(RouteTeamList, "/route/<route_name>/teams")
     api.add_resource(RouteTeam, "/route/<route_name>/teams/<team_name>")
@@ -126,8 +148,10 @@ def make_app(config=None):
     api.add_resource(UploadList, "/upload")
     api.add_resource(Upload, "/upload/<uuid>", endpoint="api.get_file")
     api.add_resource(AuditLog, "/auditlog")
+    api.add_resource(QuestionnaireList, "/questionnaire")
+    api.add_resource(Questionnaire, "/questionnaire/<name>")
 
-    app.config["SQLALCHEMY_DATABASE_URI"] = environ["POWONLINE_DSN"]
+    app.config["SQLALCHEMY_DATABASE_URI"] = get_dsn()
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     DB.init_app(app)
 

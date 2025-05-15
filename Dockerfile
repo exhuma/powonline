@@ -19,6 +19,3 @@ RUN chmod +x /migrate.bash
 RUN chmod +x /fetch-mails.bash
 EXPOSE 8000
 ENTRYPOINT ["/start.bash"]
-
-
-# RUN useradd -ms /bin/bash powonline

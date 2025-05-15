@@ -24,6 +24,11 @@ def upgrade_db():
     try:
         os.chdir(alembic_root)
         alembic.config.main(argv=["--raiseerr", "upgrade", "head"])
+        yield
+        try:
+            alembic.config.main(argv=["--raiseerr", "downgrade", "base"])
+        except:
+            print("Unable to downgrade database")
     finally:
         os.chdir(current_dir)
 

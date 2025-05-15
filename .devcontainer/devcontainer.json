@@ -6,7 +6,9 @@
 	"dockerComposeFile": "docker-compose.yml",
 	"service": "app",
 	"workspaceFolder": "/workspace",
-	"forwardPorts": [5000, 5432],
+	"forwardPorts": [
+		5000
+	],
 	// Use 'postCreateCommand' to run commands after the container is created.
 	"postCreateCommand": "bash .devcontainer/initialise.bash",
 	"remoteUser": "vscode",
@@ -14,10 +16,20 @@
 		"5000": {
 			"label": "API",
 			"onAutoForward": "notify"
-		},
-		"5432": {
-			"label": "Database",
-			"onAutoForward": "notify"
+		}
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-python.black-formatter"
+			]
+		}
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-python.black-formatter"
+			]
 		}
 	}
 }

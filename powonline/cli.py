@@ -189,7 +189,7 @@ def import_csv(filename: str, event_day: str) -> None:
 @click.option("--force/--no-force", default=False)
 @click.option("--fail-fast/--no-fail-fast", default=False)
 @click.option("--quiet/--no-quiet", default=False)
-def fetch_mails(force, fail_fast, quiet):
+def fetch_mails(force: bool, fail_fast: bool, quiet: bool) -> int:
     import logging
 
     from gouge.colourcli import Simple  # type: ignore
@@ -222,7 +222,7 @@ def fetch_mails(force, fail_fast, quiet):
         def callback(username, filename):
             user = mdl.User.get_or_create(DB.session, username)
             db_instance = mdl.Upload.get_or_create(
-                DB.session, filename, user.name
+                DB.session, filename, user.name or ""
             )
             DB.session.commit()
             pusher.trigger(

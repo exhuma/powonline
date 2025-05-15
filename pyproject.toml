@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "powonline"
-version = "2024.04.28"
+version = "2025.05.13"
 authors = [
     {name = "Michel Albert", email = "michel@albert.lu"},
 ]
@@ -23,22 +23,21 @@ dependencies = [
     "imapclient",
     "pydantic[email]",
     "pillow",
-    "psycopg2-binary",
+    "psycopg[binary]",
     "pusher",
     "pyjwt",
     "python-dateutil",
     "requests_oauthlib",
-    "sqlalchemy < 2.0",
+    "sqlalchemy >= 2.0",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "alembic",
     "blessings",
     "gouge",
     "types-Flask-SQLAlchemy",
     "types-Pillow",
-    "types-psycopg2",
     "types-python-dateutil",
 ]
 test = [

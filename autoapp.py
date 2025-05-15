@@ -1,3 +1,8 @@
+"""
+Helper script to run the app with SSL (auto-detecting certs)
+This is used for local development with SSL
+"""
+
 from os.path import exists
 
 from gouge.colourcli import Simple

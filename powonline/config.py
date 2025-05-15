@@ -1,6 +1,6 @@
 from configparser import ConfigParser
 
-from config_resolver import get_config
+from config_resolver.core import get_config
 
 
 def default() -> ConfigParser:

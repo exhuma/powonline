@@ -2,10 +2,11 @@ from __future__ import with_statement
 
 import sys
 from logging.config import fileConfig
-from os import environ
 
 from alembic import context
 from sqlalchemy import create_engine
+
+from powonline.model import DB, get_dsn
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -18,24 +19,12 @@ fileConfig(config.config_file_name)
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
-target_metadata = None
+target_metadata = DB.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
-
-
-def get_url():
-    dsn = environ.get("POWONLINE_DSN", "").strip()
-    if not dsn:
-        print(
-            "Environment variable POWONLINE_DSN is not set or empty",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-    return dsn
 
 
 def run_migrations_offline():
@@ -50,7 +39,13 @@ def run_migrations_offline():
     script output.
 
     """
-    url = get_url()
+    url = get_dsn()
+    if not url:
+        print(
+            "Environment variable POWONLINE_DSN is not set or empty",
+            file=sys.stderr,
+        )
+        sys.exit(1)
     context.configure(
         url=url, target_metadata=target_metadata, literal_binds=True
     )
@@ -66,7 +61,14 @@ def run_migrations_online():
     and associate a connection with the context.
 
     """
-    connectable = create_engine(get_url())
+    url = get_dsn()
+    if not url:
+        print(
+            "Environment variable POWONLINE_DSN is not set or empty",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    connectable = create_engine(url)
 
     with connectable.connect() as connection:
         context.configure(

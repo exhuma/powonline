@@ -14,7 +14,7 @@ Required Environment Variables
 ==============================
 
 POWONLINE_DSN
-    The database DSN (f.ex.: ``postgresl://user:password@host/dbname``)
+    The database DSN (f.ex.: ``postgresql://user:password@host/dbname``)
 
 
 Development Setup (Recommended)
@@ -79,24 +79,6 @@ After the above steps are run you should be able to run the backend using the
 following command::
 
     $ fab run
-
-
-Setup for Questionnaires
-========================
-
-As of this writing (for version 2019.04.0), the questionnaires are not yet
-managed via the web app and two steps need to be done to make questionnaire
-scores work:
-
-* Manually add the questionnaire to the database
-* Edit the config file and map the questionnaire name to the station name where
-  it should be used (multiple entries can exist)::
-
-    [questionnaire-map]
-    ; Maps questionnaires to stations. When opening a station dashboard, the
-    ; edit-box for questionnaire scores will be linked to the mapped
-    ; questionnaire on that station
-    questionnaire_name = station_name
 
 
 Authentication
