@@ -28,7 +28,7 @@ LOG = logging.getLogger(__name__)
 DB = SQLAlchemy()
 
 
-def get_dsn():
+def get_dsn() -> str:
     dsn = environ.get("POWONLINE_DSN", "").strip()
     if dsn:
         parsed = urlparse(dsn)
@@ -51,38 +51,49 @@ class TeamState(Enum):
 
 
 class TimestampMixin:
-    inserted = Column(
+    inserted: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         FetchedValue(),
         nullable=False,
         server_default=func.now(),
     )
-    updated = Column(DateTime(timezone=True), nullable=True)
+    updated: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
+    )
 
 
-class TeamStateType(types.TypeDecorator):
+class TeamStateType(types.TypeDecorator[TeamState]):
     impl = types.Unicode
+    cache_ok = True
 
-    def process_bind_param(self, value, dialect):
+    def process_bind_param(
+        self, value: TeamState | None, dialect: Any
+    ) -> str | None:
+        if value is None:
+            return None
         return value.value
 
-    def process_result_value(self, value, dialect):
+    def process_result_value(
+        self, value: str | None, dialect: Any
+    ) -> TeamState | None:
+        if value is None:
+            return None
         return TeamState(value)
 
 
 class Setting(DB.Model):  # type: ignore
     __tablename__ = "setting"
 
-    key = Column(Unicode, primary_key=True, nullable=False)
-    value = Column(Unicode)
-    description = Column(Unicode)
+    key: Mapped[str] = mapped_column(Unicode, primary_key=True, nullable=False)
+    value: Mapped[str | None] = mapped_column(Unicode)
+    description: Mapped[str | None] = mapped_column(Unicode)
 
 
 class Message(DB.Model, TimestampMixin):  # type: ignore
     __tablename__ = "message"
-    id = Column(Integer, primary_key=True)
-    content = Column(Unicode)
-    user = Column(
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    content: Mapped[str | None] = mapped_column(Unicode)
+    user: Mapped[str | None] = mapped_column(
         Unicode,
         ForeignKey(
             "user.name",
@@ -91,7 +102,7 @@ class Message(DB.Model, TimestampMixin):  # type: ignore
             ondelete="CASCADE",
         ),
     )
-    team = Column(
+    team: Mapped[str | None] = mapped_column(
         Unicode,
         ForeignKey(
             "team.name",
@@ -127,7 +138,7 @@ class Team(DB.Model, TimestampMixin):  # type: ignore
     route_name: Mapped[str | None] = mapped_column(
         ForeignKey("route.name", onupdate="CASCADE", ondelete="SET NULL")
     )
-    owner = Column(
+    owner: Mapped[str | None] = mapped_column(
         Unicode,
         ForeignKey(
             "user.name",
@@ -275,12 +286,6 @@ class User(DB.Model, TimestampMixin):  # type: ignore
     oauth_connection: Mapped[list["OauthConnection"]] = relationship(
         "OauthConnection", back_populates="user"
     )
-    stations: Mapped[set["Station"]] = relationship(
-        "User",
-        secondary="user_station",
-        back_populates="users",
-        collection_class=set,
-    )
     files: Mapped[list["Upload"]] = relationship(
         "Upload", back_populates="user"
     )
@@ -377,7 +382,7 @@ class Role(DB.Model, TimestampMixin):  # type: ignore
         return output  # type: ignore
 
 
-class TeamStation(DB.Model, TimestampMixin):  # type: ignore
+class TeamStation(DB.Model):  # type: ignore
     __tablename__ = "team_station_state"
 
     team_name: Mapped[str] = mapped_column(
@@ -392,6 +397,12 @@ class TeamStation(DB.Model, TimestampMixin):  # type: ignore
         TeamStateType, default=TeamState.UNKNOWN
     )
     score: Mapped[int | None] = mapped_column(nullable=True, default=None)
+    inserted: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        FetchedValue(),
+        nullable=False,
+        server_default=func.now(),
+    )
     updated: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -415,12 +426,18 @@ class TeamStation(DB.Model, TimestampMixin):  # type: ignore
         self.state = state
 
 
-class Questionnaire(DB.Model, TimestampMixin):  # type: ignore
+class Questionnaire(DB.Model):  # type: ignore
     __tablename__ = "questionnaire"
 
     name: Mapped[str] = mapped_column(nullable=False, primary_key=True)
     max_score: Mapped[int | None] = mapped_column()
     order: Mapped[int | None] = mapped_column(server_default="0")
+    inserted: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        FetchedValue(),
+        nullable=False,
+        server_default=func.now(),
+    )
     updated: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -462,7 +479,7 @@ class Questionnaire(DB.Model, TimestampMixin):  # type: ignore
             LOG.debug("Ignoring 'inserted' timestamp (%s)", inserted)
 
 
-class TeamQuestionnaire(DB.Model, TimestampMixin):  # type: ignore
+class TeamQuestionnaire(DB.Model):  # type: ignore
     __tablename__ = "questionnaire_score"
 
     team_name: Mapped[str] = mapped_column(
@@ -479,6 +496,12 @@ class TeamQuestionnaire(DB.Model, TimestampMixin):  # type: ignore
     )
     score: Mapped[int | None] = mapped_column(
         Integer, nullable=True, default=None
+    )
+    inserted: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        FetchedValue(),
+        nullable=False,
+        server_default=func.now(),
     )
     updated: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -633,6 +656,6 @@ user_role_table = Table(
 
 
 class Job:
-    def __init__(self):
+    def __init__(self) -> None:
         self.action = "example_action"
-        self.args = {}
+        self.args: dict[str, Any] = {}

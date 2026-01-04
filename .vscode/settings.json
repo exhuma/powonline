@@ -21,7 +21,10 @@
             "password": "postgres"
         }
     ],
-    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.typeCheckingMode": "strict",
+    "mypy-type-checker.args": [
+        "--config-file=mypy.ini"
+    ],
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
         "source.organizeImports": "explicit"
