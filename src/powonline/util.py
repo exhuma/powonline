@@ -1,7 +1,7 @@
 import logging
 import re
 from os.path import splitext
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import jwt
 from flask import current_app
@@ -36,12 +36,12 @@ PERMISSION_MAP = {
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif"}
 
 
-def allowed_file(filename):
+def allowed_file(filename: str) -> bool:
     name, ext = splitext(filename)
     return ext.lower() in ALLOWED_EXTENSIONS
 
 
-def colorize_werkzeug():  # pragma: no cover
+def colorize_werkzeug() -> None:  # pragma: no cover
     """
     Fetches the werkzeug logger and adds a color filter.
 
@@ -62,7 +62,7 @@ def colorize_werkzeug():  # pragma: no cover
     }
 
     class WerkzeugColorFilter:  # pragma: no cover
-        def filter(self, record):
+        def filter(self, record: Any) -> Any:
             match = P_REQUEST_LOG.match(record.msg)
             if match:
                 try:
@@ -100,7 +100,7 @@ def colorize_werkzeug():  # pragma: no cover
     logging.getLogger("werkzeug").addFilter(WerkzeugColorFilter())
 
 
-def get_user_identity(request):
+def get_user_identity(request: Any) -> dict[str, Any]:
     auth_header = request.headers.get("Authorization")
     if not auth_header:
         LOG.debug("No Authorization header present!")
@@ -114,7 +114,7 @@ def get_user_identity(request):
     try:
         app = cast("MyFlask", current_app)
         jwt_secret = app.localconfig.get("security", "jwt_secret")
-        auth_payload = jwt.decode(token, jwt_secret, algorithms=["HS256"])
+        auth_payload: dict[str, Any] = jwt.decode(token, jwt_secret, algorithms=["HS256"])
     except (jwt.exceptions.InvalidTokenError, jwt.exceptions.DecodeError):
         LOG.info("Bearer token seems to have been tampered with!")
         raise AccessDenied("Access Denied (invalid token)!")
@@ -122,13 +122,13 @@ def get_user_identity(request):
     return auth_payload
 
 
-def get_user_permissions(request):
+def get_user_permissions(request: Any) -> tuple[dict[str, Any], set[str]]:
     auth_payload = get_user_identity(request)
     # Expand the user roles to permissions, collecting them all in one
     # big set.
-    user_roles = set(auth_payload.get("roles", []))
+    user_roles: set[str] = set(auth_payload.get("roles", []))
     LOG.debug("Bearer token with the following roles: %r", user_roles)
-    all_permissions = set()
+    all_permissions: set[str] = set()
     for role in user_roles:
         all_permissions |= PERMISSION_MAP.get(role, set())
 
