@@ -52,6 +52,7 @@ class TeamState(Enum):
 
 
 class TimestampMixin:
+    """Base mixin for models with optional updated timestamp."""
     inserted: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         FetchedValue(),
@@ -61,6 +62,11 @@ class TimestampMixin:
     updated: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, default=None
     )
+
+
+# Note: TeamStation, Questionnaire, and TeamQuestionnaire don't use TimestampMixin
+# because they require `updated` to be non-nullable with a default, which conflicts
+# with the mixin's nullable type. They define their timestamp fields directly.
 
 
 class TeamStateType(types.TypeDecorator[TeamState]):
