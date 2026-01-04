@@ -12,4 +12,5 @@ def default() -> ConfigParser:
             "filename": "app.ini",
         },
     )
-    return lookup.config
+    config: ConfigParser = lookup.config
+    return config
