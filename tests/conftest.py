@@ -83,6 +83,7 @@ async def dbsession():
             yield session
         finally:
             await session.rollback()
+            await session.close()
 
 
 @fixture
