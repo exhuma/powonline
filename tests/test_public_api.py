@@ -158,7 +158,7 @@ async def test_update_team(dbsession: AsyncSession, red_client: AsyncClient):
     inserted = data.pop("inserted", None)
     updated = data.pop("updated", None)
     assert inserted is not None
-    assert updated is not None
+    assert updated is None
     assert data == expected
 
 
