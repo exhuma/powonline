@@ -1,17 +1,11 @@
-[build-system]
-requires = ["setuptools", "setuptools-scm"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "powonline"
 version = "2025.05.13"
-authors = [
-    {name = "Michel Albert", email = "michel@albert.lu"},
-]
+authors = [{ name = "Michel Albert", email = "michel@albert.lu" }]
 description = "Tracker for PowWow 2017"
 readme = "README.rst"
 requires-python = ">=3.7"
-license = {text = "BSD-3-Clause"}
+license = { text = "BSD-3-Clause" }
 classifiers = []
 dependencies = [
     "bcrypt",
@@ -37,10 +31,10 @@ dev = [
     "alembic",
     "blessings",
     "gouge",
+    "httpx>=0.24.1",
+    "pytest>=7.4.4",
     "types-Pillow",
     "types-python-dateutil",
-]
-test = [
     "httpx",
     "pytest",
     "pytest-asyncio",
@@ -48,10 +42,6 @@ test = [
     "pytest-coverage",
     "pytest-env",
 ]
-
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["powonline*"]
 
 [project.entry-points."flask.commands"]
 grant-admin = "powonline.cli:grant_admin"
@@ -71,7 +61,7 @@ include_trailing_comma = true
 line_length = 80
 multi_line_output = 3
 use_parentheses = true
-virtual_env = "env"
+virtual_env = ".venv"
 
 [tool.pylint."messages control"]
 disable = ["C0330", "C0326"]
