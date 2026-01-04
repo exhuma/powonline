@@ -10,7 +10,6 @@ from httpx import ASGITransport, AsyncClient
 from pytest import fixture
 from sqlalchemy import text
 
-from powonline.dependencies import async_session
 from powonline.main import create_app
 
 LOG = logging.getLogger(__name__)
@@ -73,15 +72,17 @@ def test_client(app: FastAPI) -> AsyncClient:
 
 @fixture
 async def dbsession():
-    session = async_session()
-    with open(here("seed_cleanup.sql")) as seed:
-        await session.execute(text(seed.read()))
-        await session.commit()
-    try:
-        yield session
-    finally:
-        await session.rollback()
-        await session.close()
+    from powonline.dependencies import get_async_session_maker
+    
+    session_maker = get_async_session_maker()
+    async with session_maker() as session:
+        with open(here("seed_cleanup.sql")) as seed:
+            await session.execute(text(seed.read()))
+            await session.commit()
+        try:
+            yield session
+        finally:
+            await session.rollback()
 
 
 @fixture
