@@ -36,7 +36,7 @@ dev = [
     "alembic",
     "blessings",
     "gouge",
-    "types-Flask-SQLAlchemy",
+    "mypy>=1.4.1",
     "types-Pillow",
     "types-python-dateutil",
 ]

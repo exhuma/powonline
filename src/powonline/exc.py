@@ -3,7 +3,7 @@ class PowonlineException(Exception):
 
 
 class NoQuestionnaireForStation(PowonlineException):
-    def __init__(self, station, msg=""):
+    def __init__(self, station: str, msg: str = "") -> None:
         super().__init__(msg or f"No questionnaire for station {station}")
         self.station = station
 

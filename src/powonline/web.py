@@ -1,12 +1,14 @@
+from typing import Any
+
 import logging
 from configparser import ConfigParser
 from os import environ
 
-from flask import Flask, jsonify  # type: ignore
+from flask import Flask, jsonify
 from flask_restful import Api
 
 from powonline import custom_routes
-from powonline.exc import ValidationError  # type: ignore
+from powonline.exc import ValidationError
 
 from .config import default
 from .model import DB, get_dsn
@@ -53,7 +55,7 @@ class CustomApi(Api):
     Custom API class to handle exceptions
     """
 
-    def handle_error(self, e):
+    def handle_error(self, e: Exception) -> Any:
         """
         Handle exceptions
         """
@@ -68,7 +70,7 @@ class MyFlask(Flask):
     pusher: PusherWrapper
 
 
-def make_app(config=None):
+def make_app(config: ConfigParser | None = None) -> MyFlask:
     """
     Application factory
     """
