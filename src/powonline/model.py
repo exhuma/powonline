@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from os import environ, urandom
 from typing import Any
+from uuid import UUID as PyUUID
 from urllib.parse import urlparse, urlunparse
 
 import sqlalchemy.types as types
@@ -22,7 +23,7 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy.dialects.postgresql import BYTEA, UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship, scoped_session
+from sqlalchemy.orm import Mapped, mapped_column, relationship, scoped_session, Session
 
 LOG = logging.getLogger(__name__)
 DB = SQLAlchemy()
@@ -308,7 +309,7 @@ class User(DB.Model, TimestampMixin):  # type: ignore
             return ""
 
     @staticmethod
-    def get_or_create(session: scoped_session, username: str) -> "User":
+    def get_or_create(session: "scoped_session[Session]", username: str) -> "User":
         """
         Returns a user instance by name. Creates it if missing.
         """
@@ -365,7 +366,7 @@ class Role(DB.Model, TimestampMixin):  # type: ignore
         self.name = "Example Station"
 
     @staticmethod
-    def get_or_create(session: scoped_session, name: str) -> "Role":
+    def get_or_create(session: "scoped_session[Session]", name: str) -> "Role":
         """
         Retrieves a role with name *name*.
 
@@ -374,12 +375,12 @@ class Role(DB.Model, TimestampMixin):  # type: ignore
         query = session.query(Role).filter_by(name=name)
         existing = query.one_or_none()
         if not existing:
-            output = Role()  # type: ignore
+            output = Role()
             output.name = name
             session.add(output)
         else:
             output = existing
-        return output  # type: ignore
+        return output
 
 
 class TeamStation(DB.Model):  # type: ignore
@@ -393,7 +394,7 @@ class TeamStation(DB.Model):  # type: ignore
         ForeignKey("station.name", onupdate="CASCADE", ondelete="CASCADE"),
         primary_key=True,
     )
-    state: Mapped[TeamStateType | None] = mapped_column(
+    state: Mapped[TeamState | None] = mapped_column(
         TeamStateType, default=TeamState.UNKNOWN
     )
     score: Mapped[int | None] = mapped_column(nullable=True, default=None)
@@ -444,7 +445,7 @@ class Questionnaire(DB.Model):  # type: ignore
         default=datetime.now(),
         server_default=func.now(),
     )
-    station_name: Mapped[str] = mapped_column(
+    station_name: Mapped[str | None] = mapped_column(
         Unicode,
         ForeignKey(
             "station.name",
@@ -529,8 +530,8 @@ class Upload(DB.Model):  # type: ignore
         ForeignKey("user.name", onupdate="CASCADE", ondelete="CASCADE"),
         primary_key=True,
     )
-    uuid: Mapped[UUID] = mapped_column(
-        UUID,
+    uuid: Mapped[PyUUID] = mapped_column(
+        UUID(as_uuid=True),
         unique=True,
         nullable=False,
         name="id",
@@ -545,7 +546,7 @@ class Upload(DB.Model):  # type: ignore
 
     @staticmethod
     def get_or_create(
-        session: scoped_session, relname: str, username: str
+        session: "scoped_session[Session]", relname: str, username: str
     ) -> "Upload":
         """
         Returns an upload entity. Create it if it is missing
