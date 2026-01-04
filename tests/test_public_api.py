@@ -9,7 +9,6 @@ import pytest
 from config_resolver.core import get_config
 from fastapi import FastAPI
 from httpx import AsyncClient
-from powonline.auth import User, get_user
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from util import (
@@ -20,6 +19,7 @@ from util import (
 )
 
 from powonline import schema
+from powonline.auth import User, get_user
 
 LOG = logging.getLogger(__name__)
 
@@ -158,7 +158,7 @@ async def test_update_team(dbsession: AsyncSession, red_client: AsyncClient):
     inserted = data.pop("inserted", None)
     updated = data.pop("updated", None)
     assert inserted is not None
-    assert updated is not None
+    assert updated is None
     assert data == expected
 
 

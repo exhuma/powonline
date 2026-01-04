@@ -1,3 +1,4 @@
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from powonline import core
@@ -17,11 +18,12 @@ async def test_unassign_role(dbsession: AsyncSession, seed):
     assert "a-role" not in result
 
 
-def test_new_social_login(dbsession):
+@pytest.mark.asyncio
+async def test_new_social_login(dbsession):
     """
     When a user is logged in via a social login, the user is created
     """
-    user = core.User.by_social_connection(
+    user = await core.User.by_social_connection(
         dbsession, "github", "123456789", defaults={"email": "user@example.com"}
     )
     assert user.name == "user@example.com"
