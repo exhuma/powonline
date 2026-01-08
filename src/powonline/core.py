@@ -818,8 +818,8 @@ class Upload:
         instance = result.scalar_one_or_none()
         if not instance:
             return None
-        # TODO: Implement thumbnail generation
-        thumbnail_folder = join(Upload.FALLBACK_FOLDER, "__thumbnails__")
+        # TODO: Implement thumbnail generation functionality
+        # The thumbnail should be created in the __thumbnails__ subdirectory
         return instance
 
     @staticmethod
