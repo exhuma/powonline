@@ -57,15 +57,16 @@ class TimestampMixin:
     )
 
 
-class TeamStateType(types.TypeDecorator[str]):
+class TeamStateType(types.TypeDecorator[TeamState]):
     impl = types.Unicode
+    cache_ok = True
 
     def process_bind_param(self, value: TeamState | None, dialect: Any) -> str | None:
         return value.value if value else None
 
-    def process_result_value(self, value: str | None, dialect: Any) -> TeamState:
+    def process_result_value(self, value: str | None, dialect: Any) -> TeamState | None:
         if value is None:
-            return TeamState.UNKNOWN
+            return None
         return TeamState(value)
 
 
@@ -293,10 +294,10 @@ class User(Base, TimestampMixin):
         if not oauth_connection:
             return ""
         try:
-            image_url = oauth_connection[0].image_url
+            image_url: str | None = oauth_connection[0].image_url
             if not image_url:
                 return ""
-            return image_url
+            return str(image_url)
         except IndexError:
             LOG.debug(
                 "Unexpected error occurred with the avatar-url", exc_info=True
@@ -328,7 +329,7 @@ class User(Base, TimestampMixin):
         result = await session.execute(query)
         return result.scalar_one_or_none()
 
-    def __init__(self, *, name: str, password: str, **kwargs) -> None:
+    def __init__(self, *, name: str, password: str, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.name = name
         self.password = hashpw(password.encode("utf8"), gensalt())
@@ -347,12 +348,6 @@ class User(Base, TimestampMixin):
     roles: Mapped[set["Role"]] = relationship(
         "Role",
         secondary="user_role",
-        back_populates="users",
-        collection_class=set,
-    )
-    stations: Mapped[set["Station"]] = relationship(
-        "Station",
-        secondary="user_station",
         back_populates="users",
         collection_class=set,
     )
@@ -440,7 +435,7 @@ class Questionnaire(Base, TimestampMixin):
         default=datetime.now(),
         server_default=func.now(),
     )
-    station_name: Mapped[str] = mapped_column(
+    station_name: Mapped[str | None] = mapped_column(
         Unicode,
         ForeignKey(
             "station.name",

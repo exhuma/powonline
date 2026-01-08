@@ -18,15 +18,15 @@ from .exc import (
     NoSuchQuestionnaire,
     PowonlineException,
 )
-from .model import TeamState
+from .schema import AuditType, TeamState
 
 LOG = logging.getLogger(__name__)
 
 
-async def get_assignments(session: AsyncSession):
+async def get_assignments(session: AsyncSession) -> dict[str, dict[str, Any]]:
     routes = select(model.Route)
 
-    output = {
+    output: dict[str, dict[str, Any]] = {
         "teams": {},
         "stations": {},
     }
@@ -39,7 +39,7 @@ async def get_assignments(session: AsyncSession):
     return output
 
 
-def make_default_team_state():
+def make_default_team_state() -> dict[str, TeamState]:
     return {"state": TeamState.UNKNOWN}
 
 
@@ -67,8 +67,8 @@ async def questionnaire_scores(
     query = select(model.TeamQuestionnaire).join(model.Questionnaire)
     result = await session.execute(query)
     for row in result.scalars():
-        questionnaire_name: str = row.questionnaire_name  # type: ignore
-        score: int = row.score  # type: ignore
+        questionnaire_name: str = row.questionnaire_name
+        score: int = row.score or 0
         questionnaire = await row.awaitable_attrs.questionnaire
         station = await questionnaire.awaitable_attrs.station
         station_name = station.name if questionnaire and station else ""
@@ -82,7 +82,7 @@ async def questionnaire_scores(
 
 
 def add_audit_log(
-    session: AsyncSession, username: str, type_: model.AuditType, message: str
+    session: AsyncSession, username: str, type_: AuditType, message: str
 ) -> model.AuditLog:
     entry = model.AuditLog(
         timestamp=datetime.now(timezone.utc),
@@ -97,7 +97,7 @@ def add_audit_log(
 
 async def set_questionnaire_score(
     session: AsyncSession, team: str, station: str, score: int
-):
+) -> tuple[int | None, int]:
     """
     Set the team-score for a questionaire on a given station.
     """
@@ -131,7 +131,7 @@ async def set_questionnaire_score(
     return old_score, score
 
 
-async def global_dashboard(session: AsyncSession):
+async def global_dashboard(session: AsyncSession) -> list[schema.GlobalDashboardRow]:
     teams_query = select(model.Team).order_by(model.Team.name)
     stations_query = select(model.Station).order_by(model.Station.name)
     teams = await session.execute(teams_query)
@@ -211,7 +211,8 @@ class Team:
         query = select(model.Route).filter_by(name=route_name)
         result = await session.execute(query)
         route = result.scalar_one()
-        return await route.awaitable_attrs.teams
+        teams = await route.awaitable_attrs.teams
+        return list(teams)
 
     @staticmethod
     async def create_new(
@@ -327,14 +328,15 @@ class Team:
             return []
         route = await team.awaitable_attrs.route
         stations = await route.awaitable_attrs.stations
-        return stations
+        return list(stations)
 
 
 class Station:
     @staticmethod
-    async def get(session: AsyncSession, name: str):
+    async def get(session: AsyncSession, name: str) -> model.Station | None:
         query = select(model.Station).filter_by(name=name)
-        return await session.execute(query).scalar_one_or_none()
+        result = await session.execute(query)
+        return result.scalar_one_or_none()
 
     @staticmethod
     async def all(session: AsyncSession) -> ScalarResult[model.Station]:
@@ -375,7 +377,8 @@ class Station:
         query = select(model.Route).filter_by(name=route_name)
         result = await session.execute(query)
         route = result.scalar_one()
-        return await route.awaitable_attrs.stations
+        stations = await route.awaitable_attrs.stations
+        return list(stations)
 
     @staticmethod
     async def assign_user(
@@ -493,10 +496,12 @@ class Station:
         first_row = result.first()
         if first_row is None:
             return ""
-        return first_row.name
+        name: str = first_row[0]
+        return name
 
+    # NOTE: These methods use old SQLAlchemy 1.x sync session API
     @staticmethod
-    def assign_questionnaire(session, station_name, questionnaire_name):
+    def assign_questionnaire(session: Any, station_name: str, questionnaire_name: str) -> bool:
         station = (
             session.query(model.Station).filter_by(name=station_name).one()
         )
@@ -513,7 +518,7 @@ class Station:
         return True
 
     @staticmethod
-    def unassign_questionnaire(session, station_name, questionnaire_name):
+    def unassign_questionnaire(session: Any, station_name: str, questionnaire_name: str) -> bool:
         station = (
             session.query(model.Station).filter_by(name=station_name).one()
         )
@@ -710,7 +715,7 @@ class User:
         user_query = select(model.User).filter_by(name=user_name)
         user = (await session.execute(user_query)).scalar_one()
         roles = await user.awaitable_attrs.roles
-        return roles
+        return set(roles)
 
     @staticmethod
     async def assign_station(
@@ -812,7 +817,7 @@ class Upload:
         result = await session.execute(query)
         instance = result.scalar_one_or_none()
         if not instance:
-            return
+            return None
         thumbnail_folder = join(Upload.FALLBACK_FOLDER, "__thumbnails__")
 
     @staticmethod
@@ -845,7 +850,7 @@ class Upload:
     @staticmethod
     async def delete(
         session: AsyncSession, data_folder: str, instance: model.Upload
-    ):
+    ) -> None:
         fullname = join(data_folder, instance.filename)
         unlink(fullname)
         await session.delete(instance)
@@ -853,20 +858,22 @@ class Upload:
 
 
 class Questionnaire:
+    # NOTE: These methods use old SQLAlchemy 1.x sync session API
+    # They need to be migrated to AsyncSession and the new 2.0 style
     @staticmethod
-    def all(session):
+    def all(session: Any) -> Any:
         return session.query(model.Questionnaire).order_by(
             model.Questionnaire.order
         )
 
     @staticmethod
-    def create_new(session, data):
+    def create_new(session: Any, data: Any) -> Any:
         questionnaire = model.Questionnaire(**data)
         questionnaire = session.merge(questionnaire)
         return questionnaire
 
     @staticmethod
-    def get(session, name):
+    def get(session: Any, name: str) -> Any:
         return (
             session.query(model.Questionnaire)
             .filter_by(name=name)
@@ -874,7 +881,7 @@ class Questionnaire:
         )
 
     @staticmethod
-    def upsert(session, name, data):
+    def upsert(session: Any, name: str, data: Any) -> Any:
         old = session.query(model.Questionnaire).filter_by(name=name).first()
         if not old:
             old = Questionnaire.create_new(session, data)
@@ -886,12 +893,12 @@ class Questionnaire:
         return old
 
     @staticmethod
-    def delete(session, name):
+    def delete(session: Any, name: str) -> None:
         session.query(model.Questionnaire).filter_by(name=name).delete()
         return None
 
     @staticmethod
-    def assigned_to_station(session, station_name):
+    def assigned_to_station(session: Any, station_name: str) -> Any:
         station = (
             session.query(model.Station)
             .filter_by(name=station_name)
@@ -900,7 +907,7 @@ class Questionnaire:
         return station.questionnaires
 
     @staticmethod
-    def assign_station(session, station_name, questionnaire_name):
+    def assign_station(session: Any, station_name: str, questionnaire_name: str) -> bool:
         station = (
             session.query(model.Station)
             .filter_by(name=station_name)
@@ -925,7 +932,7 @@ class Questionnaire:
         return True
 
     @staticmethod
-    def unassign_station(session, questionnaire_name):
+    def unassign_station(session: Any, questionnaire_name: str) -> bool:
         questionnaire = (
             session.query(model.Questionnaire)
             .filter_by(name=questionnaire_name)
