@@ -3,6 +3,8 @@ Utility functions to work with pusher.com for distributed live-events.
 """
 import logging
 from abc import ABCMeta, abstractmethod
+from configparser import ConfigParser
+from typing import Any
 
 import pusher  # type: ignore
 
@@ -10,12 +12,12 @@ LOG = logging.getLogger(__name__)
 
 
 class PusherWrapper(metaclass=ABCMeta):
-    def __init__(self, channels):
+    def __init__(self, channels: dict[str, str]) -> None:
         self.channels = channels
         LOG.debug("pusher wrapper instantiated with channels: %r", channels)
 
     @staticmethod
-    def create(config, app_id, key, secret):
+    def create(config: ConfigParser, app_id: str, key: str, secret: str) -> "PusherWrapper":
         channels = {
             "team-event-channel": config.get(
                 "pusher_channels",
@@ -37,14 +39,14 @@ class PusherWrapper(metaclass=ABCMeta):
             return DefaultPusher(app_id, key, secret, channels)
 
     @abstractmethod
-    def trigger(self, channel, event, payload):
+    def trigger(self, channel: str, event: str, payload: Any) -> None:
         raise NotImplementedError("Not yet implemented")
 
-    def send_team_event(self, event, payload):
+    def send_team_event(self, event: str, payload: Any) -> None:
         channel = self.channels["team-event-channel"]
         self.trigger(channel, event, payload)
 
-    def send_file_event(self, event, payload):
+    def send_file_event(self, event: str, payload: Any) -> None:
         channel = self.channels["file-event-channel"]
         self.trigger(channel, event, payload)
 
@@ -54,23 +56,23 @@ class NullPusher(PusherWrapper):
     A fake pusher implementation which does nothing but logging.
     """
 
-    def trigger(self, channel, event, payload):
+    def trigger(self, channel: str, event: str, payload: Any) -> None:
         LOG.debug(
             "NullPusher triggered with %r, %r, %r", channel, event, payload
         )
 
 
 class DefaultPusher(PusherWrapper):
-    def __init__(self, app_id, key, secret, channels):
+    def __init__(self, app_id: str, key: str, secret: str, channels: dict[str, str]) -> None:
         super().__init__(channels)
         self._pusher = pusher.Pusher(
             app_id=app_id, key=key, secret=secret, cluster="eu", ssl=True
         )
         LOG.debug("Successfully created pusher client for app-id %r", app_id)
 
-    def trigger(self, channel, event, payload):
+    def trigger(self, channel: str, event: str, payload: Any) -> None:
         LOG.debug("Sending event %r to channel %r", event, channel)
         try:
             self._pusher.trigger(channel, event, payload)
-        except:
+        except Exception:
             LOG.exception("Unable to contact pusher!")

@@ -1,11 +1,12 @@
 from pathlib import Path
+from typing import Any
 
 from gouge.colourcli import Simple
 from gouge.preformatters import uvicorn_access
 
 
 class LogFormatter(Simple):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(
             *args,
             pre_formatters={

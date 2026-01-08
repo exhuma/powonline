@@ -1,6 +1,6 @@
 import os
 from configparser import ConfigParser
-from typing import Annotated
+from typing import Annotated, AsyncGenerator
 
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import (
