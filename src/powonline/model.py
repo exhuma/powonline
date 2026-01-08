@@ -32,7 +32,7 @@ LOG = logging.getLogger(__name__)
 metadata = MetaData()
 
 
-def get_dsn():
+def get_dsn() -> str:
     dsn = environ.get("POWONLINE_DSN", "").strip()
     if dsn:
         parsed = urlparse(dsn)
@@ -57,17 +57,19 @@ class TimestampMixin:
     )
 
 
-class TeamStateType(types.TypeDecorator):
+class TeamStateType(types.TypeDecorator[str]):
     impl = types.Unicode
 
-    def process_bind_param(self, value, dialect):
+    def process_bind_param(self, value: TeamState | None, dialect: Any) -> str | None:
         return value.value if value else None
 
-    def process_result_value(self, value, dialect):
+    def process_result_value(self, value: str | None, dialect: Any) -> TeamState:
+        if value is None:
+            return TeamState.UNKNOWN
         return TeamState(value)
 
 
-class Setting(Base):  # type: ignore
+class Setting(Base):
     __tablename__ = "setting"
 
     key = mapped_column(Unicode, primary_key=True, nullable=False)
@@ -75,7 +77,7 @@ class Setting(Base):  # type: ignore
     description = mapped_column(Unicode)
 
 
-class Message(Base, TimestampMixin):  # type: ignore
+class Message(Base, TimestampMixin):
     __tablename__ = "message"
     id = mapped_column(Integer, primary_key=True)
     content = mapped_column(Unicode)
@@ -99,7 +101,7 @@ class Message(Base, TimestampMixin):  # type: ignore
     )
 
 
-class Team(Base, TimestampMixin):  # type: ignore
+class Team(Base, TimestampMixin):
     __tablename__ = "team"
     __table_args__ = (
         UniqueConstraint("confirmation_key", name="team_confirmation_key"),
@@ -161,7 +163,7 @@ class Team(Base, TimestampMixin):  # type: ignore
         return "Team(name=%r)" % self.name
 
 
-class Station(Base, TimestampMixin):  # type: ignore
+class Station(Base, TimestampMixin):
     __tablename__ = "station"
     name: Mapped[str] = mapped_column(primary_key=True)
     contact: Mapped[str | None] = mapped_column()
@@ -201,7 +203,7 @@ class Station(Base, TimestampMixin):  # type: ignore
         return "Station(name=%r)" % self.name
 
 
-class Route(Base, TimestampMixin):  # type: ignore
+class Route(Base, TimestampMixin):
     __tablename__ = "route"
 
     name: Mapped[str] = mapped_column(primary_key=True)
@@ -224,7 +226,7 @@ class Route(Base, TimestampMixin):  # type: ignore
             setattr(self, k, v)
 
 
-class OauthConnection(Base, TimestampMixin):  # type: ignore
+class OauthConnection(Base, TimestampMixin):
     __tablename__ = "oauth_connection"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -251,7 +253,7 @@ class OauthConnection(Base, TimestampMixin):  # type: ignore
     )
 
 
-class User(Base, TimestampMixin):  # type: ignore
+class User(Base, TimestampMixin):
     __tablename__ = "user"
     __table_args__ = (UniqueConstraint("email", name="user_email_key"),)
 
@@ -273,7 +275,7 @@ class User(Base, TimestampMixin):  # type: ignore
         "OauthConnection", back_populates="user"
     )
     stations: Mapped[set["Station"]] = relationship(
-        "User",
+        "Station",
         secondary="user_station",
         back_populates="users",
         collection_class=set,
@@ -291,9 +293,10 @@ class User(Base, TimestampMixin):  # type: ignore
         if not oauth_connection:
             return ""
         try:
-            if not oauth_connection[0].image_url:
+            image_url = oauth_connection[0].image_url
+            if not image_url:
                 return ""
-            return oauth_connection[0].image_url
+            return image_url
         except IndexError:
             LOG.debug(
                 "Unexpected error occurred with the avatar-url", exc_info=True
@@ -311,7 +314,7 @@ class User(Base, TimestampMixin):  # type: ignore
         if not instance:
             randbytes = encode(urandom(100), "hex")[:30]
             password = randbytes.decode("ascii")
-            instance = User(username, password)
+            instance = User(name=username, password=password)
             session.add(instance)
             LOG.warning("User initialised with random password!")
         return instance
@@ -355,7 +358,7 @@ class User(Base, TimestampMixin):  # type: ignore
     )
 
 
-class Role(Base, TimestampMixin):  # type: ignore
+class Role(Base, TimestampMixin):
     __tablename__ = "role"
     name: Mapped[str] = mapped_column(primary_key=True)
     users: Mapped[set["User"]] = relationship(
@@ -384,10 +387,10 @@ class Role(Base, TimestampMixin):  # type: ignore
             session.add(output)
         else:
             output = existing
-        return output  # type: ignore
+        return output
 
 
-class TeamStation(Base, TimestampMixin):  # type: ignore
+class TeamStation(Base, TimestampMixin):
     __tablename__ = "team_station_state"
 
     team_name: Mapped[str] = mapped_column(
@@ -425,7 +428,7 @@ class TeamStation(Base, TimestampMixin):  # type: ignore
         self.state = state
 
 
-class Questionnaire(Base, TimestampMixin):  # type: ignore
+class Questionnaire(Base, TimestampMixin):
     __tablename__ = "questionnaire"
 
     name: Mapped[str] = mapped_column(nullable=False, primary_key=True)
@@ -461,18 +464,18 @@ class Questionnaire(Base, TimestampMixin):  # type: ignore
         station_name: str | None = None,
         inserted: datetime | None = None,
         updated: datetime | None = None,
-    ):
+    ) -> None:
         self.name = name
         self.max_score = max_score
         self.order = order
-        self.station_name = station_name or None
+        self.station_name = station_name
         if updated:
             self.updated = updated
         if inserted:
             LOG.debug("Ignoring 'inserted' timestamp (%s)", inserted)
 
 
-class TeamQuestionnaire(Base, TimestampMixin):  # type: ignore
+class TeamQuestionnaire(Base, TimestampMixin):
     __tablename__ = "questionnaire_score"
 
     team_name: Mapped[str] = mapped_column(
@@ -508,7 +511,7 @@ class TeamQuestionnaire(Base, TimestampMixin):  # type: ignore
         self.score = score
 
 
-class Upload(Base):  # type: ignore
+class Upload(Base):
     __tablename__ = "uploads"
     filename: Mapped[str] = mapped_column(Unicode, primary_key=True)
     username: Mapped[str] = mapped_column(
@@ -549,7 +552,7 @@ class Upload(Base):  # type: ignore
         return instance
 
 
-class AuditLog(Base):  # type: ignore
+class AuditLog(Base):
     __tablename__ = "auditlog"
     timestamp: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -642,6 +645,6 @@ user_role_table = Table(
 
 
 class Job:
-    def __init__(self):
+    def __init__(self) -> None:
         self.action = "example_action"
-        self.args = {}
+        self.args: dict[str, Any] = {}

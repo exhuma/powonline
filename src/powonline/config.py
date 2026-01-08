@@ -1,5 +1,6 @@
 from configparser import ConfigParser
 from functools import lru_cache
+from typing import cast
 
 from config_resolver.core import get_config
 
@@ -14,4 +15,4 @@ def default() -> ConfigParser:
             "filename": "app.ini",
         },
     )
-    return lookup.config
+    return cast(ConfigParser, lookup.config)

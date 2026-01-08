@@ -42,6 +42,7 @@ dev = [
     "pytest-coverage",
     "pytest-env",
     "mypy>=1.4.1",
+    "types-requests-oauthlib>=1.3.0.1",
 ]
 
 [project.entry-points."flask.commands"]
