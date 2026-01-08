@@ -9,7 +9,7 @@ from .schema import ErrorMessage
 LOG = logging.getLogger(__name__)
 
 
-def handle_access_errors(request: Request, error: AccessDenied):
+def handle_access_errors(request: Request, error: AccessDenied) -> JSONResponse:
     output = ErrorMessage(message="Access Denied", detail=str(error))
     match error.reason:
         case AuthDeniedReason.ACCESS_DENIED:
@@ -22,7 +22,7 @@ def handle_access_errors(request: Request, error: AccessDenied):
     return JSONResponse(output.model_dump(), status_code)
 
 
-def handle_value_error(request: Request, error: UserInputError):
+def handle_value_error(request: Request, error: UserInputError) -> JSONResponse:
     output = ErrorMessage(message="User input error", detail=str(error))
     LOG.debug(output)
     return JSONResponse(output.model_dump(), 400)

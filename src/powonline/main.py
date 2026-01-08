@@ -33,7 +33,7 @@ def get_cors_data() -> dict[str, list[str]]:
     return output
 
 
-def create_app():
+def create_app() -> FastAPI:
     app = FastAPI(title="powonline", version=__version__)
     cors_info = get_cors_data()
     app.add_middleware(

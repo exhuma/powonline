@@ -59,7 +59,7 @@ def set_async_session_maker(session_maker: async_sessionmaker[AsyncSession]) -> 
     _async_session = session_maker
 
 
-async def get_db():
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """Dependency to get a database session."""
     session_maker = get_async_session_maker()
     async with session_maker() as session:
@@ -67,7 +67,7 @@ async def get_db():
         await session.commit()
 
 
-def get_pusher(config: Annotated[ConfigParser, Depends(default)]):
+def get_pusher(config: Annotated[ConfigParser, Depends(default)]) -> PusherWrapper:
     output = PusherWrapper.create(
         config,
         config.get("pusher", "app_id", fallback=""),

@@ -5,7 +5,7 @@ ROUTER = APIRouter()
 
 
 @ROUTER.get("/")
-async def root():
+async def root() -> RedirectResponse:
     """
     The main entry-point of the API (redirects to the docs)
     """
