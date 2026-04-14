@@ -7,7 +7,7 @@
 
 set -xe
 
-suto apt-get update && sudo apt-get install -y entr
+sudo apt-get update && sudo apt-get install -y entr
 
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
