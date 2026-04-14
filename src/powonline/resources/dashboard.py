@@ -6,27 +6,27 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from powonline import core, schema
 from powonline.dependencies import get_db
 
-ROUTER = APIRouter(prefix="", tags=["dashboard"])
+ROUTER = APIRouter(prefix="/events/{event_id}", tags=["dashboard"])
 
 
 @ROUTER.get("/station/{station_name}/dashboard")
 @ROUTER.get("/station/{station_name}/{relation}/dashboard")
 async def for_station(
     session: Annotated[AsyncSession, Depends(get_db)],
+    event_id: int,
     station_name: str,
     relation: schema.StationRelation = schema.StationRelation.UNKNOWN,
 ) -> list[schema.DashboardRow]:
-    print(station_name, relation)
     if relation != schema.StationRelation.UNKNOWN:
         station_name = await core.Station.related(
-            session, station_name, relation
+            session, station_name, relation, event_id=event_id
         )
         if not station_name:
             return []
 
     output: list[schema.DashboardRow] = []
     async for team_name, state, score, updated in core.Station.team_states(
-        session, station_name
+        session, station_name, event_id=event_id
     ):
         output.append(
             schema.DashboardRow(
@@ -41,7 +41,8 @@ async def for_station(
 
 @ROUTER.get("/dashboard")
 async def get(
-    session: Annotated[AsyncSession, Depends(get_db)]
+    session: Annotated[AsyncSession, Depends(get_db)],
+    event_id: int,
 ) -> list[schema.GlobalDashboardRow]:
-    output = await core.global_dashboard(session)
+    output = await core.global_dashboard(session, event_id=event_id)
     return output

@@ -23,8 +23,12 @@ from .model import TeamState
 LOG = logging.getLogger(__name__)
 
 
-async def get_assignments(session: AsyncSession):
+async def get_assignments(
+    session: AsyncSession, event_id: int | None = None
+):
     routes = select(model.Route)
+    if event_id is not None:
+        routes = routes.filter_by(event_id=event_id)
 
     output = {
         "teams": {},
@@ -43,8 +47,12 @@ def make_default_team_state():
     return {"state": TeamState.UNKNOWN}
 
 
-async def scoreboard(session: AsyncSession) -> Iterator[tuple[str, int]]:
+async def scoreboard(
+    session: AsyncSession, event_id: int | None = None
+) -> Iterator[tuple[str, int]]:
     query = select(model.Team)
+    if event_id is not None:
+        query = query.filter_by(event_id=event_id)
     teams = await session.execute(query)
     scores: dict[str, int] = {}
     for row in teams.scalars():
@@ -62,9 +70,12 @@ async def scoreboard(session: AsyncSession) -> Iterator[tuple[str, int]]:
 
 async def questionnaire_scores(
     session: AsyncSession,
+    event_id: int | None = None,
 ) -> dict[str, dict[str, dict[str, str | int]]]:
     output: dict[str, dict[str, dict[str, str | int]]] = {}
     query = select(model.TeamQuestionnaire).join(model.Questionnaire)
+    if event_id is not None:
+        query = query.filter(model.Questionnaire.event_id == event_id)
     result = await session.execute(query)
     for row in result.scalars():
         questionnaire_name: str = row.questionnaire_name  # type: ignore
@@ -82,13 +93,18 @@ async def questionnaire_scores(
 
 
 def add_audit_log(
-    session: AsyncSession, username: str, type_: model.AuditType, message: str
+    session: AsyncSession,
+    username: str,
+    type_: model.AuditType,
+    message: str,
+    event_id: int | None = None,
 ) -> model.AuditLog:
     entry = model.AuditLog(
         timestamp=datetime.now(timezone.utc),
         username=username,
         type_=type_,
         message=message,
+        event_id=event_id,
     )
     LOG.debug("New entry on audit-trail: %r", entry)
     session.add(entry)
@@ -96,12 +112,18 @@ def add_audit_log(
 
 
 async def set_questionnaire_score(
-    session: AsyncSession, team: str, station: str, score: int
+    session: AsyncSession,
+    team: str,
+    station: str,
+    score: int,
+    event_id: int | None = None,
 ):
     """
     Set the team-score for a questionaire on a given station.
     """
     station_query = select(model.Station).filter_by(name=station)
+    if event_id is not None:
+        station_query = station_query.filter_by(event_id=event_id)
     station_entity = (await session.execute(station_query)).scalar_one_or_none()
     if not station_entity:
         raise PowonlineException(f"Station {station} not found")
@@ -131,9 +153,14 @@ async def set_questionnaire_score(
     return old_score, score
 
 
-async def global_dashboard(session: AsyncSession):
+async def global_dashboard(
+    session: AsyncSession, event_id: int | None = None
+):
     teams_query = select(model.Team).order_by(model.Team.name)
     stations_query = select(model.Station).order_by(model.Station.name)
+    if event_id is not None:
+        teams_query = teams_query.filter_by(event_id=event_id)
+        stations_query = stations_query.filter_by(event_id=event_id)
     teams = await session.execute(teams_query)
     team_names = set()
     station_names = set()
@@ -183,14 +210,22 @@ async def global_dashboard(session: AsyncSession):
 
 class Team:
     @staticmethod
-    async def all(session: AsyncSession) -> ScalarResult[model.Team]:
+    async def all(
+        session: AsyncSession, event_id: int | None = None
+    ) -> ScalarResult[model.Team]:
         query = select(model.Team).order_by(model.Team.effective_start_time)
+        if event_id is not None:
+            query = query.filter_by(event_id=event_id)
         result = await session.execute(query)
         return result.scalars()
 
     @staticmethod
-    async def get(session: AsyncSession, name: str) -> model.Team | None:
+    async def get(
+        session: AsyncSession, name: str, event_id: int | None = None
+    ) -> model.Team | None:
         query = select(model.Team).filter_by(name=name)
+        if event_id is not None:
+            query = query.filter_by(event_id=event_id)
         result = await session.execute(query)
         return result.scalar_one_or_none()
 
@@ -206,9 +241,11 @@ class Team:
 
     @staticmethod
     async def assigned_to_route(
-        session: AsyncSession, route_name: str
+        session: AsyncSession, route_name: str, event_id: int | None = None
     ) -> list[model.Team]:
         query = select(model.Route).filter_by(name=route_name)
+        if event_id is not None:
+            query = query.filter_by(event_id=event_id)
         result = await session.execute(query)
         route = result.scalar_one()
         return await route.awaitable_attrs.teams
@@ -225,11 +262,16 @@ class Team:
 
     @staticmethod
     async def upsert(
-        session: AsyncSession, name: str, data: dict[str, Any]
+        session: AsyncSession,
+        name: str,
+        data: dict[str, Any],
+        event_id: int | None = None,
     ) -> model.Team:
         data.pop("inserted", None)
         data.pop("updated", None)
         old_query = select(model.Team).filter_by(name=name)
+        if event_id is not None:
+            old_query = old_query.filter_by(event_id=event_id)
         old_result = await session.execute(old_query)
         old = old_result.scalar_one_or_none()
         if not old:
@@ -239,15 +281,40 @@ class Team:
         return old
 
     @staticmethod
-    async def delete(session: AsyncSession, name: str) -> None:
+    async def delete(
+        session: AsyncSession, name: str, event_id: int | None = None
+    ) -> None:
         query = delete(model.Team).filter_by(name=name)
+        if event_id is not None:
+            query = query.filter_by(event_id=event_id)
         await session.execute(query)
         return None
 
     @staticmethod
     async def get_station_data(
-        session: AsyncSession, team_name: str, station_name: str
+        session: AsyncSession,
+        team_name: str,
+        station_name: str,
+        event_id: int | None = None,
     ) -> model.TeamStation:
+        if event_id is not None:
+            team_query = select(model.Team).filter_by(
+                name=team_name,
+                event_id=event_id,
+            )
+            station_query = select(model.Station).filter_by(
+                name=station_name,
+                event_id=event_id,
+            )
+            team = (await session.execute(team_query)).scalar_one_or_none()
+            station = (
+                await session.execute(station_query)
+            ).scalar_one_or_none()
+            if not team or not station:
+                return model.TeamStation(
+                    team_name=team_name,
+                    station_name=station_name,
+                )
         query = select(model.TeamStation).filter_by(
             team_name=team_name, station_name=station_name
         )
@@ -262,8 +329,26 @@ class Team:
 
     @staticmethod
     async def advance_on_station(
-        session: AsyncSession, team_name: str, station_name: str
+        session: AsyncSession,
+        team_name: str,
+        station_name: str,
+        event_id: int | None = None,
     ) -> TeamState:
+        if event_id is not None:
+            team_query = select(model.Team).filter_by(
+                name=team_name,
+                event_id=event_id,
+            )
+            station_query = select(model.Station).filter_by(
+                name=station_name,
+                event_id=event_id,
+            )
+            team = (await session.execute(team_query)).scalar_one_or_none()
+            station = (
+                await session.execute(station_query)
+            ).scalar_one_or_none()
+            if not team or not station:
+                raise PowonlineException("Unknown team or station for event")
         query = select(model.TeamStation).filter_by(
             team_name=team_name, station_name=station_name
         )
@@ -296,8 +381,27 @@ class Team:
 
     @staticmethod
     async def set_station_score(
-        session: AsyncSession, team_name: str, station_name: str, score: int
+        session: AsyncSession,
+        team_name: str,
+        station_name: str,
+        score: int,
+        event_id: int | None = None,
     ) -> tuple[int | None, int]:
+        if event_id is not None:
+            team_query = select(model.Team).filter_by(
+                name=team_name,
+                event_id=event_id,
+            )
+            station_query = select(model.Station).filter_by(
+                name=station_name,
+                event_id=event_id,
+            )
+            team = (await session.execute(team_query)).scalar_one_or_none()
+            station = (
+                await session.execute(station_query)
+            ).scalar_one_or_none()
+            if not team or not station:
+                raise PowonlineException("Unknown team or station for event")
         query = select(model.TeamStation).filter_by(
             team_name=team_name, station_name=station_name
         )
@@ -315,9 +419,11 @@ class Team:
 
     @staticmethod
     async def stations(
-        session: AsyncSession, team_name: str
+        session: AsyncSession, team_name: str, event_id: int | None = None
     ) -> list[model.Station]:
         query = select(model.Team).filter_by(name=team_name)
+        if event_id is not None:
+            query = query.filter_by(event_id=event_id)
         result = await session.execute(query)
         team = result.scalar_one_or_none()
         if not team:
@@ -332,13 +438,24 @@ class Team:
 
 class Station:
     @staticmethod
-    async def get(session: AsyncSession, name: str):
+    async def get(
+        session: AsyncSession,
+        name: str,
+        event_id: int | None = None,
+    ):
         query = select(model.Station).filter_by(name=name)
+        if event_id is not None:
+            query = query.filter_by(event_id=event_id)
         return await session.execute(query).scalar_one_or_none()
 
     @staticmethod
-    async def all(session: AsyncSession) -> ScalarResult[model.Station]:
+    async def all(
+        session: AsyncSession,
+        event_id: int | None = None,
+    ) -> ScalarResult[model.Station]:
         query = select(model.Station).order_by(model.Station.order)
+        if event_id is not None:
+            query = query.filter_by(event_id=event_id)
         return (await session.execute(query)).scalars()
 
     @staticmethod
@@ -351,9 +468,14 @@ class Station:
 
     @staticmethod
     async def upsert(
-        session: AsyncSession, name: str, data: dict[str, Any]
+        session: AsyncSession,
+        name: str,
+        data: dict[str, Any],
+        event_id: int | None = None,
     ) -> model.Station:
         query = select(model.Station).filter_by(name=name)
+        if event_id is not None:
+            query = query.filter_by(event_id=event_id)
         result = await session.execute(query)
         old = result.scalar_one()
         if not old:
@@ -363,16 +485,26 @@ class Station:
         return old
 
     @staticmethod
-    async def delete(session: AsyncSession, name: str) -> None:
+    async def delete(
+        session: AsyncSession,
+        name: str,
+        event_id: int | None = None,
+    ) -> None:
         query = delete(model.Station).filter_by(name=name)
+        if event_id is not None:
+            query = query.filter_by(event_id=event_id)
         await session.execute(query)
         return None
 
     @staticmethod
     async def assigned_to_route(
-        session: AsyncSession, route_name: str
+        session: AsyncSession,
+        route_name: str,
+        event_id: int | None = None,
     ) -> list[model.Station]:
         query = select(model.Route).filter_by(name=route_name)
+        if event_id is not None:
+            query = query.filter_by(event_id=event_id)
         result = await session.execute(query)
         route = result.scalar_one()
         return await route.awaitable_attrs.stations
@@ -416,10 +548,14 @@ class Station:
 
     @staticmethod
     async def team_states(
-        session: AsyncSession, station_name: str
+        session: AsyncSession,
+        station_name: str,
+        event_id: int | None = None,
     ) -> AsyncGenerator[Tuple[str, TeamState, Optional[int], datetime], None]:
         # TODO this could be improved by just using one query
         station_query = select(model.Station).filter_by(name=station_name)
+        if event_id is not None:
+            station_query = station_query.filter_by(event_id=event_id)
         station = (await session.execute(station_query)).scalars().one()
         states_query = select(model.TeamStation).filter_by(
             station_name=station_name
@@ -458,11 +594,21 @@ class Station:
         session: AsyncSession,
         station_name: str,
         relation: schema.StationRelation,
+        event_id: int | None = None,
     ) -> AsyncGenerator[Tuple[str, TeamState, Optional[int], datetime], None]:
-        related_station = await Station.related(session, station_name, relation)
+        related_station = await Station.related(
+            session,
+            station_name,
+            relation,
+            event_id=event_id,
+        )
         if not related_station:
             return
-        async for state in Station.team_states(session, related_station):
+        async for state in Station.team_states(
+            session,
+            related_station,
+            event_id=event_id,
+        ):
             yield state
 
     @staticmethod
@@ -470,6 +616,7 @@ class Station:
         session: AsyncSession,
         station_name: str,
         relation: schema.StationRelation,
+        event_id: int | None = None,
     ) -> str:
         subquery = (
             select(model.Station.order)
@@ -484,6 +631,8 @@ class Station:
             raise ValueError(f"Unsupported station-relation: {relation}")
 
         query = select(model.Station.name).filter(relation_filter)
+        if event_id is not None:
+            query = query.filter(model.Station.event_id == event_id)
         if relation == schema.StationRelation.PREVIOUS:
             query = query.order_by(model.Station.order.desc())
         elif relation == schema.StationRelation.NEXT:
@@ -528,8 +677,14 @@ class Station:
 
 class Route:
     @staticmethod
-    async def all(session: AsyncSession) -> ScalarResult[model.Route]:
-        return (await session.execute(select(model.Route))).scalars()
+    async def all(
+        session: AsyncSession,
+        event_id: int | None = None,
+    ) -> ScalarResult[model.Route]:
+        query = select(model.Route)
+        if event_id is not None:
+            query = query.filter_by(event_id=event_id)
+        return (await session.execute(query)).scalars()
 
     @staticmethod
     async def create_new(
@@ -541,9 +696,14 @@ class Route:
 
     @staticmethod
     async def upsert(
-        session: AsyncSession, name: str, data: dict[str, Any]
+        session: AsyncSession,
+        name: str,
+        data: dict[str, Any],
+        event_id: int | None = None,
     ) -> model.Route:
         old_query = select(model.Route).filter_by(name=name)
+        if event_id is not None:
+            old_query = old_query.filter_by(event_id=event_id)
         old_result = await session.execute(old_query)
         old = old_result.scalar_one_or_none()
         if not old:
@@ -553,21 +713,34 @@ class Route:
         return old
 
     @staticmethod
-    async def delete(session: AsyncSession, name: str) -> None:
+    async def delete(
+        session: AsyncSession,
+        name: str,
+        event_id: int | None = None,
+    ) -> None:
         delete_query = delete(model.Route).filter_by(name=name)
+        if event_id is not None:
+            delete_query = delete_query.filter_by(event_id=event_id)
         await session.execute(delete_query)
         return None
 
     @staticmethod
     async def assign_team(
-        session: AsyncSession, route_name: str, team_name: str
+        session: AsyncSession,
+        route_name: str,
+        team_name: str,
+        event_id: int | None = None,
     ) -> bool:
         team_query = select(model.Team).filter_by(name=team_name)
+        if event_id is not None:
+            team_query = team_query.filter_by(event_id=event_id)
         team = (await session.execute(team_query)).scalar_one()
         team_route = await team.awaitable_attrs.route
         if team_route:
             return False  # A team can only be assigned to one route
         route_query = select(model.Route).filter_by(name=route_name)
+        if event_id is not None:
+            route_query = route_query.filter_by(event_id=event_id)
         route = (await session.execute(route_query)).scalar_one()
         route_teams = await route.awaitable_attrs.teams
         route_teams.add(team)
@@ -575,11 +748,18 @@ class Route:
 
     @staticmethod
     async def unassign_team(
-        session: AsyncSession, route_name: str, team_name: str
+        session: AsyncSession,
+        route_name: str,
+        team_name: str,
+        event_id: int | None = None,
     ) -> bool:
         route_query = select(model.Route).filter_by(name=route_name)
+        if event_id is not None:
+            route_query = route_query.filter_by(event_id=event_id)
         route = (await session.execute(route_query)).scalar_one()
         team_query = select(model.Team).filter_by(name=team_name)
+        if event_id is not None:
+            team_query = team_query.filter_by(event_id=event_id)
         team = (await session.execute(team_query)).scalar_one()
         route_teams = await route.awaitable_attrs.teams
         route_teams.remove(team)
@@ -587,11 +767,18 @@ class Route:
 
     @staticmethod
     async def assign_station(
-        session: AsyncSession, route_name: str, station_name: str
+        session: AsyncSession,
+        route_name: str,
+        station_name: str,
+        event_id: int | None = None,
     ) -> bool:
         route_query = select(model.Route).filter_by(name=route_name)
+        if event_id is not None:
+            route_query = route_query.filter_by(event_id=event_id)
         route = (await session.execute(route_query)).scalar_one()
         station_query = select(model.Station).filter_by(name=station_name)
+        if event_id is not None:
+            station_query = station_query.filter_by(event_id=event_id)
         station = (await session.execute(station_query)).scalar_one()
         route_stations = await route.awaitable_attrs.stations
         route_stations.add(station)
@@ -599,11 +786,18 @@ class Route:
 
     @staticmethod
     async def unassign_station(
-        session: AsyncSession, route_name: str, station_name: str
+        session: AsyncSession,
+        route_name: str,
+        station_name: str,
+        event_id: int | None = None,
     ) -> bool:
         route_query = select(model.Route).filter_by(name=route_name)
+        if event_id is not None:
+            route_query = route_query.filter_by(event_id=event_id)
         route = (await session.execute(route_query)).scalar_one()
         station_query = select(model.Station).filter_by(name=station_name)
+        if event_id is not None:
+            station_query = station_query.filter_by(event_id=event_id)
         station = (await session.execute(station_query)).scalar_one()
         route_stations = await route.awaitable_attrs.stations
         route_stations.remove(station)
@@ -611,9 +805,14 @@ class Route:
 
     @staticmethod
     async def update_color(
-        session: AsyncSession, route_name: str, color_value: str
+        session: AsyncSession,
+        route_name: str,
+        color_value: str,
+        event_id: int | None = None,
     ) -> bool:
         route_query = select(model.Route).filter_by(name=route_name)
+        if event_id is not None:
+            route_query = route_query.filter_by(event_id=event_id)
         route = (await session.execute(route_query)).scalar_one()
         route.color = color_value
         return True
@@ -749,8 +948,21 @@ class User:
 
     @staticmethod
     async def may_access_station(
-        session: AsyncSession, user_name: str, station_name: str
+        session: AsyncSession,
+        user_name: str,
+        station_name: str,
+        event_id: int | None = None,
     ) -> bool:
+        if event_id is not None:
+            station_query = select(model.Station).filter_by(
+                name=station_name,
+                event_id=event_id,
+            )
+            station = (
+                await session.execute(station_query)
+            ).scalar_one_or_none()
+            if not station:
+                return False
         user_query = select(model.User).filter_by(name=user_name)
         user = (await session.execute(user_query)).scalar_one()
         if not user:
@@ -787,20 +999,132 @@ class Role:
         return result.scalars()
 
 
+class Event:
+    @staticmethod
+    async def get(session: AsyncSession, event_id: int) -> model.Event | None:
+        query = select(model.Event).filter_by(id=event_id)
+        result = await session.execute(query)
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def all(session: AsyncSession) -> ScalarResult[model.Event]:
+        query = select(model.Event).order_by(model.Event.inserted.desc())
+        result = await session.execute(query)
+        return result.scalars()
+
+    @staticmethod
+    async def all_accessible(
+        session: AsyncSession, user_name: str
+    ) -> ScalarResult[model.Event]:
+        query = (
+            select(model.Event)
+            .join(
+                model.EventUserRole,
+                model.EventUserRole.event_id == model.Event.id,
+            )
+            .filter_by(user_name=user_name)
+            .order_by(model.Event.inserted.desc())
+        )
+        result = await session.execute(query)
+        return result.scalars()
+
+    @staticmethod
+    async def create_new(
+        session: AsyncSession,
+        data: dict[str, Any],
+        owner_name: str,
+    ) -> model.Event:
+        event = model.Event(**data)
+        session.add(event)
+        await session.flush()
+        owner_role = model.EventUserRole(
+            event_id=event.id,
+            user_name=owner_name,
+            role_name="event_owner",
+        )
+        session.add(owner_role)
+        return event
+
+    @staticmethod
+    async def update(
+        session: AsyncSession,
+        event: model.Event,
+        data: dict[str, Any],
+    ) -> model.Event:
+        for key, value in data.items():
+            if value is not None:
+                setattr(event, key, value)
+        return event
+
+    @staticmethod
+    async def list_members(
+        session: AsyncSession, event_id: int
+    ) -> ScalarResult[model.EventUserRole]:
+        query = select(model.EventUserRole).filter_by(event_id=event_id)
+        result = await session.execute(query)
+        return result.scalars()
+
+    @staticmethod
+    async def assign_member_role(
+        session: AsyncSession,
+        event_id: int,
+        user_name: str,
+        role_name: str,
+    ) -> model.EventUserRole:
+        query = select(model.EventUserRole).filter_by(
+            event_id=event_id,
+            user_name=user_name,
+            role_name=role_name,
+        )
+        existing = (await session.execute(query)).scalar_one_or_none()
+        if existing:
+            return existing
+        output = model.EventUserRole(
+            event_id=event_id,
+            user_name=user_name,
+            role_name=role_name,
+        )
+        session.add(output)
+        return output
+
+    @staticmethod
+    async def revoke_member_role(
+        session: AsyncSession,
+        event_id: int,
+        user_name: str,
+        role_name: str,
+    ) -> None:
+        query = delete(model.EventUserRole).filter_by(
+            event_id=event_id,
+            user_name=user_name,
+            role_name=role_name,
+        )
+        await session.execute(query)
+
+
 class Upload:
     FALLBACK_FOLDER = "/tmp/uploads"
 
     @staticmethod
-    async def all(session: AsyncSession) -> ScalarResult[model.Upload]:
+    async def all(
+        session: AsyncSession,
+        event_id: int | None = None,
+    ) -> ScalarResult[model.Upload]:
         query = select(model.Upload)
+        if event_id is not None:
+            query = query.filter_by(event_id=event_id)
         result = await session.execute(query)
         return result.scalars()
 
     @staticmethod
     async def list(
-        session: AsyncSession, username: str
+        session: AsyncSession,
+        username: str,
+        event_id: int | None = None,
     ) -> ScalarResult[model.Upload]:
         query = select(model.Upload).filter_by(username=username)
+        if event_id is not None:
+            query = query.filter_by(event_id=event_id)
         result = await session.execute(query)
         return result.scalars()
 
@@ -817,27 +1141,38 @@ class Upload:
 
     @staticmethod
     async def store(
-        session: AsyncSession, user_name: str, relative_target: str
+        session: AsyncSession,
+        user_name: str,
+        relative_target: str,
+        event_id: int | None = None,
     ) -> model.Upload:
         query = select(model.Upload).filter_by(
-            filename=relative_target, username=user_name
+            filename=relative_target,
+            username=user_name,
         )
+        if event_id is not None:
+            query = query.filter_by(event_id=event_id)
         result = await session.execute(query)
         db_instance = result.scalar_one_or_none()
         if not db_instance:
             db_instance = model.Upload(relative_target, user_name)
+            db_instance.event_id = event_id
             session.add(db_instance)
             await session.flush()
         return db_instance
 
     @staticmethod
     async def by_id(
-        session: AsyncSession, uuid: uuid.UUID
+        session: AsyncSession,
+        uuid: uuid.UUID,
+        event_id: int | None = None,
     ) -> model.Upload | None:
         """
         Returns an upload entity by its UUID
         """
         query = select(model.Upload).filter_by(uuid=uuid)
+        if event_id is not None:
+            query = query.filter_by(event_id=event_id)
         result = await session.execute(query)
         instance = result.scalar_one_or_none()
         return instance

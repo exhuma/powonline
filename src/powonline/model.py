@@ -22,7 +22,7 @@ from sqlalchemy import (
     func,
     select,
 )
-from sqlalchemy.dialects.postgresql import BYTEA, UUID
+from sqlalchemy.dialects.postgresql import BYTEA, TSTZRANGE, UUID, Range
 from sqlalchemy.ext.asyncio import AsyncAttrs, AsyncSession
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -124,6 +124,10 @@ class Team(Base, TimestampMixin):  # type: ignore
     route_name: Mapped[str | None] = mapped_column(
         ForeignKey("route.name", onupdate="CASCADE", ondelete="SET NULL")
     )
+    event_id: Mapped[int | None] = mapped_column(
+        ForeignKey("event.id", onupdate="CASCADE", ondelete="CASCADE"),
+        nullable=True,
+    )
     owner = mapped_column(
         Unicode,
         ForeignKey(
@@ -136,6 +140,7 @@ class Team(Base, TimestampMixin):  # type: ignore
     owner_user = relationship("User")
 
     route: Mapped["Route"] = relationship("Route", back_populates="teams")
+    event: Mapped["Event | None"] = relationship("Event", back_populates="teams")
     stations: Mapped[list["Station"]] = relationship(
         "Station", secondary="team_station_state", viewonly=True
     )
@@ -164,6 +169,10 @@ class Team(Base, TimestampMixin):  # type: ignore
 class Station(Base, TimestampMixin):  # type: ignore
     __tablename__ = "station"
     name: Mapped[str] = mapped_column(primary_key=True)
+    event_id: Mapped[int | None] = mapped_column(
+        ForeignKey("event.id", onupdate="CASCADE", ondelete="CASCADE"),
+        nullable=True,
+    )
     contact: Mapped[str | None] = mapped_column()
     phone: Mapped[str | None] = mapped_column()
     order: Mapped[int] = mapped_column(server_default="500")
@@ -192,6 +201,9 @@ class Station(Base, TimestampMixin):  # type: ignore
     )
 
     questionnaires = relationship("Questionnaire", back_populates="station")
+    event: Mapped["Event | None"] = relationship(
+        "Event", back_populates="stations"
+    )
 
     def update(self, **kwargs: Any) -> None:
         for k, v in kwargs.items():
@@ -206,8 +218,15 @@ class Route(Base, TimestampMixin):  # type: ignore
 
     name: Mapped[str] = mapped_column(primary_key=True)
     color: Mapped[str | None] = mapped_column()
+    event_id: Mapped[int | None] = mapped_column(
+        ForeignKey("event.id", onupdate="CASCADE", ondelete="CASCADE"),
+        nullable=True,
+    )
     teams: Mapped[set["Team"]] = relationship(
         "Team", back_populates="route", collection_class=set
+    )
+    event: Mapped["Event | None"] = relationship(
+        "Event", back_populates="routes"
     )
     stations: Mapped[set["Station"]] = relationship(
         "Station",
@@ -222,6 +241,39 @@ class Route(Base, TimestampMixin):  # type: ignore
     def update(self, **kwargs: Any) -> None:
         for k, v in kwargs.items():
             setattr(self, k, v)
+
+
+class Event(Base, TimestampMixin):  # type: ignore
+    __tablename__ = "event"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(Unicode, unique=True, nullable=False)
+    time_range: Mapped[Range[datetime]] = mapped_column(
+        TSTZRANGE, nullable=False
+    )
+
+    routes: Mapped[list["Route"]] = relationship(
+        "Route", back_populates="event"
+    )
+    teams: Mapped[list["Team"]] = relationship("Team", back_populates="event")
+    stations: Mapped[list["Station"]] = relationship(
+        "Station", back_populates="event"
+    )
+    questionnaires: Mapped[list["Questionnaire"]] = relationship(
+        "Questionnaire", back_populates="event"
+    )
+    uploads: Mapped[list["Upload"]] = relationship(
+        "Upload", back_populates="event"
+    )
+    auditlog: Mapped[list["AuditLog"]] = relationship(
+        "AuditLog", back_populates="event"
+    )
+    memberships: Mapped[list["EventUserRole"]] = relationship(
+        "EventUserRole", back_populates="event"
+    )
+
+    def __repr__(self) -> str:
+        return f"Event(id={self.id!r}, name={self.name!r})"
 
 
 class OauthConnection(Base, TimestampMixin):  # type: ignore
@@ -283,6 +335,9 @@ class User(Base, TimestampMixin):  # type: ignore
     )
     auditlog: Mapped[list["AuditLog"]] = relationship(
         "AuditLog", back_populates="user"
+    )
+    event_roles: Mapped[list["EventUserRole"]] = relationship(
+        "EventUserRole", back_populates="user"
     )
 
     @property
@@ -447,11 +502,18 @@ class Questionnaire(Base, TimestampMixin):  # type: ignore
         ),
         nullable=True,
     )
+    event_id: Mapped[int | None] = mapped_column(
+        ForeignKey("event.id", onupdate="CASCADE", ondelete="CASCADE"),
+        nullable=True,
+    )
 
     teams: Mapped[set["Team"]] = relationship(
         "Team", secondary="questionnaire_score", viewonly=True
     )  # uses an AssociationObject
-    station = relationship("Station")
+    station = relationship("Station", back_populates="questionnaires")
+    event: Mapped["Event | None"] = relationship(
+        "Event", back_populates="questionnaires"
+    )
 
     def __init__(
         self,
@@ -523,8 +585,15 @@ class Upload(Base):  # type: ignore
         name="id",
         server_default=func.gen_random_uuid(),
     )
+    event_id: Mapped[int | None] = mapped_column(
+        ForeignKey("event.id", onupdate="CASCADE", ondelete="CASCADE"),
+        nullable=True,
+    )
 
     user: Mapped["User"] = relationship("User", back_populates="files")
+    event: Mapped["Event | None"] = relationship(
+        "Event", back_populates="uploads"
+    )
 
     def __init__(self, relname: str, username: str) -> None:
         self.filename = relname
@@ -565,8 +634,15 @@ class AuditLog(Base):  # type: ignore
     )
     type_: Mapped[str] = mapped_column(name="type", nullable=False)
     message: Mapped[str] = mapped_column(name="message", nullable=False)
+    event_id: Mapped[int | None] = mapped_column(
+        ForeignKey("event.id", onupdate="CASCADE", ondelete="CASCADE"),
+        nullable=True,
+    )
 
     user: Mapped["User"] = relationship("User", back_populates="auditlog")
+    event: Mapped["Event | None"] = relationship(
+        "Event", back_populates="auditlog"
+    )
 
     def __init__(
         self, timestamp: datetime, username: str, type_: AuditType, message: str
@@ -575,6 +651,24 @@ class AuditLog(Base):  # type: ignore
         self.username = username
         self.type_ = type_.value
         self.message = message
+
+
+class EventUserRole(Base, TimestampMixin):  # type: ignore
+    __tablename__ = "event_user_role"
+
+    event_id: Mapped[int] = mapped_column(
+        ForeignKey("event.id", onupdate="CASCADE", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    user_name: Mapped[str] = mapped_column(
+        Unicode,
+        ForeignKey("user.name", onupdate="CASCADE", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    role_name: Mapped[str] = mapped_column(Unicode, primary_key=True)
+
+    event: Mapped["Event"] = relationship("Event", back_populates="memberships")
+    user: Mapped["User"] = relationship("User", back_populates="event_roles")
 
 
 route_station_table = Table(

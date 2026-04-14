@@ -1,9 +1,10 @@
 import logging
 from configparser import ConfigParser
+from datetime import datetime, timezone
 from typing import Annotated
 
 import jwt
-from fastapi import Depends
+from fastapi import Depends, Path
 from fastapi.security import (
     HTTPAuthorizationCredentials,
     HTTPBasic,
@@ -11,9 +12,13 @@ from fastapi.security import (
     HTTPBearer,
 )
 from pydantic import BaseModel
+from sqlalchemy import and_, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from powonline.config import default
+from powonline.dependencies import get_db
 from powonline.exc import AccessDenied, AuthDeniedReason
+from powonline.model import Event, EventUserRole
 
 LOG = logging.getLogger(__name__)
 AUTH_LOG = logging.getLogger("auth")
@@ -35,7 +40,20 @@ PERMISSION_MAP = {
     "station_manager": {
         "manage_station",
     },
+    "event_owner": {
+        "manage_event",
+        "manage_event_members",
+        "bypass_event_window",
+    },
+    "event_co_admin": {
+        "manage_event",
+        "manage_event_members",
+        "bypass_event_window",
+    },
 }
+
+EVENT_OWNER_ROLE = "event_owner"
+EVENT_CO_ADMIN_ROLE = "event_co_admin"
 
 LOCAL_AUTH = HTTPBasic(
     auto_error=False, description="Authentication for local-development"
@@ -144,3 +162,61 @@ def get_user(
             AuthDeniedReason.NOT_AUTHENTICATED,
         )
     return optional_user
+
+
+async def is_event_admin(
+    session: AsyncSession, event_id: int, user_name: str
+) -> bool:
+    query = select(EventUserRole).filter(
+        and_(
+            EventUserRole.event_id == event_id,
+            EventUserRole.user_name == user_name,
+            EventUserRole.role_name.in_((EVENT_OWNER_ROLE, EVENT_CO_ADMIN_ROLE)),
+        )
+    )
+    result = await session.execute(query)
+    return result.scalar_one_or_none() is not None
+
+
+async def require_event_admin_user(
+    auth_user: Annotated[User, Depends(get_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+    event_id: int = Path(),
+) -> User:
+    if await is_event_admin(session, event_id, auth_user.name):
+        return auth_user
+    raise AccessDenied(
+        "Access denied (event admin or owner required)",
+        reason=AuthDeniedReason.ACCESS_DENIED,
+    )
+
+
+async def require_event_mutation_access(
+    auth_user: Annotated[User, Depends(get_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+    event_id: int = Path(),
+) -> User:
+    event_query = select(Event).filter_by(id=event_id)
+    event = (await session.execute(event_query)).scalar_one_or_none()
+    if not event:
+        raise AccessDenied(
+            "Unknown event",
+            reason=AuthDeniedReason.ACCESS_DENIED,
+        )
+
+    # Event owners and co-admins may mutate outside the event window.
+    if await is_event_admin(session, event_id, auth_user.name):
+        return auth_user
+
+    now = datetime.now(timezone.utc)
+    # Check if now is within the event's time_range [start, end)
+    # The Range object has .lower and .upper properties
+    if (
+        event.time_range.lower <= now < event.time_range.upper
+    ):
+        return auth_user
+
+    raise AccessDenied(
+        "Mutations are not allowed outside the event window",
+        reason=AuthDeniedReason.ACCESS_DENIED,
+    )

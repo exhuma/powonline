@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 class ErrorType(Enum):
@@ -74,6 +74,61 @@ class RouteSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     name: str
     color: str = ""
+
+
+class TimeRange(BaseModel):
+    """Represents a time range with inclusive start and exclusive end."""
+    start: datetime
+    end: datetime
+
+    @field_validator('end')
+    @classmethod
+    def validate_end_after_start(cls, v: datetime, info) -> datetime:
+        if 'start' in info.data and v <= info.data['start']:
+            raise ValueError('end must be greater than start')
+        return v
+
+
+class EventSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    time_range: TimeRange
+    inserted: datetime | None = None
+    updated: datetime | None = None
+
+    @field_validator('time_range', mode='before')
+    @classmethod
+    def convert_range_to_timerange(cls, v):
+        """Convert SQLAlchemy Range object to TimeRange model."""
+        if isinstance(v, dict):
+            # Already a dict from API request
+            return v
+        # SQLAlchemy Range object from database
+        if hasattr(v, 'lower') and hasattr(v, 'upper'):
+            return TimeRange(start=v.lower, end=v.upper)
+        return v
+
+
+class EventCreateSchema(BaseModel):
+    name: str
+    time_range: TimeRange
+
+
+class EventUpdateSchema(BaseModel):
+    name: str | None = None
+    time_range: TimeRange | None = None
+
+
+class EventMemberSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    user_name: str
+    role_name: str
+
+
+class EventMemberUpdateSchema(BaseModel):
+    user_name: str
+    role_name: str
 
 
 class UserSchema(BaseModel):

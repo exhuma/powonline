@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from powonline import core, schema
-from powonline.auth import User, get_user
+from powonline.auth import User, require_event_mutation_access
 from powonline.dependencies import get_db, get_pusher
 from powonline.exc import (
     AccessDenied,
@@ -15,7 +15,7 @@ from powonline.exc import (
 )
 from powonline.pusher import PusherWrapper
 
-ROUTER = APIRouter(prefix="/job", tags=["job"])
+ROUTER = APIRouter(prefix="/events/{event_id}/job", tags=["job"])
 LOG = logging.getLogger(__name__)
 
 
@@ -29,6 +29,7 @@ def validate_score(value):
 
 async def _action_advance(
     session: AsyncSession,
+    event_id: int,
     username: str,
     permissions: set[str],
     pusher: PusherWrapper,
@@ -38,13 +39,13 @@ async def _action_advance(
     team_name = args["team_name"]
 
     has_access = await core.User.may_access_station(
-        session, username, station_name
+        session, username, station_name, event_id=event_id
     )
     if "admin_stations" in permissions or (
         "manage_station" in permissions and has_access
     ):
         new_state = await core.Team.advance_on_station(
-            session, team_name, station_name
+            session, team_name, station_name, event_id=event_id
         )
         output = {"result": {"state": new_state.value}}
         pusher.send_team_event(
@@ -61,6 +62,7 @@ async def _action_advance(
 
 async def _action_set_score(
     session: AsyncSession,
+    event_id: int,
     username: str,
     permissions: set[str],
     pusher: PusherWrapper,
@@ -71,7 +73,7 @@ async def _action_set_score(
     score = validate_score(args["score"])
 
     has_access = await core.User.may_access_station(
-        session, username, station_name
+        session, username, station_name, event_id=event_id
     )
     if "admin_stations" in permissions or (
         "manage_station" in permissions and has_access
@@ -84,7 +86,11 @@ async def _action_set_score(
             username,
         )
         old_score, new_score = await core.Team.set_station_score(
-            session, team_name, station_name, score
+            session,
+            team_name,
+            station_name,
+            score,
+            event_id=event_id,
         )
         if old_score != new_score:
             core.add_audit_log(
@@ -93,6 +99,7 @@ async def _action_set_score(
                 schema.AuditType.STATION_SCORE,
                 "Change score of team %r from %s to %s on station %s"
                 % (team_name, old_score, score, station_name),
+                event_id=event_id,
             )
         output = {
             "new_score": new_score,
@@ -113,6 +120,7 @@ async def _action_set_score(
 
 async def _action_set_questionnaire_score(
     session: AsyncSession,
+    event_id: int,
     username: str,
     permissions: set[str],
     pusher: PusherWrapper,
@@ -123,7 +131,7 @@ async def _action_set_questionnaire_score(
     score = validate_score(args["score"])
 
     has_access = await core.User.may_access_station(
-        session, username, station_name
+        session, username, station_name, event_id=event_id
     )
     if "admin_stations" in permissions or (
         "manage_station" in permissions and has_access
@@ -141,6 +149,7 @@ async def _action_set_questionnaire_score(
                 team_name,
                 station_name,
                 score,
+                event_id=event_id,
             )
         except NoQuestionnaireForStation:
             LOG.error(
@@ -158,6 +167,7 @@ async def _action_set_questionnaire_score(
                 schema.AuditType.QUESTIONNAIRE_SCORE,
                 "Change questionnaire score of team %r from %s to %s on station %s"
                 % (team_name, old_score, score, station_name),
+                event_id=event_id,
             )
         output = {
             "new_score": new_score,
@@ -185,9 +195,10 @@ ACTION_MAP = {
 
 @ROUTER.post("")
 async def create_new_job(
-    auth_user: Annotated[User, Depends(get_user)],
+    auth_user: Annotated[User, Depends(require_event_mutation_access)],
     session: Annotated[AsyncSession, Depends(get_db)],
     pusher: Annotated[PusherWrapper, Depends(get_pusher)],
+    event_id: int,
     job: schema.JobSchema = Body(),
 ) -> JSONResponse:
     auth_user.require_permission("manage_station")
@@ -199,6 +210,11 @@ async def create_new_job(
     else:
         LOG.debug("Matched job %r to %r", job.action, func)
     result = await func(
-        session, auth_user.name, auth_user.permissions, pusher, args=job.args
+        session,
+        event_id,
+        auth_user.name,
+        auth_user.permissions,
+        pusher,
+        args=job.args,
     )
     return JSONResponse(result)

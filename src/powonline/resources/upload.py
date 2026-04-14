@@ -22,7 +22,7 @@ from powonline.exc import AccessDenied, AuthDeniedReason, NotFound
 from powonline.model import Upload
 from powonline.pusher import PusherWrapper
 
-ROUTER = APIRouter(prefix="", tags=["files", "uploads"])
+ROUTER = APIRouter(prefix="/events/{event_id}", tags=["files", "uploads"])
 LOG = logging.getLogger(__name__)
 
 
@@ -52,16 +52,24 @@ def secure_filename(filename):
 
 
 def upload_to_json(
-    request: Request, data_folder: str, db_instance: Upload
+    request: Request,
+    data_folder: str,
+    db_instance: Upload,
+    event_id: int,
 ) -> schema.UploadSchema | None:
     """
     Convert a DB-instance of an upload to a JSONifiable dictionary
     """
     file_url = request.url_for(
-        "api.get_file", uuid=db_instance.uuid, _external=True, _scheme="https"
+        "api.get_file",
+        event_id=event_id,
+        uuid=db_instance.uuid,
+        _external=True,
+        _scheme="https",
     )
     tn_url = request.url_for(
         "api.get_file",
+        event_id=event_id,
         uuid=db_instance.uuid,
         size=256,
         _external=True,
@@ -69,6 +77,7 @@ def upload_to_json(
     )
     tiny_url = request.url_for(
         "api.get_file",
+        event_id=event_id,
         uuid=db_instance.uuid,
         size=64,
         _external=True,
@@ -128,6 +137,7 @@ def _thumbnail(fullname: str, size: int):
 async def create_upload(
     auth_user: Annotated[User, Depends(get_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
+    event_id: int,
     config: Annotated[ConfigParser, Depends(default)],
     pusher: Annotated[PusherWrapper, Depends(get_pusher)],
     request: Request,
@@ -151,10 +161,18 @@ async def create_upload(
             target_file_object.write(upload_file.file.read())
 
         db_instance = await core.Upload.store(
-            session, auth_user.name, relative_target
+            session,
+            auth_user.name,
+            relative_target,
+            event_id=event_id,
         )
 
-        file_data = upload_to_json(request, data_folder, db_instance)
+        file_data = upload_to_json(
+            request,
+            data_folder,
+            db_instance,
+            event_id,
+        )
         if not file_data:
             return Response("Failed to store file", 500)
         response = Response(
@@ -172,14 +190,15 @@ async def _get_public(
     session: Annotated[AsyncSession, Depends(get_db)],
     request: Request,
     data_folder: str,
+    event_id: int,
 ) -> list[schema.UploadSchema]:
     """
     Return files for a public request (f.ex. image gallery)
     """
     output: list[schema.UploadSchema] = []
-    files = await core.Upload.all(session)
+    files = await core.Upload.all(session, event_id=event_id)
     for item in files:
-        json_data = upload_to_json(request, data_folder, item)
+        json_data = upload_to_json(request, data_folder, item, event_id)
         if json_data:
             output.append(json_data)
     return output
@@ -190,6 +209,7 @@ async def _get_private(
     user: User,
     request: Request,
     data_folder: str,
+    event_id: int,
 ) -> list[schema.UploadSchema]:
     """
     Return files for a private request (f.ex. manageing uploads)
@@ -197,17 +217,17 @@ async def _get_private(
     all_permissions = user.permissions
     output: dict[str, list[schema.UploadSchema]] = {}
     if "admin_files" in all_permissions:
-        files = await core.Upload.all(session)
+        files = await core.Upload.all(session, event_id=event_id)
         for item in files:
             output_files = output.setdefault(item.username, [])
-            json_data = upload_to_json(request, data_folder, item)
+            json_data = upload_to_json(request, data_folder, item, event_id)
             if json_data:
                 output_files.append(json_data)
     else:
-        files = await core.Upload.list(session, user.name)
+        files = await core.Upload.list(session, user.name, event_id=event_id)
         output_files = []
         for item in files:
-            json_data = upload_to_json(request, data_folder, item)
+            json_data = upload_to_json(request, data_folder, item, event_id)
             if json_data:
                 output_files.append(json_data)
         output["self"] = output_files
@@ -220,6 +240,7 @@ async def _get_private(
 async def query_uploads(
     auth_user: Annotated[User, Depends(get_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
+    event_id: int,
     request: Request,
     config: Annotated[ConfigParser, Depends(default)],
     public: bool = False,
@@ -231,13 +252,20 @@ async def query_uploads(
         "app", "upload_folder", fallback=core.Upload.FALLBACK_FOLDER
     )
     if public:
-        return await _get_public(session, request, data_folder)
-    return await _get_private(session, auth_user, request, data_folder)
+        return await _get_public(session, request, data_folder, event_id)
+    return await _get_private(
+        session,
+        auth_user,
+        request,
+        data_folder,
+        event_id,
+    )
 
 
 @ROUTER.get("/upload/{uuid}", name="api.get_file")
 async def get_file(
     session: Annotated[AsyncSession, Depends(get_db)],
+    event_id: int,
     uuid: UUID,
     config: Annotated[ConfigParser, Depends(default)],
     size: int = 0,
@@ -248,7 +276,7 @@ async def get_file(
     data_folder = config.get(
         "app", "upload_folder", fallback=core.Upload.FALLBACK_FOLDER
     )
-    db_instance = await core.Upload.by_id(session, uuid)
+    db_instance = await core.Upload.by_id(session, uuid, event_id=event_id)
     if not db_instance:
         raise NotFound("File not found")
 
@@ -264,8 +292,9 @@ async def get_file(
 @ROUTER.delete("/upload/{uuid}", name="api.delete_file")
 async def delete_file(
     session: Annotated[AsyncSession, Depends(get_db)],
+    event_id: int,
     uuid: UUID,
-    user: User,
+    user: Annotated[User, Depends(get_user)],
     request: Request,
     config: Annotated[ConfigParser, Depends(default)],
     pusher: Annotated[PusherWrapper, Depends(get_pusher)],
@@ -273,7 +302,7 @@ async def delete_file(
     """
     Retrieve a single file
     """
-    db_instance = await core.Upload.by_id(session, uuid)
+    db_instance = await core.Upload.by_id(session, uuid, event_id=event_id)
     if not db_instance:
         raise NotFound("File not found")
     all_permissions = user.permissions

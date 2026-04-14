@@ -6,14 +6,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from powonline import core, schema
 from powonline.dependencies import get_db
 
-ROUTER = APIRouter(prefix="/assignments", tags=["assignment"])
+ROUTER = APIRouter(prefix="/events/{event_id}/assignments", tags=["assignment"])
 
 
 @ROUTER.get("")
 async def get(
-    session: Annotated[AsyncSession, Depends(get_db)]
+    session: Annotated[AsyncSession, Depends(get_db)],
+    event_id: int,
 ) -> schema.AssignmentMap:
-    data = await core.get_assignments(session)
+    data = await core.get_assignments(session, event_id=event_id)
 
     out_stations = {}
     for route_name, stations in data["stations"].items():
