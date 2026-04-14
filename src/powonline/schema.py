@@ -78,14 +78,15 @@ class RouteSchema(BaseModel):
 
 class TimeRange(BaseModel):
     """Represents a time range with inclusive start and exclusive end."""
+
     start: datetime
     end: datetime
 
-    @field_validator('end')
+    @field_validator("end")
     @classmethod
     def validate_end_after_start(cls, v: datetime, info) -> datetime:
-        if 'start' in info.data and v <= info.data['start']:
-            raise ValueError('end must be greater than start')
+        if "start" in info.data and v <= info.data["start"]:
+            raise ValueError("end must be greater than start")
         return v
 
 
@@ -97,7 +98,7 @@ class EventSchema(BaseModel):
     inserted: datetime | None = None
     updated: datetime | None = None
 
-    @field_validator('time_range', mode='before')
+    @field_validator("time_range", mode="before")
     @classmethod
     def convert_range_to_timerange(cls, v):
         """Convert SQLAlchemy Range object to TimeRange model."""
@@ -105,7 +106,7 @@ class EventSchema(BaseModel):
             # Already a dict from API request
             return v
         # SQLAlchemy Range object from database
-        if hasattr(v, 'lower') and hasattr(v, 'upper'):
+        if hasattr(v, "lower") and hasattr(v, "upper"):
             return TimeRange(start=v.lower, end=v.upper)
         return v
 
@@ -220,15 +221,6 @@ class PasswordCredentials(BaseModel, frozen=True):
     password: str
 
 
-class SocialCredentials(BaseModel, frozen=True):
-    social_provider: str
-    token: str
-    user_id: str
-    name: str = ""
-    email: str = ""
-    picture: str = ""
-
-
 class ErrorMessage(BaseModel, frozen=True):
     message: str
     detail: str = ""
@@ -236,3 +228,17 @@ class ErrorMessage(BaseModel, frozen=True):
 
 class ListResult[T](BaseModel, frozen=True):
     items: list[T]
+
+
+class SessionInfo(BaseModel, frozen=True):
+    """Returned after a successful login or session check."""
+
+    user: str
+    roles: list[str]
+
+
+class AuthProvider(BaseModel, frozen=True):
+    """Describes an available OAuth identity provider."""
+
+    name: str
+    label: str

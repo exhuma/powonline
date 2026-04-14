@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Annotated
 
 import jwt
-from fastapi import Depends, Path
+from fastapi import Cookie, Depends, Path
 from fastapi.security import (
     HTTPAuthorizationCredentials,
     HTTPBasic,
@@ -91,9 +91,7 @@ class User(BaseModel):
 
 
 def local_dev_user(
-    basic_credentials: Annotated[
-        HTTPBasicCredentials | None, Depends(LOCAL_AUTH)
-    ],
+    basic_credentials: Annotated[HTTPBasicCredentials | None, Depends(LOCAL_AUTH)],
 ) -> User | None:
     """
     Implementation for HTTP BASIC authentication for local development.
@@ -109,9 +107,7 @@ def local_dev_user(
         return None
     username, _, roles_str = basic_credentials.username.partition("#")
     roles = {
-        role.strip()
-        for role in roles_str.split(",")
-        if role.strip() in PERMISSION_MAP
+        role.strip() for role in roles_str.split(",") if role.strip() in PERMISSION_MAP
     }
     user = User(name=username, roles=roles)
     AUTH_LOG.warning(
@@ -122,18 +118,10 @@ def local_dev_user(
     return user
 
 
-def get_token_user(
-    config: Annotated[ConfigParser, Depends(default)],
-    credentials: Annotated[HTTPAuthorizationCredentials, Depends(Bearer)],
-) -> User | None:
-    if credentials is None or credentials.credentials is None:
-        return None
-    jwt_secret = config.get("security", "jwt_secret")
-    token = credentials.credentials
+def _decode_token(jwt_secret: str, token: str) -> User | None:
+    """Decode and validate a JWT, returning a User or None on failure."""
     try:
-        decoded = jwt.decode(
-            token, jwt_secret, algorithms=["HS256"], verify=True
-        )
+        decoded = jwt.decode(token, jwt_secret, algorithms=["HS256"])
     except jwt.ExpiredSignatureError:
         LOG.warning("Expired JWT token")
         return None
@@ -144,6 +132,31 @@ def get_token_user(
         name=decoded["username"],
         roles=set(decoded["roles"]),
     )
+
+
+def get_token_user(
+    config: Annotated[ConfigParser, Depends(default)],
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(Bearer)],
+    access_token: Annotated[str | None, Cookie()] = None,
+) -> User | None:
+    """
+    Authenticate via JWT.
+
+    Checks, in order:
+    1. ``Authorization: Bearer <token>`` header (for API clients / backward compat)
+    2. ``access_token`` HttpOnly cookie (for browser sessions)
+    """
+    jwt_secret = config.get("security", "jwt_secret")
+
+    # 1) Bearer header
+    if credentials is not None and credentials.credentials:
+        return _decode_token(jwt_secret, credentials.credentials)
+
+    # 2) Cookie
+    if access_token:
+        return _decode_token(jwt_secret, access_token)
+
+    return None
 
 
 def get_optional_user(
@@ -164,9 +177,7 @@ def get_user(
     return optional_user
 
 
-async def is_event_admin(
-    session: AsyncSession, event_id: int, user_name: str
-) -> bool:
+async def is_event_admin(session: AsyncSession, event_id: int, user_name: str) -> bool:
     query = select(EventUserRole).filter(
         and_(
             EventUserRole.event_id == event_id,
@@ -211,9 +222,7 @@ async def require_event_mutation_access(
     now = datetime.now(timezone.utc)
     # Check if now is within the event's time_range [start, end)
     # The Range object has .lower and .upper properties
-    if (
-        event.time_range.lower <= now < event.time_range.upper
-    ):
+    if event.time_range.lower <= now < event.time_range.upper:
         return auth_user
 
     raise AccessDenied(

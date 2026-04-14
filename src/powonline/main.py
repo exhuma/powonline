@@ -4,43 +4,36 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from powonline import __version__, error_handlers, resources, routers
+from powonline.config import default as get_config
 
 LOG = logging.getLogger(__name__)
 
 
-def get_cors_data() -> dict[str, list[str]]:
-    # TODO cfg_data = app.localconfig.get("app", "allowed_origins", fallback="")
-    allowed_origins = ["*"]
-    # TODO origin = request.headers.get("Origin", "")
-    # TODO if current_app.debug and origin not in allowed_origins:
-    # TODO     LOG.info(
-    # TODO         "Application is in debug mode, auto-adding %s to allowed origins",
-    # TODO         origin,
-    # TODO     )
-    # TODO     allowed_origins.add(origin)
-    # TODO LOG.debug("Allowed CORS origins: %r", allowed_origins)
+def _get_allowed_origins() -> list[str]:
+    """
+    Read ``allowed_origins`` from [app] in the config file.
 
-    # TODO if origin in allowed_origins:
-    # TODO     response.headers.add("Access-Control-Allow-Origin", origin)
-    # TODO elif origin:
-    # TODO     LOG.error("Unauthorized CORS request from %r", origin)
-
-    output: dict[str, list[str]] = {
-        "allowed_origins": list(allowed_origins),
-        "allowed_headers": ["Content-Type", "Authorization"],
-        "allowed_methods": ["GET", "POST", "PUT", "DELETE"],
-    }
-    return output
+    Falls back to ``["*"]`` when the key is absent or the config cannot be
+    loaded (e.g. during unit tests that don't mount a real config file).
+    """
+    try:
+        config = get_config()
+        raw = config.get("app", "allowed_origins", fallback="*")
+        origins = [o.strip() for o in raw.split(",") if o.strip()]
+        return origins or ["*"]
+    except Exception:
+        LOG.warning("Could not read allowed_origins from config, defaulting to '*'")
+        return ["*"]
 
 
 def create_app():
     app = FastAPI(title="powonline", version=__version__)
-    cors_info = get_cors_data()
+    allowed_origins = _get_allowed_origins()
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=cors_info["allowed_origins"],
-        allow_methods=cors_info["allowed_methods"],
-        allow_headers=cors_info["allowed_headers"],
+        allow_origins=allowed_origins,
+        allow_methods=["GET", "POST", "PUT", "DELETE"],
+        allow_headers=["Content-Type", "Authorization"],
         allow_credentials=True,
     )
     error_handlers.register(app)
