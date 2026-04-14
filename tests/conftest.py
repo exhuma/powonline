@@ -23,18 +23,12 @@ def here(localname):
 
 @fixture(scope="session", autouse=True)
 def upgrade_db():
-    alembic_root = Path.cwd() / "database"
-    current_dir = Path.cwd()
+    alembic.config.main(argv=["--raiseerr", "upgrade", "head"])
+    yield
     try:
-        os.chdir(alembic_root)
-        alembic.config.main(argv=["--raiseerr", "upgrade", "head"])
-        yield
-        try:
-            alembic.config.main(argv=["--raiseerr", "downgrade", "base"])
-        except:
-            print("Unable to downgrade database")
-    finally:
-        os.chdir(current_dir)
+        alembic.config.main(argv=["--raiseerr", "downgrade", "base"])
+    except:
+        print("Unable to downgrade database")
 
 
 @fixture
@@ -73,7 +67,7 @@ def test_client(app: FastAPI) -> AsyncClient:
 @fixture
 async def dbsession():
     from powonline.dependencies import get_async_session_maker
-    
+
     session_maker = get_async_session_maker()
     async with session_maker() as session:
         with open(here("seed_cleanup.sql")) as seed:

@@ -16,10 +16,8 @@ uv tool install pre-commit
 
 fab develop
 
-uv run pip install --group dev --editable .
-
-(cd database && uv run alembic upgrade head)
-(cd database && uv run alembic show head)
+uv run alembic upgrade head
+uv run alembic show head
 
 psql -v ON_ERROR_STOP=1 -X1qf \
     .devcontainer/sample-data.sql \

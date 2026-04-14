@@ -31,7 +31,7 @@ def upgrade():
             UUID,
             unique=True,
             nullable=False,
-            server_default=sa.func.uuid_generate_v4(),
+            server_default=sa.func.gen_random_uuid(),
         ),
     )
 
