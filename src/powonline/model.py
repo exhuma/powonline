@@ -521,7 +521,7 @@ class Upload(Base):  # type: ignore
         unique=True,
         nullable=False,
         name="id",
-        server_default=func.uuid_generate_v4(),
+        server_default=func.gen_random_uuid(),
     )
 
     user: Mapped["User"] = relationship("User", back_populates="files")
