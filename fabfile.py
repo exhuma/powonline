@@ -6,9 +6,9 @@ def develop(context):
     """
     Set up a development environment
     """
-    context.run("uv sync --group test", replace_env=False, pty=True)
+    context.run("uv sync", replace_env=False, pty=True)
     context.run("mkdir -p .mamerwiselen/powonline")
-    context.run("cp app.ini.dist .mamerwiselen/powonline/app.ini")
+    context.run("cp sample-files/app.ini .mamerwiselen/powonline/app.ini")
     context.run("pre-commit install -f")
 
 

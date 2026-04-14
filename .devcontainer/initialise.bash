@@ -16,6 +16,8 @@ uv tool install pre-commit
 
 fab develop
 
+uv run pip install --group dev --editable .
+
 (cd database && uv run alembic upgrade head)
 (cd database && uv run alembic show head)
 
