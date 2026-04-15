@@ -34,6 +34,16 @@ via a small popup when the project is loaded).
 Authentication Setup
 --------------------
 
+The dev-container ships with a local Keycloak realm for the generic OIDC
+provider. It is exposed as ``http://idp.127.0.0.1.nip.io:8080`` so the browser
+and the backend can use the same hostname during local development. Inside the
+dev container, that hostname is mapped back to the Docker host gateway.
+
+The backend callback remains on ``localhost``. Keep the callback URLs from the
+realm import and the OIDC ``redirect_uri`` query parameter on the existing
+``http://localhost:5000`` or ``http://localhost:8000`` values unless you also
+move the API itself behind a shared hostname.
+
 1. Obtain OAuth2 credentials for Google and Facebook:
    - For Google, create credentials in the Google Cloud Console and note the
      client ID, client secret, and redirect URI.
