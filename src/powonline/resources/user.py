@@ -15,6 +15,21 @@ ROUTER = APIRouter(prefix="/user", tags=["user"])
 LOG = logging.getLogger(__name__)
 
 
+@ROUTER.get("/me/admin-events")
+async def list_my_admin_events(
+    auth_user: Annotated[User, Depends(get_auth_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+) -> schema.ListResult[schema.EventSchema]:
+    """
+    Return upcoming events where the authenticated user is event_owner or
+    event_co_admin.  Used by the user-management UI to populate the event
+    dropdown when assigning stations to a user.
+    """
+    items = await core.Event.all_admin_upcoming(session, auth_user.name)
+    output = [schema.EventSchema.model_validate(item) for item in items]
+    return schema.ListResult(items=output)
+
+
 @ROUTER.get("")
 async def query_users(
     auth_user: Annotated[User, Depends(get_auth_user)],
@@ -176,3 +191,18 @@ async def assign_user_to_station(
         return Response("", 204)
     else:
         return Response("Station is already assigned to that user", 400)
+
+
+@ROUTER.delete("/{user_name}/stations/{station_name}")
+async def unassign_user_from_station(
+    auth_user: Annotated[User, Depends(get_auth_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+    user_name: str,
+    station_name: str = Path(),
+):
+    """
+    Removes a station assignment from a user.
+    """
+    auth_user.require_permission("manage_permissions")
+    await core.Station.unassign_user(session, station_name, user_name)
+    return Response("", 204)

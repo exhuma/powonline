@@ -23,9 +23,7 @@ from .model import TeamState
 LOG = logging.getLogger(__name__)
 
 
-async def get_assignments(
-    session: AsyncSession, event_id: int | None = None
-):
+async def get_assignments(session: AsyncSession, event_id: int | None = None):
     routes = select(model.Route)
     if event_id is not None:
         routes = routes.filter_by(event_id=event_id)
@@ -60,8 +58,7 @@ async def scoreboard(
             state.score for state in await row.awaitable_attrs.station_states
         )
         quest_score = sum(
-            quest.score
-            for quest in await row.awaitable_attrs.questionnaire_scores
+            quest.score for quest in await row.awaitable_attrs.questionnaire_scores
         )
         scores[row.name] = sum([station_score, quest_score])
     output = reversed(sorted(scores.items(), key=lambda x: x[1]))
@@ -153,9 +150,7 @@ async def set_questionnaire_score(
     return old_score, score
 
 
-async def global_dashboard(
-    session: AsyncSession, event_id: int | None = None
-):
+async def global_dashboard(session: AsyncSession, event_id: int | None = None):
     teams_query = select(model.Team).order_by(model.Team.name)
     stations_query = select(model.Station).order_by(model.Station.name)
     if event_id is not None:
@@ -171,8 +166,7 @@ async def global_dashboard(
         team_route = await team.awaitable_attrs.route
         if team_route:
             reachable_stations = {
-                station.name
-                for station in await team_route.awaitable_attrs.stations
+                station.name for station in await team_route.awaitable_attrs.stations
             }
         else:
             reachable_stations = set()
@@ -251,9 +245,7 @@ class Team:
         return await route.awaitable_attrs.teams
 
     @staticmethod
-    async def create_new(
-        session: AsyncSession, data: dict[str, Any]
-    ) -> model.Team:
+    async def create_new(session: AsyncSession, data: dict[str, Any]) -> model.Team:
         team = model.Team(**data)
         if not data.get("confirmation_key"):
             team.reset_confirmation_key()
@@ -307,9 +299,7 @@ class Team:
                 event_id=event_id,
             )
             team = (await session.execute(team_query)).scalar_one_or_none()
-            station = (
-                await session.execute(station_query)
-            ).scalar_one_or_none()
+            station = (await session.execute(station_query)).scalar_one_or_none()
             if not team or not station:
                 return model.TeamStation(
                     team_name=team_name,
@@ -321,9 +311,7 @@ class Team:
         result = await session.execute(query)
         state = result.scalar_one_or_none()
         if not state:
-            return model.TeamStation(
-                team_name=team_name, station_name=station_name
-            )
+            return model.TeamStation(team_name=team_name, station_name=station_name)
         else:
             return state
 
@@ -344,9 +332,7 @@ class Team:
                 event_id=event_id,
             )
             team = (await session.execute(team_query)).scalar_one_or_none()
-            station = (
-                await session.execute(station_query)
-            ).scalar_one_or_none()
+            station = (await session.execute(station_query)).scalar_one_or_none()
             if not team or not station:
                 raise PowonlineException("Unknown team or station for event")
         query = select(model.TeamStation).filter_by(
@@ -355,9 +341,7 @@ class Team:
         result = await session.execute(query)
         state = result.scalar_one_or_none()
         if not state:
-            state = model.TeamStation(
-                team_name=team_name, station_name=station_name
-            )
+            state = model.TeamStation(team_name=team_name, station_name=station_name)
             state = await session.merge(state)
             await session.flush()
 
@@ -397,9 +381,7 @@ class Team:
                 event_id=event_id,
             )
             team = (await session.execute(team_query)).scalar_one_or_none()
-            station = (
-                await session.execute(station_query)
-            ).scalar_one_or_none()
+            station = (await session.execute(station_query)).scalar_one_or_none()
             if not team or not station:
                 raise PowonlineException("Unknown team or station for event")
         query = select(model.TeamStation).filter_by(
@@ -409,9 +391,7 @@ class Team:
         state = result.scalar_one_or_none()
 
         if not state:
-            state = model.TeamStation(
-                team_name=team_name, station_name=station_name
-            )
+            state = model.TeamStation(team_name=team_name, station_name=station_name)
             state = await session.merge(state)
         old_score = state.score
         state.score = score
@@ -459,9 +439,7 @@ class Station:
         return (await session.execute(query)).scalars()
 
     @staticmethod
-    async def create_new(
-        session: AsyncSession, data: dict[str, Any]
-    ) -> model.Station:
+    async def create_new(session: AsyncSession, data: dict[str, Any]) -> model.Station:
         station = model.Station(**data)
         station = await session.merge(station)
         return station
@@ -557,9 +535,7 @@ class Station:
         if event_id is not None:
             station_query = station_query.filter_by(event_id=event_id)
         station = (await session.execute(station_query)).scalars().one()
-        states_query = select(model.TeamStation).filter_by(
-            station_name=station_name
-        )
+        states_query = select(model.TeamStation).filter_by(station_name=station_name)
         states = await session.execute(states_query)
         mapping = {state.team_name: state for state in states.scalars()}
 
@@ -619,9 +595,7 @@ class Station:
         event_id: int | None = None,
     ) -> str:
         subquery = (
-            select(model.Station.order)
-            .filter_by(name=station_name)
-            .scalar_subquery()
+            select(model.Station.order).filter_by(name=station_name).scalar_subquery()
         )
         if relation == schema.StationRelation.PREVIOUS:
             relation_filter = model.Station.order < subquery
@@ -646,30 +620,20 @@ class Station:
 
     @staticmethod
     def assign_questionnaire(session, station_name, questionnaire_name):
-        station = (
-            session.query(model.Station).filter_by(name=station_name).one()
-        )
+        station = session.query(model.Station).filter_by(name=station_name).one()
         questionnaire = (
-            session.query(model.Questionnaire)
-            .filter_by(name=questionnaire_name)
-            .one()
+            session.query(model.Questionnaire).filter_by(name=questionnaire_name).one()
         )
         if len(station.questionnaires) >= 1:
-            raise PowonlineException(
-                "Station already has a questionnaire assigned"
-            )
+            raise PowonlineException("Station already has a questionnaire assigned")
         station.questionnaires.append(questionnaire)
         return True
 
     @staticmethod
     def unassign_questionnaire(session, station_name, questionnaire_name):
-        station = (
-            session.query(model.Station).filter_by(name=station_name).one()
-        )
+        station = session.query(model.Station).filter_by(name=station_name).one()
         questionnaire = (
-            session.query(model.Questionnaire)
-            .filter_by(name=questionnaire_name)
-            .one()
+            session.query(model.Questionnaire).filter_by(name=questionnaire_name).one()
         )
         station.questionnaires.remove(questionnaire)
         return True
@@ -687,9 +651,7 @@ class Route:
         return (await session.execute(query)).scalars()
 
     @staticmethod
-    async def create_new(
-        session: AsyncSession, data: dict[str, Any]
-    ) -> model.Route:
+    async def create_new(session: AsyncSession, data: dict[str, Any]) -> model.Route:
         route = model.Route(**data)
         route = await session.merge(route)
         return route
@@ -865,9 +827,7 @@ class User:
         return None
 
     @staticmethod
-    async def create_new(
-        session: AsyncSession, data: dict[str, Any]
-    ) -> model.User:
+    async def create_new(session: AsyncSession, data: dict[str, Any]) -> model.User:
         data.pop("avatar_url", None)  # Avatars are not settable
         user = model.User(**data)
         session.add(user)
@@ -958,9 +918,7 @@ class User:
                 name=station_name,
                 event_id=event_id,
             )
-            station = (
-                await session.execute(station_query)
-            ).scalar_one_or_none()
+            station = (await session.execute(station_query)).scalar_one_or_none()
             if not station:
                 return False
         user_query = select(model.User).filter_by(name=user_name)
@@ -985,9 +943,7 @@ class Role:
         return None
 
     @staticmethod
-    async def create_new(
-        session: AsyncSession, data: dict[str, Any]
-    ) -> model.Role:
+    async def create_new(session: AsyncSession, data: dict[str, Any]) -> model.Role:
         role = model.Role(**data)
         session.add(role)
         return role
@@ -1024,6 +980,32 @@ class Event:
             )
             .filter_by(user_name=user_name)
             .order_by(model.Event.inserted.desc())
+        )
+        result = await session.execute(query)
+        return result.scalars()
+
+    @staticmethod
+    async def all_admin_upcoming(
+        session: AsyncSession, user_name: str
+    ) -> ScalarResult[model.Event]:
+        """Return upcoming events where user_name is event_owner or event_co_admin."""
+        now = datetime.now(timezone.utc)
+        query = (
+            select(model.Event)
+            .join(
+                model.EventUserRole,
+                model.EventUserRole.event_id == model.Event.id,
+            )
+            .where(
+                and_(
+                    model.EventUserRole.user_name == user_name,
+                    model.EventUserRole.role_name.in_(
+                        ("event_owner", "event_co_admin")
+                    ),
+                    func.upper(model.Event.time_range) > now,
+                )
+            )
+            .order_by(model.Event.time_range.asc())
         )
         result = await session.execute(query)
         return result.scalars()
@@ -1129,9 +1111,7 @@ class Upload:
         return result.scalars()
 
     @staticmethod
-    async def make_thumbnail(
-        session: AsyncSession, uuid: str
-    ) -> model.Upload | None:
+    async def make_thumbnail(session: AsyncSession, uuid: str) -> model.Upload | None:
         query = select(model.Upload).filter_by(uuid=uuid)
         result = await session.execute(query)
         instance = result.scalar_one_or_none()
@@ -1178,9 +1158,7 @@ class Upload:
         return instance
 
     @staticmethod
-    async def delete(
-        session: AsyncSession, data_folder: str, instance: model.Upload
-    ):
+    async def delete(session: AsyncSession, data_folder: str, instance: model.Upload):
         fullname = join(data_folder, instance.filename)
         unlink(fullname)
         await session.delete(instance)
@@ -1286,9 +1264,7 @@ class Questionnaire:
         )
         if event_id is not None:
             station_query = station_query.filter_by(event_id=event_id)
-            questionnaire_query = questionnaire_query.filter_by(
-                event_id=event_id
-            )
+            questionnaire_query = questionnaire_query.filter_by(event_id=event_id)
         station = (await session.execute(station_query)).scalar_one_or_none()
         questionnaire = (
             await session.execute(questionnaire_query)
@@ -1300,9 +1276,7 @@ class Questionnaire:
             len(station_questionnaires) >= 1
             and questionnaire not in station_questionnaires
         ):
-            raise PowonlineException(
-                "Station already has a questionnaire assigned"
-            )
+            raise PowonlineException("Station already has a questionnaire assigned")
         questionnaire_station = await questionnaire.awaitable_attrs.station
         if questionnaire_station and questionnaire_station != station:
             raise PowonlineException(
