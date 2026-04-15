@@ -1008,7 +1008,7 @@ class Event:
 
     @staticmethod
     async def all(session: AsyncSession) -> ScalarResult[model.Event]:
-        query = select(model.Event).order_by(model.Event.inserted.desc())
+        query = select(model.Event).order_by(model.Event.time_range.asc())
         result = await session.execute(query)
         return result.scalars()
 
