@@ -99,13 +99,20 @@ def _make_refresh_token(jwt_secret: str, username: str, roles: list[str]) -> str
 
 
 def _make_pkce_state_token(
-    jwt_secret: str, state: str, code_verifier: str, provider: str
+    jwt_secret: str,
+    state: str,
+    code_verifier: str,
+    provider: str,
+    redirect_uri: str,
+    frontend_url: str,
 ) -> str:
     now = int(time())
     payload = {
         "state": state,
         "cv": code_verifier,
         "provider": provider,
+        "redirect_uri": redirect_uri,
+        "frontend_url": frontend_url,
         "iat": now,
         "exp": now + PKCE_STATE_LIFETIME,
     }
@@ -188,6 +195,9 @@ async def social_login_start(
     redirect_uri: str = Query(
         ..., description="Backend callback URL the IdP should redirect to"
     ),
+    frontend_url: str = Query(
+        ..., description="Frontend URL to redirect to after successful login"
+    ),
 ):
     """
     Begin an OAuth2 PKCE flow.
@@ -210,7 +220,14 @@ async def social_login_start(
         client.authorization_url, redirect_uri, state, code_challenge
     )
 
-    pkce_cookie = _make_pkce_state_token(jwt_secret, state, code_verifier, provider)
+    pkce_cookie = _make_pkce_state_token(
+        jwt_secret,
+        state,
+        code_verifier,
+        provider,
+        redirect_uri,
+        frontend_url,
+    )
 
     response = RedirectResponse(auth_url, status_code=302)
     response.set_cookie(
@@ -226,12 +243,19 @@ async def social_login_callback(
     config: Annotated[ConfigParser, Depends(default)],
     code: str = Query(...),
     state: str = Query(...),
-    redirect_uri: str = Query(
-        ...,
-        description="Must exactly match the URI used to start the flow",
+    redirect_uri: str | None = Query(
+        None,
+        description=(
+            "Optional override of the callback URI; defaults to the URI used "
+            "to start the flow"
+        ),
     ),
-    frontend_url: str = Query(
-        ..., description="Frontend URL to redirect to after successful login"
+    frontend_url: str | None = Query(
+        None,
+        description=(
+            "Optional override of frontend redirect URL; defaults to the URL "
+            "used to start the flow"
+        ),
     ),
     pkce_state: Annotated[str | None, Cookie()] = None,
 ):
@@ -261,6 +285,13 @@ async def social_login_callback(
 
     if pkce["provider"] != provider:
         raise HTTPException(400, "Provider mismatch in PKCE state")
+
+    redirect_uri = redirect_uri or pkce.get("redirect_uri")
+    frontend_url = frontend_url or pkce.get("frontend_url")
+    if not redirect_uri:
+        raise HTTPException(400, "Missing redirect_uri for token exchange")
+    if not frontend_url:
+        raise HTTPException(400, "Missing frontend_url for final redirect")
 
     code_verifier = pkce["cv"]
 

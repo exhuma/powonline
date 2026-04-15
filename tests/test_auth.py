@@ -355,7 +355,10 @@ async def test_social_login_start_unknown_provider(
     try:
         response = await test_client.get(
             "/auth/social/nonexistent",
-            params={"redirect_uri": "http://localhost/auth/callback/nonexistent"},
+            params={
+                "redirect_uri": "http://localhost/auth/callback/nonexistent",
+                "frontend_url": "http://localhost/auth/callback",
+            },
             follow_redirects=False,
         )
         assert response.status_code == 400, response.content
@@ -388,7 +391,10 @@ async def test_social_login_start_redirects(app: FastAPI, test_client: AsyncClie
         with patch("powonline.routers.auth.Social.create", return_value=mock_client):
             response = await test_client.get(
                 "/auth/social/github",
-                params={"redirect_uri": "http://localhost/auth/callback/github"},
+                params={
+                    "redirect_uri": "http://localhost/auth/callback/github",
+                    "frontend_url": "http://localhost/auth/callback",
+                },
                 follow_redirects=False,
             )
         assert response.status_code == 302, response.content
@@ -525,6 +531,62 @@ async def test_callback_success(app: FastAPI, test_client: AsyncClient, seed):
             )
         assert response.status_code == 302, response.content
         assert response.headers["location"] == "http://localhost/"
+        assert "access_token" in response.cookies
+        assert "refresh_token" in response.cookies
+    finally:
+        test_client.cookies.clear()
+        app.dependency_overrides.pop(config_default, None)
+
+
+async def test_callback_success_uses_pkce_cookie_urls(
+    app: FastAPI, test_client: AsyncClient, seed
+):
+    """
+    Happy path without redirect_uri/frontend_url query params.
+    The callback should use values persisted in the PKCE state cookie.
+    """
+    app.dependency_overrides[config_default] = lambda: _make_config(
+        extra=dedent(
+            """\
+            [social:github]
+            client_id = gh-client-id
+            client_secret = gh-client-secret
+            """
+        )
+    )
+
+    pkce_payload = {
+        "state": "good-state",
+        "cv": "code-verifier",
+        "provider": "github",
+        "redirect_uri": "http://localhost/auth/callback/github",
+        "frontend_url": "http://localhost/auth/callback",
+        "iat": int(time()),
+        "exp": int(time()) + 600,
+    }
+    pkce_cookie = jwt.encode(pkce_payload, JWT_SECRET, algorithm="HS256")
+    test_client.cookies.set("pkce_state", pkce_cookie)
+
+    mock_social = MagicMock()
+    mock_social.exchange_code = MagicMock(
+        return_value={"access_token": "gh-access-token"}
+    )
+    mock_social.get_user_info = MagicMock(
+        return_value={"email": "newuser@example.com", "name": "New User"}
+    )
+
+    try:
+        with patch("powonline.routers.auth.Social.create", return_value=mock_social):
+            response = await test_client.get(
+                "/auth/callback/github",
+                params={
+                    "code": "somecode",
+                    "state": "good-state",
+                },
+                follow_redirects=False,
+            )
+        assert response.status_code == 302, response.content
+        assert response.headers["location"] == "http://localhost/auth/callback"
         assert "access_token" in response.cookies
         assert "refresh_token" in response.cookies
     finally:
