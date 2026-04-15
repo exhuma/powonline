@@ -1189,30 +1189,57 @@ class Upload:
 
 class Questionnaire:
     @staticmethod
-    def all(session):
-        return session.query(model.Questionnaire).order_by(
-            model.Questionnaire.order
-        )
+    async def all(
+        session: AsyncSession,
+        event_id: int | None = None,
+    ) -> ScalarResult[model.Questionnaire]:
+        query = select(model.Questionnaire).order_by(model.Questionnaire.order)
+        if event_id is not None:
+            query = query.filter_by(event_id=event_id)
+        result = await session.execute(query)
+        return result.scalars()
 
     @staticmethod
-    def create_new(session, data):
-        questionnaire = model.Questionnaire(**data)
-        questionnaire = session.merge(questionnaire)
+    async def create_new(
+        session: AsyncSession, data: dict[str, Any]
+    ) -> model.Questionnaire:
+        payload = dict(data)
+        event_id = payload.pop("event_id", None)
+        payload.pop("inserted", None)
+        payload.pop("updated", None)
+        questionnaire = model.Questionnaire(**payload)
+        questionnaire.event_id = event_id
+        questionnaire = await session.merge(questionnaire)
         return questionnaire
 
     @staticmethod
-    def get(session, name):
-        return (
-            session.query(model.Questionnaire)
-            .filter_by(name=name)
-            .one_or_none()
-        )
+    async def get(
+        session: AsyncSession,
+        name: str,
+        event_id: int | None = None,
+    ) -> model.Questionnaire | None:
+        query = select(model.Questionnaire).filter_by(name=name)
+        if event_id is not None:
+            query = query.filter_by(event_id=event_id)
+        result = await session.execute(query)
+        return result.scalar_one_or_none()
 
     @staticmethod
-    def upsert(session, name, data):
-        old = session.query(model.Questionnaire).filter_by(name=name).first()
+    async def upsert(
+        session: AsyncSession,
+        name: str,
+        data: dict[str, Any],
+        event_id: int | None = None,
+    ) -> model.Questionnaire:
+        data.pop("inserted", None)
+        data.pop("updated", None)
+        query = select(model.Questionnaire).filter_by(name=name)
+        if event_id is not None:
+            query = query.filter_by(event_id=event_id)
+        result = await session.execute(query)
+        old = result.scalar_one_or_none()
         if not old:
-            old = Questionnaire.create_new(session, data)
+            old = await Questionnaire.create_new(session, data)
         for k, v in data.items():
             if k == "station_name" and not v:
                 setattr(old, k, None)
@@ -1221,51 +1248,81 @@ class Questionnaire:
         return old
 
     @staticmethod
-    def delete(session, name):
-        session.query(model.Questionnaire).filter_by(name=name).delete()
+    async def delete(
+        session: AsyncSession,
+        name: str,
+        event_id: int | None = None,
+    ) -> None:
+        query = delete(model.Questionnaire).filter_by(name=name)
+        if event_id is not None:
+            query = query.filter_by(event_id=event_id)
+        await session.execute(query)
         return None
 
     @staticmethod
-    def assigned_to_station(session, station_name):
-        station = (
-            session.query(model.Station)
-            .filter_by(name=station_name)
-            .one_or_none()
-        )
-        return station.questionnaires
+    async def assigned_to_station(
+        session: AsyncSession,
+        station_name: str,
+        event_id: int | None = None,
+    ) -> list[model.Questionnaire]:
+        station_query = select(model.Station).filter_by(name=station_name)
+        if event_id is not None:
+            station_query = station_query.filter_by(event_id=event_id)
+        station = (await session.execute(station_query)).scalar_one_or_none()
+        if not station:
+            return []
+        return await station.awaitable_attrs.questionnaires
 
     @staticmethod
-    def assign_station(session, station_name, questionnaire_name):
-        station = (
-            session.query(model.Station)
-            .filter_by(name=station_name)
-            .one_or_none()
+    async def assign_station(
+        session: AsyncSession,
+        station_name: str,
+        questionnaire_name: str,
+        event_id: int | None = None,
+    ) -> bool:
+        station_query = select(model.Station).filter_by(name=station_name)
+        questionnaire_query = select(model.Questionnaire).filter_by(
+            name=questionnaire_name
         )
+        if event_id is not None:
+            station_query = station_query.filter_by(event_id=event_id)
+            questionnaire_query = questionnaire_query.filter_by(
+                event_id=event_id
+            )
+        station = (await session.execute(station_query)).scalar_one_or_none()
         questionnaire = (
-            session.query(model.Questionnaire)
-            .filter_by(name=questionnaire_name)
-            .one_or_none()
-        )
+            await session.execute(questionnaire_query)
+        ).scalar_one_or_none()
         if not station or not questionnaire:
             return False
-        if len(station.questionnaires) > 1:
+        station_questionnaires = await station.awaitable_attrs.questionnaires
+        if (
+            len(station_questionnaires) >= 1
+            and questionnaire not in station_questionnaires
+        ):
             raise PowonlineException(
                 "Station already has a questionnaire assigned"
             )
-        if questionnaire.station and questionnaire.station != station:
+        questionnaire_station = await questionnaire.awaitable_attrs.station
+        if questionnaire_station and questionnaire_station != station:
             raise PowonlineException(
                 "Questionnaire already assigned to another station"
             )
-        station.questionnaires.add(questionnaire)
+
+        if questionnaire not in station_questionnaires:
+            station_questionnaires.append(questionnaire)
         return True
 
     @staticmethod
-    def unassign_station(session, questionnaire_name):
-        questionnaire = (
-            session.query(model.Questionnaire)
-            .filter_by(name=questionnaire_name)
-            .one_or_none()
-        )
+    async def unassign_station(
+        session: AsyncSession,
+        questionnaire_name: str,
+        event_id: int | None = None,
+    ) -> bool:
+        query = select(model.Questionnaire).filter_by(name=questionnaire_name)
+        if event_id is not None:
+            query = query.filter_by(event_id=event_id)
+        questionnaire = (await session.execute(query)).scalar_one_or_none()
         if not questionnaire:
             return False
         questionnaire.station = None
