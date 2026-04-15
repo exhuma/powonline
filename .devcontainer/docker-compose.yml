@@ -45,7 +45,7 @@ services:
       POSTGRES_PASSWORD: postgres
 
   idp:
-    image: quay.io/keycloak/keycloak:22.0.0
+    image: quay.io/keycloak/keycloak:26.6.0
     restart: unless-stopped
     command:
       - start-dev
@@ -53,6 +53,9 @@ services:
       - --db-url-host keycloak-db
       - --db-username postgres
       - --db-password postgres
+      - --import-realm
+    volumes:
+      - ./docker-resources/keycloak-realm:/opt/keycloak/data/import:ro
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin

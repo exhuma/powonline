@@ -7,7 +7,8 @@
 	"service": "app",
 	"workspaceFolder": "/workspace",
 	"forwardPorts": [
-		5000
+		5000,
+		8080
 	],
 	// Use 'postCreateCommand' to run commands after the container is created.
 	"postCreateCommand": "bash .devcontainer/initialise.bash",
@@ -16,16 +17,10 @@
 		"5000": {
 			"label": "API",
 			"onAutoForward": "notify"
-		}
-	},
-	"customizations": {
-		"vscode": {
-			"extensions": [
-				"ms-python.black-formatter",
-				"tamasfe.even-better-toml",
-				"ms-python.python",
-				"charliermarsh.ruff"
-			]
+		},
+		"8080": {
+			"label": "Keycloak",
+			"onAutoForward": "notify"
 		}
 	},
 	"customizations": {
