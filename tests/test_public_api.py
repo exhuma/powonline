@@ -36,14 +36,10 @@ TEST_HELPER = TestCase()
 @pytest.fixture
 async def seed(dbsession: AsyncSession, app: FastAPI, test_client: AsyncClient):
     test_config = ConfigParser()
-    test_config.read_string(
-        dedent(
-            """\
+    test_config.read_string(dedent("""\
             [security]
             jwt_secret = testing
-            """
-        )
-    )
+            """))
     app.dependency_overrides[get_config] = lambda: test_config
     try:
         with open(here("seed_cleanup.sql")) as seed:

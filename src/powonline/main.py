@@ -22,7 +22,9 @@ def _get_allowed_origins() -> list[str]:
         origins = [o.strip() for o in raw.split(",") if o.strip()]
         return origins or ["*"]
     except Exception:
-        LOG.warning("Could not read allowed_origins from config, defaulting to '*'")
+        LOG.warning(
+            "Could not read allowed_origins from config, defaulting to '*'"
+        )
         return ["*"]
 
 

@@ -85,7 +85,9 @@ def _make_access_token(jwt_secret: str, username: str, roles: list[str]) -> str:
     return jwt.encode(payload, jwt_secret, algorithm="HS256")
 
 
-def _make_refresh_token(jwt_secret: str, username: str, roles: list[str]) -> str:
+def _make_refresh_token(
+    jwt_secret: str, username: str, roles: list[str]
+) -> str:
     now = int(time())
     payload = {
         "sub": username,
@@ -129,7 +131,9 @@ def _set_auth_cookies(
 ) -> None:
     access = _make_access_token(jwt_secret, username, roles)
     refresh = _make_refresh_token(jwt_secret, username, roles)
-    response.set_cookie("access_token", access, **_cookie_kwargs(ACCESS_TOKEN_LIFETIME))
+    response.set_cookie(
+        "access_token", access, **_cookie_kwargs(ACCESS_TOKEN_LIFETIME)
+    )
     response.set_cookie(
         "refresh_token", refresh, **_cookie_kwargs(REFRESH_TOKEN_LIFETIME)
     )
@@ -310,14 +314,18 @@ async def social_login_callback(
 
     access_token = token_data.get("access_token")
     if not access_token:
-        raise HTTPException(502, "No access token received from identity provider")
+        raise HTTPException(
+            502, "No access token received from identity provider"
+        )
 
     # Fetch user info
     try:
         user_info = await _call(client.get_user_info, access_token)
     except Exception as exc:
         LOG.error("User info fetch failed for %s: %s", provider, exc)
-        raise HTTPException(502, "Failed to retrieve user info from identity provider")
+        raise HTTPException(
+            502, "Failed to retrieve user info from identity provider"
+        )
 
     # Find or create local user
     user_orm = await core.User.by_social_connection(

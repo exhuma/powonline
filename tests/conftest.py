@@ -3,13 +3,13 @@ import os
 from pathlib import Path
 from textwrap import dedent
 
-import alembic.config
 from config_resolver.core import get_config
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from pytest import fixture
 from sqlalchemy import text
 
+import alembic.config
 from powonline.main import create_app
 
 LOG = logging.getLogger(__name__)
@@ -43,15 +43,10 @@ def test_config():
 
 @fixture
 def app(test_config):
-    test_config.read_string(
-        dedent(
-            """\
+    test_config.read_string(dedent("""\
         [security]
         jwt_secret = %s
-        """
-            % ("testing",)
-        )
-    )
+        """ % ("testing",)))
     app = create_app()
     return app
 

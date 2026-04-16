@@ -5,9 +5,9 @@ Revises:
 Create Date: 2017-06-19 08:07:51.151982
 
 """
+
 from datetime import datetime
 
-from alembic import op
 from sqlalchemy import (
     Boolean,
     Column,
@@ -17,6 +17,8 @@ from sqlalchemy import (
     Unicode,
     func,
 )
+
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "3ee5e487c3e5"

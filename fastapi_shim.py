@@ -123,7 +123,7 @@ async def get_optional_user(
 
 
 async def get_current_user(
-    user: Annotated[User | None, Depends(get_optional_user)]
+    user: Annotated[User | None, Depends(get_optional_user)],
 ) -> User:
     if user is None:
         raise AuthError("Access Denied", status_code=401)

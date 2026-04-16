@@ -16,7 +16,7 @@ loggers:
     level: INFO
 handlers:
   console:
-    class : logging.StreamHandler
+    class: logging.StreamHandler
     formatter: gouge
 formatters:
   gouge:

@@ -41,15 +41,11 @@ JWT_SECRET = "testing-secret-key-long-enough-for-hs256"
 def _make_config(extra: str = "") -> ConfigParser:
     """Build a minimal test ConfigParser with the correct jwt_secret."""
     cfg = ConfigParser()
-    cfg.read_string(
-        dedent(
-            f"""\
+    cfg.read_string(dedent(f"""\
             [security]
             jwt_secret = {JWT_SECRET}
             {extra}
-            """
-        )
-    )
+            """))
     return cfg
 
 
@@ -130,7 +126,9 @@ async def test_login_success(app: FastAPI, test_client: AsyncClient, seed):
         app.dependency_overrides.pop(config_default, None)
 
 
-async def test_login_wrong_password(app: FastAPI, test_client: AsyncClient, seed):
+async def test_login_wrong_password(
+    app: FastAPI, test_client: AsyncClient, seed
+):
     """Wrong password → 401 (NOT_AUTHENTICATED reason)."""
     app.dependency_overrides[config_default] = lambda: _make_config()
 
@@ -179,7 +177,9 @@ async def test_login_unknown_user(app: FastAPI, test_client: AsyncClient, seed):
 
 async def test_me_authenticated(app: FastAPI, test_client: AsyncClient, seed):
     """Authenticated user → 200 with user + roles."""
-    app.dependency_overrides[get_user] = lambda: User(name="user-red", roles={"admin"})
+    app.dependency_overrides[get_user] = lambda: User(
+        name="user-red", roles={"admin"}
+    )
     try:
         response = await test_client.get("/auth/me")
         assert response.status_code == 200, response.content
@@ -196,7 +196,9 @@ async def test_me_unauthenticated(test_client: AsyncClient):
     assert response.status_code == 401, response.content
 
 
-async def test_me_with_access_cookie(app: FastAPI, test_client: AsyncClient, seed):
+async def test_me_with_access_cookie(
+    app: FastAPI, test_client: AsyncClient, seed
+):
     """Valid access_token cookie → 200."""
     app.dependency_overrides[config_default] = lambda: _make_config()
     token = _make_access_token("user-red", ["admin"])
@@ -321,15 +323,11 @@ async def test_providers_returns_configured_provider(
 ):
     """When a provider section is configured, it appears in the list."""
     # Config section name uses colon separator: social:github
-    cfg = _make_config(
-        extra=dedent(
-            """\
+    cfg = _make_config(extra=dedent("""\
             [social:github]
             client_id = gh-client-id
             client_secret = gh-client-secret
-            """
-        )
-    )
+            """))
     app.dependency_overrides[config_default] = lambda: cfg
     try:
         response = await test_client.get("/auth/providers")
@@ -366,20 +364,18 @@ async def test_social_login_start_unknown_provider(
         app.dependency_overrides.pop(config_default, None)
 
 
-async def test_social_login_start_redirects(app: FastAPI, test_client: AsyncClient):
+async def test_social_login_start_redirects(
+    app: FastAPI, test_client: AsyncClient
+):
     """
     Known provider → 302 redirect to IdP authorization URL + pkce_state cookie.
     The Social.create call and the underlying authorization_url are mocked.
     """
-    cfg = _make_config(
-        extra=dedent(
-            """\
+    cfg = _make_config(extra=dedent("""\
             [social:github]
             client_id = gh-client-id
             client_secret = gh-client-secret
-            """
-        )
-    )
+            """))
     app.dependency_overrides[config_default] = lambda: cfg
 
     mock_client = MagicMock()
@@ -388,7 +384,9 @@ async def test_social_login_start_redirects(app: FastAPI, test_client: AsyncClie
     )
 
     try:
-        with patch("powonline.routers.auth.Social.create", return_value=mock_client):
+        with patch(
+            "powonline.routers.auth.Social.create", return_value=mock_client
+        ):
             response = await test_client.get(
                 "/auth/social/github",
                 params={
@@ -426,7 +424,9 @@ async def test_callback_missing_pkce_cookie(
     assert response.status_code == 400, response.content
 
 
-async def test_callback_state_mismatch(app: FastAPI, test_client: AsyncClient, seed):
+async def test_callback_state_mismatch(
+    app: FastAPI, test_client: AsyncClient, seed
+):
     """State in query param doesn't match pkce cookie → 400."""
     app.dependency_overrides[config_default] = lambda: _make_config()
     pkce_payload = {
@@ -455,7 +455,9 @@ async def test_callback_state_mismatch(app: FastAPI, test_client: AsyncClient, s
         app.dependency_overrides.pop(config_default, None)
 
 
-async def test_callback_provider_mismatch(app: FastAPI, test_client: AsyncClient, seed):
+async def test_callback_provider_mismatch(
+    app: FastAPI, test_client: AsyncClient, seed
+):
     """Provider in URL doesn't match pkce cookie → 400."""
     app.dependency_overrides[config_default] = lambda: _make_config()
     pkce_payload = {
@@ -490,13 +492,11 @@ async def test_callback_success(app: FastAPI, test_client: AsyncClient, seed):
     client returns token + user info → 302 to frontend_url with auth cookies.
     """
     app.dependency_overrides[config_default] = lambda: _make_config(
-        extra=dedent(
-            """\
+        extra=dedent("""\
             [social:github]
             client_id = gh-client-id
             client_secret = gh-client-secret
-            """
-        )
+            """)
     )
 
     pkce_payload = {
@@ -518,7 +518,9 @@ async def test_callback_success(app: FastAPI, test_client: AsyncClient, seed):
     )
 
     try:
-        with patch("powonline.routers.auth.Social.create", return_value=mock_social):
+        with patch(
+            "powonline.routers.auth.Social.create", return_value=mock_social
+        ):
             response = await test_client.get(
                 "/auth/callback/github",
                 params={
@@ -546,13 +548,11 @@ async def test_callback_success_uses_pkce_cookie_urls(
     The callback should use values persisted in the PKCE state cookie.
     """
     app.dependency_overrides[config_default] = lambda: _make_config(
-        extra=dedent(
-            """\
+        extra=dedent("""\
             [social:github]
             client_id = gh-client-id
             client_secret = gh-client-secret
-            """
-        )
+            """)
     )
 
     pkce_payload = {
@@ -576,7 +576,9 @@ async def test_callback_success_uses_pkce_cookie_urls(
     )
 
     try:
-        with patch("powonline.routers.auth.Social.create", return_value=mock_social):
+        with patch(
+            "powonline.routers.auth.Social.create", return_value=mock_social
+        ):
             response = await test_client.get(
                 "/auth/callback/github",
                 params={

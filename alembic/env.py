@@ -3,9 +3,10 @@ from __future__ import with_statement
 import sys
 from logging.config import fileConfig
 
+from sqlalchemy import create_engine
+
 from alembic import context
 from powonline.model import get_dsn, metadata
-from sqlalchemy import create_engine
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

@@ -10,7 +10,6 @@ lost-tracker DB, making data-migration easier.
 
 from textwrap import dedent
 
-from alembic import op
 from sqlalchemy import (
     Boolean,
     Column,
@@ -21,6 +20,8 @@ from sqlalchemy import (
     Unicode,
 )
 
+from alembic import op
+
 # revision identifiers, used by Alembic.
 revision = "5be3d628dcc3"
 down_revision = "f5fdb20dd1dd"
@@ -29,16 +30,12 @@ depends_on = None
 
 
 def create_updated_trigger(tablename):
-    op.execute(
-        dedent(
-            """\
+    op.execute(dedent("""\
         CREATE TRIGGER {0}_updated_timestamp
         BEFORE UPDATE ON public."{0}"
         FOR ROW WHEN ((old.* IS DISTINCT FROM new.*))
 
-        EXECUTE PROCEDURE public.set_updated_column();"""
-        ).format(tablename)
-    )
+        EXECUTE PROCEDURE public.set_updated_column();""").format(tablename))
 
 
 def add_ts(tablename, ins=True, upd=True):
@@ -58,9 +55,7 @@ def add_ts(tablename, ins=True, upd=True):
 
 def upgrade():
     op.execute("CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog")
-    op.execute(
-        dedent(
-            """\
+    op.execute(dedent("""\
         CREATE FUNCTION public.set_updated_column() RETURNS trigger
             LANGUAGE plpgsql
             AS $$
@@ -69,9 +64,7 @@ def upgrade():
                 RETURN NEW;
             END;
             $$;
-        """
-        )
-    )
+        """))
 
     add_ts("role")
     add_ts("route")

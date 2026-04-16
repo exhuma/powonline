@@ -53,7 +53,9 @@ def set_engine(engine: AsyncEngine) -> None:
     _async_session = None  # Reset session maker
 
 
-def set_async_session_maker(session_maker: async_sessionmaker[AsyncSession]) -> None:
+def set_async_session_maker(
+    session_maker: async_sessionmaker[AsyncSession],
+) -> None:
     """Set a custom session maker (useful for testing)."""
     global _async_session
     _async_session = session_maker

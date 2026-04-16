@@ -170,7 +170,9 @@ async def domain_lookup(
 ) -> schema.EventSchema:
     event = await core.Event.get_by_domain(session, domain)
     if not event:
-        raise HTTPException(status_code=404, detail="No event mapped to this domain")
+        raise HTTPException(
+            status_code=404, detail="No event mapped to this domain"
+        )
     return schema.EventSchema.model_validate(event)
 
 
@@ -205,7 +207,9 @@ async def add_event_domain(
     try:
         domain = await core.EventDomain.create(session, event_id, body.domain)
     except Exception:
-        raise HTTPException(status_code=409, detail="Domain already mapped to an event")
+        raise HTTPException(
+            status_code=409, detail="Domain already mapped to an event"
+        )
     return schema.EventDomainSchema.model_validate(domain)
 
 

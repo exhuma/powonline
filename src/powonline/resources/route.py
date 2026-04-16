@@ -179,4 +179,3 @@ async def set_route_color(
         event_id=event_id,
     )
     return {"color": new_color}
-

@@ -27,7 +27,9 @@ async def query_teams_for_event(
         if not filter_func:
             return Response(f"{quickfilter!r} is not a known quickfilter!", 400)
         quickfilter_teams = await filter_func(session)
-        teams = [team for team in quickfilter_teams if team.event_id == event_id]
+        teams = [
+            team for team in quickfilter_teams if team.event_id == event_id
+        ]
     elif assigned_to_route:
         teams = await core.Team.assigned_to_route(
             session, assigned_to_route, event_id=event_id

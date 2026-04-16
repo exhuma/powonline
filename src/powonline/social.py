@@ -297,7 +297,9 @@ class Microsoft:
             tenant=tenant,
         )
 
-    def __init__(self, client_id: str, client_secret: str, tenant: str = "common"):
+    def __init__(
+        self, client_id: str, client_secret: str, tenant: str = "common"
+    ):
         self.client_id = client_id
         self.client_secret = client_secret
         self.tenant = tenant

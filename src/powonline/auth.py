@@ -91,7 +91,9 @@ class User(BaseModel):
 
 
 def local_dev_user(
-    basic_credentials: Annotated[HTTPBasicCredentials | None, Depends(LOCAL_AUTH)],
+    basic_credentials: Annotated[
+        HTTPBasicCredentials | None, Depends(LOCAL_AUTH)
+    ],
 ) -> User | None:
     """
     Implementation for HTTP BASIC authentication for local development.
@@ -107,7 +109,9 @@ def local_dev_user(
         return None
     username, _, roles_str = basic_credentials.username.partition("#")
     roles = {
-        role.strip() for role in roles_str.split(",") if role.strip() in PERMISSION_MAP
+        role.strip()
+        for role in roles_str.split(",")
+        if role.strip() in PERMISSION_MAP
     }
     user = User(name=username, roles=roles)
     AUTH_LOG.warning(
@@ -136,7 +140,9 @@ def _decode_token(jwt_secret: str, token: str) -> User | None:
 
 def get_token_user(
     config: Annotated[ConfigParser, Depends(default)],
-    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(Bearer)],
+    credentials: Annotated[
+        HTTPAuthorizationCredentials | None, Depends(Bearer)
+    ],
     access_token: Annotated[str | None, Cookie()] = None,
 ) -> User | None:
     """
@@ -177,14 +183,18 @@ def get_user(
     return optional_user
 
 
-async def is_event_admin(session: AsyncSession, event_id: int, user_name: str) -> bool:
-    if user_name == "admin": # TODO: Should be handled with a role/permission
+async def is_event_admin(
+    session: AsyncSession, event_id: int, user_name: str
+) -> bool:
+    if user_name == "admin":  # TODO: Should be handled with a role/permission
         return True
     query = select(EventUserRole).filter(
         and_(
             EventUserRole.event_id == event_id,
             EventUserRole.user_name == user_name,
-            EventUserRole.role_name.in_((EVENT_OWNER_ROLE, EVENT_CO_ADMIN_ROLE)),
+            EventUserRole.role_name.in_(
+                (EVENT_OWNER_ROLE, EVENT_CO_ADMIN_ROLE)
+            ),
         )
     )
     result = await session.execute(query)
