@@ -178,6 +178,8 @@ def get_user(
 
 
 async def is_event_admin(session: AsyncSession, event_id: int, user_name: str) -> bool:
+    if user_name == "admin": # TODO: Should be handled with a role/permission
+        return True
     query = select(EventUserRole).filter(
         and_(
             EventUserRole.event_id == event_id,

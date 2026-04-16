@@ -1,7 +1,7 @@
 import logging
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Response
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Response
 from sqlalchemy.dialects.postgresql import Range
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,6 +17,7 @@ from powonline.dependencies import get_db
 from powonline.exc import NotFound
 
 ROUTER = APIRouter(prefix="/events", tags=["event"])
+DOMAIN_ROUTER = APIRouter(tags=["event"])
 LOG = logging.getLogger(__name__)
 
 ALLOWED_MEMBER_ROLES = {EVENT_OWNER_ROLE, EVENT_CO_ADMIN_ROLE}
@@ -28,8 +29,7 @@ def _convert_time_range_for_db(data: dict[str, Any]) -> dict[str, Any]:
         time_range_dict = data["time_range"]
         # Create a Range object with inclusive start, exclusive end
         data["time_range"] = Range(
-            lower=time_range_dict["start"],
-            upper=time_range_dict["end"]
+            lower=time_range_dict["start"], upper=time_range_dict["end"]
         )
     return data
 
@@ -155,4 +155,67 @@ async def remove_event_member(
         user_name=user_name,
         role_name=role_name,
     )
+    return Response(status_code=204)
+
+
+# ---------------------------------------------------------------------------
+# Domain-lookup endpoint (public, no auth required)
+# ---------------------------------------------------------------------------
+
+
+@DOMAIN_ROUTER.get("/domain-lookup")
+async def domain_lookup(
+    session: Annotated[AsyncSession, Depends(get_db)],
+    domain: str = Query(..., description="Hostname to look up"),
+) -> schema.EventSchema:
+    event = await core.Event.get_by_domain(session, domain)
+    if not event:
+        raise HTTPException(status_code=404, detail="No event mapped to this domain")
+    return schema.EventSchema.model_validate(event)
+
+
+# ---------------------------------------------------------------------------
+# Per-event domain management (event admin only)
+# ---------------------------------------------------------------------------
+
+
+@ROUTER.get("/{event_id}/domains")
+async def list_event_domains(
+    auth_user: Annotated[User, Depends(require_event_admin_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+    event_id: int,
+) -> schema.ListResult[schema.EventDomainSchema]:
+    _ = auth_user
+    items = await core.EventDomain.list(session, event_id)
+    mapped = [schema.EventDomainSchema.model_validate(item) for item in items]
+    return schema.ListResult(items=mapped)
+
+
+@ROUTER.post("/{event_id}/domains", status_code=201)
+async def add_event_domain(
+    auth_user: Annotated[User, Depends(require_event_admin_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+    event_id: int,
+    body: schema.EventDomainCreateSchema = Body(),
+) -> schema.EventDomainSchema:
+    _ = auth_user
+    event = await core.Event.get(session, event_id)
+    if not event:
+        raise NotFound("No such event")
+    try:
+        domain = await core.EventDomain.create(session, event_id, body.domain)
+    except Exception:
+        raise HTTPException(status_code=409, detail="Domain already mapped to an event")
+    return schema.EventDomainSchema.model_validate(domain)
+
+
+@ROUTER.delete("/{event_id}/domains/{domain}", status_code=204)
+async def remove_event_domain(
+    auth_user: Annotated[User, Depends(require_event_admin_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+    event_id: int,
+    domain: str,
+):
+    _ = auth_user
+    await core.EventDomain.delete(session, event_id, domain)
     return Response(status_code=204)

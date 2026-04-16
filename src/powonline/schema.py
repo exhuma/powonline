@@ -132,6 +132,17 @@ class EventMemberUpdateSchema(BaseModel):
     role_name: str
 
 
+class EventDomainSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    event_id: int
+    domain: str
+
+
+class EventDomainCreateSchema(BaseModel):
+    domain: str
+
+
 class UserSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     name: str

@@ -43,6 +43,7 @@ def create_app():
     app.include_router(resources.audit.ROUTER)
     app.include_router(resources.dashboard.ROUTER)
     app.include_router(resources.event.ROUTER)
+    app.include_router(resources.event.DOMAIN_ROUTER)
     app.include_router(resources.job.ROUTER)
     app.include_router(resources.questionnaire.ROUTER)
     app.include_router(resources.route.ROUTER)

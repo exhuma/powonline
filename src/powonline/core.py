@@ -1083,6 +1083,40 @@ class Event:
         )
         await session.execute(query)
 
+    @staticmethod
+    async def get_by_domain(session: AsyncSession, domain: str) -> model.Event | None:
+        query = (
+            select(model.Event)
+            .join(model.EventDomain, model.EventDomain.event_id == model.Event.id)
+            .where(model.EventDomain.domain == domain)
+        )
+        result = await session.execute(query)
+        return result.scalar_one_or_none()
+
+
+class EventDomain:
+    @staticmethod
+    async def list(
+        session: AsyncSession, event_id: int
+    ) -> ScalarResult[model.EventDomain]:
+        query = select(model.EventDomain).filter_by(event_id=event_id)
+        result = await session.execute(query)
+        return result.scalars()
+
+    @staticmethod
+    async def create(
+        session: AsyncSession, event_id: int, domain: str
+    ) -> model.EventDomain:
+        row = model.EventDomain(event_id=event_id, domain=domain)
+        session.add(row)
+        await session.flush()
+        return row
+
+    @staticmethod
+    async def delete(session: AsyncSession, event_id: int, domain: str) -> None:
+        query = delete(model.EventDomain).filter_by(event_id=event_id, domain=domain)
+        await session.execute(query)
+
 
 class Upload:
     FALLBACK_FOLDER = "/tmp/uploads"

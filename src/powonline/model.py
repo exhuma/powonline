@@ -201,9 +201,7 @@ class Station(Base, TimestampMixin):  # type: ignore
     )
 
     questionnaires = relationship("Questionnaire", back_populates="station")
-    event: Mapped["Event | None"] = relationship(
-        "Event", back_populates="stations"
-    )
+    event: Mapped["Event | None"] = relationship("Event", back_populates="stations")
 
     def update(self, **kwargs: Any) -> None:
         for k, v in kwargs.items():
@@ -225,9 +223,7 @@ class Route(Base, TimestampMixin):  # type: ignore
     teams: Mapped[set["Team"]] = relationship(
         "Team", back_populates="route", collection_class=set
     )
-    event: Mapped["Event | None"] = relationship(
-        "Event", back_populates="routes"
-    )
+    event: Mapped["Event | None"] = relationship("Event", back_populates="routes")
     stations: Mapped[set["Station"]] = relationship(
         "Station",
         secondary="route_station",
@@ -248,32 +244,46 @@ class Event(Base, TimestampMixin):  # type: ignore
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(Unicode, unique=True, nullable=False)
-    time_range: Mapped[Range[datetime]] = mapped_column(
-        TSTZRANGE, nullable=False
-    )
+    time_range: Mapped[Range[datetime]] = mapped_column(TSTZRANGE, nullable=False)
 
-    routes: Mapped[list["Route"]] = relationship(
-        "Route", back_populates="event"
-    )
+    routes: Mapped[list["Route"]] = relationship("Route", back_populates="event")
     teams: Mapped[list["Team"]] = relationship("Team", back_populates="event")
-    stations: Mapped[list["Station"]] = relationship(
-        "Station", back_populates="event"
-    )
+    stations: Mapped[list["Station"]] = relationship("Station", back_populates="event")
     questionnaires: Mapped[list["Questionnaire"]] = relationship(
         "Questionnaire", back_populates="event"
     )
-    uploads: Mapped[list["Upload"]] = relationship(
-        "Upload", back_populates="event"
-    )
+    uploads: Mapped[list["Upload"]] = relationship("Upload", back_populates="event")
     auditlog: Mapped[list["AuditLog"]] = relationship(
         "AuditLog", back_populates="event"
     )
     memberships: Mapped[list["EventUserRole"]] = relationship(
         "EventUserRole", back_populates="event"
     )
+    domains: Mapped[list["EventDomain"]] = relationship(
+        "EventDomain", back_populates="event", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         return f"Event(id={self.id!r}, name={self.name!r})"
+
+
+class EventDomain(Base):  # type: ignore
+    """Maps a hostname to an event, enabling domain-based event pinning."""
+
+    __tablename__ = "event_domain"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    event_id: Mapped[int] = mapped_column(
+        ForeignKey("event.id", name="event_domain_event_fkey", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    domain: Mapped[str] = mapped_column(Unicode, unique=True, nullable=False)
+
+    event: Mapped["Event"] = relationship("Event", back_populates="domains")
+
+    def __repr__(self) -> str:
+        return f"EventDomain(id={self.id!r}, event_id={self.event_id!r}, domain={self.domain!r})"
 
 
 class OauthConnection(Base, TimestampMixin):  # type: ignore
@@ -298,9 +308,7 @@ class OauthConnection(Base, TimestampMixin):  # type: ignore
     image_url: Mapped[str | None] = mapped_column(Unicode(512))
     rank: Mapped[int | None] = mapped_column()
 
-    user: Mapped["User"] = relationship(
-        "User", back_populates="oauth_connection"
-    )
+    user: Mapped["User"] = relationship("User", back_populates="oauth_connection")
 
 
 class User(Base, TimestampMixin):  # type: ignore
@@ -313,9 +321,7 @@ class User(Base, TimestampMixin):  # type: ignore
         nullable=False, server_default="false"
     )
     email: Mapped[str | None] = mapped_column()
-    active: Mapped[bool] = mapped_column(
-        Boolean, default=True, server_default="true"
-    )
+    active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     confirmed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
@@ -330,12 +336,8 @@ class User(Base, TimestampMixin):  # type: ignore
         back_populates="users",
         collection_class=set,
     )
-    files: Mapped[list["Upload"]] = relationship(
-        "Upload", back_populates="user"
-    )
-    auditlog: Mapped[list["AuditLog"]] = relationship(
-        "AuditLog", back_populates="user"
-    )
+    files: Mapped[list["Upload"]] = relationship("Upload", back_populates="user")
+    auditlog: Mapped[list["AuditLog"]] = relationship("AuditLog", back_populates="user")
     event_roles: Mapped[list["EventUserRole"]] = relationship(
         "EventUserRole", back_populates="user"
     )
@@ -350,9 +352,7 @@ class User(Base, TimestampMixin):  # type: ignore
                 return ""
             return oauth_connection[0].image_url
         except IndexError:
-            LOG.debug(
-                "Unexpected error occurred with the avatar-url", exc_info=True
-            )
+            LOG.debug("Unexpected error occurred with the avatar-url", exc_info=True)
             return ""
 
     @staticmethod
@@ -465,9 +465,7 @@ class TeamStation(Base, TimestampMixin):  # type: ignore
     )
 
     team: Mapped["Team"] = relationship("Team")
-    station: Mapped["Station"] = relationship(
-        "Station", back_populates="states"
-    )
+    station: Mapped["Station"] = relationship("Station", back_populates="states")
 
     def __init__(
         self,
@@ -543,15 +541,11 @@ class TeamQuestionnaire(Base, TimestampMixin):  # type: ignore
         name="team",
     )
     questionnaire_name: Mapped[str] = mapped_column(
-        ForeignKey(
-            "questionnaire.name", onupdate="CASCADE", ondelete="CASCADE"
-        ),
+        ForeignKey("questionnaire.name", onupdate="CASCADE", ondelete="CASCADE"),
         primary_key=True,
         name="questionnaire",
     )
-    score: Mapped[int | None] = mapped_column(
-        Integer, nullable=True, default=None
-    )
+    score: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
     updated: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -562,9 +556,7 @@ class TeamQuestionnaire(Base, TimestampMixin):  # type: ignore
     team: Mapped["Team"] = relationship("Team")
     questionnaire: Mapped["Questionnaire"] = relationship("Questionnaire")
 
-    def __init__(
-        self, team_name: str, questionnaire_name: str, score: int = 0
-    ) -> None:
+    def __init__(self, team_name: str, questionnaire_name: str, score: int = 0) -> None:
         self.team_name = team_name
         self.questionnaire_name = questionnaire_name
         self.score = score
@@ -591,9 +583,7 @@ class Upload(Base):  # type: ignore
     )
 
     user: Mapped["User"] = relationship("User", back_populates="files")
-    event: Mapped["Event | None"] = relationship(
-        "Event", back_populates="uploads"
-    )
+    event: Mapped["Event | None"] = relationship("Event", back_populates="uploads")
 
     def __init__(self, relname: str, username: str) -> None:
         self.filename = relname
@@ -640,9 +630,7 @@ class AuditLog(Base):  # type: ignore
     )
 
     user: Mapped["User"] = relationship("User", back_populates="auditlog")
-    event: Mapped["Event | None"] = relationship(
-        "Event", back_populates="auditlog"
-    )
+    event: Mapped["Event | None"] = relationship("Event", back_populates="auditlog")
 
     def __init__(
         self, timestamp: datetime, username: str, type_: AuditType, message: str
