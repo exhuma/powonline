@@ -671,7 +671,12 @@ class AuditLog(Base):  # type: ignore
     )
 
     def __init__(
-        self, timestamp: datetime, username: str, type_: AuditType, message: str
+        self,
+        timestamp: datetime,
+        username: str,
+        type_: AuditType,
+        message: str,
+        event_id: int | None = None,
     ) -> None:
         self.timestamp = timestamp
         self.username = username

@@ -614,11 +614,10 @@ class Station:
         relation: schema.StationRelation,
         event_id: int | None = None,
     ) -> str:
-        subquery = (
-            select(model.Station.order)
-            .filter_by(name=station_name)
-            .scalar_subquery()
-        )
+        subquery = select(model.Station.order).filter_by(name=station_name)
+        if event_id is not None:
+            subquery = subquery.filter_by(event_id=event_id)
+        subquery = subquery.scalar_subquery()
         if relation == schema.StationRelation.PREVIOUS:
             relation_filter = model.Station.order < subquery
         elif relation == schema.StationRelation.NEXT:
