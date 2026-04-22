@@ -14,11 +14,13 @@ from sqlalchemy import (
     DateTime,
     FetchedValue,
     ForeignKey,
+    ForeignKeyConstraint,
     Integer,
     MetaData,
     Table,
     Unicode,
     UniqueConstraint,
+    and_,
     func,
     select,
 )
@@ -77,6 +79,15 @@ class Setting(Base):  # type: ignore
 
 class Message(Base, TimestampMixin):  # type: ignore
     __tablename__ = "message"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["team", "event_id"],
+            ["team.name", "team.event_id"],
+            name="message_team_fkey",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+    )
     id = mapped_column(Integer, primary_key=True)
     content = mapped_column(Unicode)
     user = mapped_column(
@@ -88,14 +99,10 @@ class Message(Base, TimestampMixin):  # type: ignore
             ondelete="CASCADE",
         ),
     )
-    team = mapped_column(
-        Unicode,
-        ForeignKey(
-            "team.name",
-            name="message_team_fkey",
-            onupdate="CASCADE",
-            ondelete="CASCADE",
-        ),
+    team = mapped_column(Unicode)
+    event_id: Mapped[int | None] = mapped_column(
+        ForeignKey("event.id", onupdate="CASCADE", ondelete="CASCADE"),
+        nullable=True,
     )
 
 
@@ -103,6 +110,13 @@ class Team(Base, TimestampMixin):  # type: ignore
     __tablename__ = "team"
     __table_args__ = (
         UniqueConstraint("confirmation_key", name="team_confirmation_key"),
+        ForeignKeyConstraint(
+            ["route_name", "event_id"],
+            ["route.name", "route.event_id"],
+            name="team_route_fkey",
+            onupdate="CASCADE",
+            ondelete="SET NULL",
+        ),
     )
 
     name: Mapped[str] = mapped_column(primary_key=True)
@@ -121,12 +135,10 @@ class Team(Base, TimestampMixin):  # type: ignore
     planned_start_time: Mapped[datetime | None] = mapped_column()
     effective_start_time: Mapped[datetime | None] = mapped_column()
     finish_time: Mapped[datetime | None] = mapped_column()
-    route_name: Mapped[str | None] = mapped_column(
-        ForeignKey("route.name", onupdate="CASCADE", ondelete="SET NULL")
-    )
-    event_id: Mapped[int | None] = mapped_column(
+    route_name: Mapped[str | None] = mapped_column()
+    event_id: Mapped[int] = mapped_column(
         ForeignKey("event.id", onupdate="CASCADE", ondelete="CASCADE"),
-        nullable=True,
+        primary_key=True,
     )
     owner = mapped_column(
         Unicode,
@@ -139,21 +151,45 @@ class Team(Base, TimestampMixin):  # type: ignore
     )
     owner_user = relationship("User")
 
-    route: Mapped["Route"] = relationship("Route", back_populates="teams")
+    route: Mapped["Route | None"] = relationship(
+        "Route",
+        back_populates="teams",
+        foreign_keys="[Team.route_name]",
+        primaryjoin="and_(Team.route_name == Route.name, Team.event_id == Route.event_id)",
+        overlaps="event",
+    )
     event: Mapped["Event | None"] = relationship(
         "Event", back_populates="teams"
     )
     stations: Mapped[list["Station"]] = relationship(
-        "Station", secondary="team_station_state", viewonly=True
+        "Station",
+        secondary="team_station_state",
+        primaryjoin="and_(Team.name == TeamStation.team_name, Team.event_id == TeamStation.event_id)",
+        secondaryjoin="and_(Station.name == TeamStation.station_name, Station.event_id == TeamStation.event_id)",
+        viewonly=True,
+        overlaps="states,station,team,teams",
     )
     station_states: Mapped[list["TeamStation"]] = relationship(
-        "TeamStation", viewonly=True
+        "TeamStation",
+        foreign_keys="[TeamStation.team_name]",
+        primaryjoin="and_(Team.name == TeamStation.team_name, Team.event_id == TeamStation.event_id)",
+        viewonly=True,
+        overlaps="stations,station,team",
     )
     questionnaire_scores: Mapped[list["TeamQuestionnaire"]] = relationship(
-        "TeamQuestionnaire", viewonly=True
+        "TeamQuestionnaire",
+        foreign_keys="[TeamQuestionnaire.team_name]",
+        primaryjoin="and_(Team.name == TeamQuestionnaire.team_name, Team.event_id == TeamQuestionnaire.event_id)",
+        viewonly=True,
+        overlaps="questionnaires,team,questionnaire",
     )
     questionnaires: Mapped[list["Questionnaire"]] = relationship(
-        "Questionnaire", secondary="questionnaire_score", viewonly=True
+        "Questionnaire",
+        secondary="questionnaire_score",
+        primaryjoin="and_(Team.name == TeamQuestionnaire.team_name, Team.event_id == TeamQuestionnaire.event_id)",
+        secondaryjoin="and_(Questionnaire.name == TeamQuestionnaire.questionnaire_name, Questionnaire.event_id == TeamQuestionnaire.event_id)",
+        viewonly=True,
+        overlaps="questionnaire_scores,team,questionnaire,teams",
     )
 
     def update(self, **kwargs: Any) -> None:
@@ -171,9 +207,9 @@ class Team(Base, TimestampMixin):  # type: ignore
 class Station(Base, TimestampMixin):  # type: ignore
     __tablename__ = "station"
     name: Mapped[str] = mapped_column(primary_key=True)
-    event_id: Mapped[int | None] = mapped_column(
+    event_id: Mapped[int] = mapped_column(
         ForeignKey("event.id", onupdate="CASCADE", ondelete="CASCADE"),
-        nullable=True,
+        primary_key=True,
     )
     contact: Mapped[str | None] = mapped_column()
     phone: Mapped[str | None] = mapped_column()
@@ -184,6 +220,14 @@ class Station(Base, TimestampMixin):  # type: ignore
     routes: Mapped[set["Route"]] = relationship(
         "Route",
         secondary="route_station",
+        primaryjoin=lambda: and_(
+            Station.name == route_station_table.c.station_name,
+            Station.event_id == route_station_table.c.event_id,
+        ),
+        secondaryjoin=lambda: and_(
+            Route.name == route_station_table.c.route_name,
+            Route.event_id == route_station_table.c.event_id,
+        ),
         back_populates="stations",
         collection_class=set,
     )
@@ -191,18 +235,38 @@ class Station(Base, TimestampMixin):  # type: ignore
     users: Mapped[set["User"]] = relationship(
         "User",
         secondary="user_station",
+        primaryjoin=lambda: and_(
+            Station.name == user_station_table.c.station_name,
+            Station.event_id == user_station_table.c.event_id,
+        ),
+        secondaryjoin=lambda: User.name == user_station_table.c.user_name,
         back_populates="stations",
         collection_class=set,
     )
 
     teams: Mapped[list["Team"]] = relationship(
-        "Team", secondary="team_station_state", viewonly=True
+        "Team",
+        secondary="team_station_state",
+        primaryjoin="and_(Station.name == TeamStation.station_name, Station.event_id == TeamStation.event_id)",
+        secondaryjoin="and_(Team.name == TeamStation.team_name, Team.event_id == TeamStation.event_id)",
+        viewonly=True,
+        overlaps="states,station,team,station_states,stations",
     )
     states: Mapped[list["TeamStation"]] = relationship(
-        "TeamStation", back_populates="station"
+        "TeamStation",
+        back_populates="station",
+        foreign_keys="[TeamStation.station_name]",
+        primaryjoin="and_(Station.name == TeamStation.station_name, Station.event_id == TeamStation.event_id)",
+        overlaps="teams,team,station_states,stations",
     )
 
-    questionnaires = relationship("Questionnaire", back_populates="station")
+    questionnaires = relationship(
+        "Questionnaire",
+        back_populates="station",
+        foreign_keys="[Questionnaire.station_name]",
+        primaryjoin="and_(Station.name == Questionnaire.station_name, Station.event_id == Questionnaire.event_id)",
+        overlaps="event",
+    )
     event: Mapped["Event | None"] = relationship(
         "Event", back_populates="stations"
     )
@@ -220,12 +284,17 @@ class Route(Base, TimestampMixin):  # type: ignore
 
     name: Mapped[str] = mapped_column(primary_key=True)
     color: Mapped[str | None] = mapped_column()
-    event_id: Mapped[int | None] = mapped_column(
+    event_id: Mapped[int] = mapped_column(
         ForeignKey("event.id", onupdate="CASCADE", ondelete="CASCADE"),
-        nullable=True,
+        primary_key=True,
     )
     teams: Mapped[set["Team"]] = relationship(
-        "Team", back_populates="route", collection_class=set
+        "Team",
+        back_populates="route",
+        foreign_keys="[Team.route_name]",
+        primaryjoin="and_(Team.route_name == Route.name, Team.event_id == Route.event_id)",
+        collection_class=set,
+        overlaps="event",
     )
     event: Mapped["Event | None"] = relationship(
         "Event", back_populates="routes"
@@ -233,6 +302,14 @@ class Route(Base, TimestampMixin):  # type: ignore
     stations: Mapped[set["Station"]] = relationship(
         "Station",
         secondary="route_station",
+        primaryjoin=lambda: and_(
+            Route.name == route_station_table.c.route_name,
+            Route.event_id == route_station_table.c.event_id,
+        ),
+        secondaryjoin=lambda: and_(
+            Station.name == route_station_table.c.station_name,
+            Station.event_id == route_station_table.c.event_id,
+        ),
         back_populates="routes",
         collection_class=set,
     )
@@ -350,12 +427,6 @@ class User(Base, TimestampMixin):  # type: ignore
     oauth_connection: Mapped[list["OauthConnection"]] = relationship(
         "OauthConnection", back_populates="user"
     )
-    stations: Mapped[set["Station"]] = relationship(
-        "User",
-        secondary="user_station",
-        back_populates="users",
-        collection_class=set,
-    )
     files: Mapped[list["Upload"]] = relationship(
         "Upload", back_populates="user"
     )
@@ -431,6 +502,11 @@ class User(Base, TimestampMixin):  # type: ignore
     stations: Mapped[set["Station"]] = relationship(
         "Station",
         secondary="user_station",
+        primaryjoin=lambda: User.name == user_station_table.c.user_name,
+        secondaryjoin=lambda: and_(
+            Station.name == user_station_table.c.station_name,
+            Station.event_id == user_station_table.c.event_id,
+        ),
         back_populates="users",
         collection_class=set,
     )
@@ -470,15 +546,24 @@ class Role(Base, TimestampMixin):  # type: ignore
 
 class TeamStation(Base, TimestampMixin):  # type: ignore
     __tablename__ = "team_station_state"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["team_name", "event_id"],
+            ["team.name", "team.event_id"],
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+        ForeignKeyConstraint(
+            ["station_name", "event_id"],
+            ["station.name", "station.event_id"],
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+    )
 
-    team_name: Mapped[str] = mapped_column(
-        ForeignKey("team.name", onupdate="CASCADE", ondelete="CASCADE"),
-        primary_key=True,
-    )
-    station_name: Mapped[str] = mapped_column(
-        ForeignKey("station.name", onupdate="CASCADE", ondelete="CASCADE"),
-        primary_key=True,
-    )
+    team_name: Mapped[str] = mapped_column(primary_key=True)
+    station_name: Mapped[str] = mapped_column(primary_key=True)
+    event_id: Mapped[int] = mapped_column(primary_key=True)
     state: Mapped[TeamState | None] = mapped_column(
         TeamStateType, default=TeamState.UNKNOWN
     )
@@ -490,24 +575,44 @@ class TeamStation(Base, TimestampMixin):  # type: ignore
         server_default=func.now(),
     )
 
-    team: Mapped["Team"] = relationship("Team")
+    team: Mapped["Team"] = relationship(
+        "Team",
+        foreign_keys="[TeamStation.team_name]",
+        primaryjoin="and_(TeamStation.team_name == Team.name, TeamStation.event_id == Team.event_id)",
+        overlaps="stations,station_states",
+    )
     station: Mapped["Station"] = relationship(
-        "Station", back_populates="states"
+        "Station",
+        back_populates="states",
+        foreign_keys="[TeamStation.station_name]",
+        primaryjoin="and_(TeamStation.station_name == Station.name, TeamStation.event_id == Station.event_id)",
+        overlaps="teams,station_states,stations",
     )
 
     def __init__(
         self,
         team_name: str,
         station_name: str,
+        event_id: int,
         state: TeamState = TeamState.UNKNOWN,
     ) -> None:
         self.team_name = team_name
         self.station_name = station_name
+        self.event_id = event_id
         self.state = state
 
 
 class Questionnaire(Base, TimestampMixin):  # type: ignore
     __tablename__ = "questionnaire"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["station_name", "event_id"],
+            ["station.name", "station.event_id"],
+            name="questionnaire_station_fkey",
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+    )
 
     name: Mapped[str] = mapped_column(nullable=False, primary_key=True)
     max_score: Mapped[int | None] = mapped_column()
@@ -518,25 +623,27 @@ class Questionnaire(Base, TimestampMixin):  # type: ignore
         default=datetime.now(),
         server_default=func.now(),
     )
-    station_name: Mapped[str] = mapped_column(
-        Unicode,
-        ForeignKey(
-            "station.name",
-            name="for_station",
-            onupdate="CASCADE",
-            ondelete="CASCADE",
-        ),
-        nullable=True,
-    )
-    event_id: Mapped[int | None] = mapped_column(
+    station_name: Mapped[str | None] = mapped_column(Unicode, nullable=True)
+    event_id: Mapped[int] = mapped_column(
         ForeignKey("event.id", onupdate="CASCADE", ondelete="CASCADE"),
-        nullable=True,
+        primary_key=True,
     )
 
     teams: Mapped[set["Team"]] = relationship(
-        "Team", secondary="questionnaire_score", viewonly=True
+        "Team",
+        secondary="questionnaire_score",
+        primaryjoin="and_(Questionnaire.name == TeamQuestionnaire.questionnaire_name, Questionnaire.event_id == TeamQuestionnaire.event_id)",
+        secondaryjoin="and_(Team.name == TeamQuestionnaire.team_name, Team.event_id == TeamQuestionnaire.event_id)",
+        viewonly=True,
+        overlaps="questionnaire,team,questionnaire_scores,questionnaires",
     )  # uses an AssociationObject
-    station = relationship("Station", back_populates="questionnaires")
+    station = relationship(
+        "Station",
+        back_populates="questionnaires",
+        foreign_keys="[Questionnaire.station_name]",
+        primaryjoin="and_(Questionnaire.station_name == Station.name, Questionnaire.event_id == Station.event_id)",
+        overlaps="event",
+    )
     event: Mapped["Event | None"] = relationship(
         "Event", back_populates="questionnaires"
     )
@@ -562,19 +669,27 @@ class Questionnaire(Base, TimestampMixin):  # type: ignore
 
 class TeamQuestionnaire(Base, TimestampMixin):  # type: ignore
     __tablename__ = "questionnaire_score"
-
-    team_name: Mapped[str] = mapped_column(
-        ForeignKey("team.name", onupdate="CASCADE", ondelete="CASCADE"),
-        primary_key=True,
-        name="team",
-    )
-    questionnaire_name: Mapped[str] = mapped_column(
-        ForeignKey(
-            "questionnaire.name", onupdate="CASCADE", ondelete="CASCADE"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["team", "event_id"],
+            ["team.name", "team.event_id"],
+            onupdate="CASCADE",
+            ondelete="CASCADE",
         ),
+        ForeignKeyConstraint(
+            ["questionnaire", "event_id"],
+            ["questionnaire.name", "questionnaire.event_id"],
+            onupdate="CASCADE",
+            ondelete="CASCADE",
+        ),
+    )
+
+    team_name: Mapped[str] = mapped_column(primary_key=True, name="team")
+    questionnaire_name: Mapped[str] = mapped_column(
         primary_key=True,
         name="questionnaire",
     )
+    event_id: Mapped[int] = mapped_column(primary_key=True)
     score: Mapped[int | None] = mapped_column(
         Integer, nullable=True, default=None
     )
@@ -585,14 +700,29 @@ class TeamQuestionnaire(Base, TimestampMixin):  # type: ignore
         server_default=func.now(),
     )
 
-    team: Mapped["Team"] = relationship("Team")
-    questionnaire: Mapped["Questionnaire"] = relationship("Questionnaire")
+    team: Mapped["Team"] = relationship(
+        "Team",
+        foreign_keys="[TeamQuestionnaire.team_name]",
+        primaryjoin="and_(TeamQuestionnaire.team_name == Team.name, TeamQuestionnaire.event_id == Team.event_id)",
+        overlaps="questionnaires,questionnaire_scores",
+    )
+    questionnaire: Mapped["Questionnaire"] = relationship(
+        "Questionnaire",
+        foreign_keys="[TeamQuestionnaire.questionnaire_name]",
+        primaryjoin="and_(TeamQuestionnaire.questionnaire_name == Questionnaire.name, TeamQuestionnaire.event_id == Questionnaire.event_id)",
+        overlaps="teams,questionnaire_scores,questionnaires",
+    )
 
     def __init__(
-        self, team_name: str, questionnaire_name: str, score: int = 0
+        self,
+        team_name: str,
+        questionnaire_name: str,
+        event_id: int,
+        score: int = 0,
     ) -> None:
         self.team_name = team_name
         self.questionnaire_name = questionnaire_name
+        self.event_id = event_id
         self.score = score
 
 
@@ -611,9 +741,9 @@ class Upload(Base):  # type: ignore
         name="id",
         server_default=func.gen_random_uuid(),
     )
-    event_id: Mapped[int | None] = mapped_column(
+    event_id: Mapped[int] = mapped_column(
         ForeignKey("event.id", onupdate="CASCADE", ondelete="CASCADE"),
-        nullable=True,
+        primary_key=True,
     )
 
     user: Mapped["User"] = relationship("User", back_populates="files")
@@ -660,9 +790,9 @@ class AuditLog(Base):  # type: ignore
     )
     type_: Mapped[str] = mapped_column(name="type", nullable=False)
     message: Mapped[str] = mapped_column(name="message", nullable=False)
-    event_id: Mapped[int | None] = mapped_column(
+    event_id: Mapped[int] = mapped_column(
         ForeignKey("event.id", onupdate="CASCADE", ondelete="CASCADE"),
-        nullable=True,
+        primary_key=True,
     )
 
     user: Mapped["User"] = relationship("User", back_populates="auditlog")
@@ -676,12 +806,13 @@ class AuditLog(Base):  # type: ignore
         username: str,
         type_: AuditType,
         message: str,
-        event_id: int | None = None,
+        event_id: int,
     ) -> None:
         self.timestamp = timestamp
         self.username = username
         self.type_ = type_.value
         self.message = message
+        self.event_id = event_id
 
 
 class EventUserRole(Base, TimestampMixin):  # type: ignore
@@ -705,18 +836,9 @@ class EventUserRole(Base, TimestampMixin):  # type: ignore
 route_station_table = Table(
     "route_station",
     metadata,
-    Column(
-        "route_name",
-        Unicode,
-        ForeignKey("route.name", onupdate="CASCADE", ondelete="CASCADE"),
-        primary_key=True,
-    ),
-    Column(
-        "station_name",
-        Unicode,
-        ForeignKey("station.name", onupdate="CASCADE", ondelete="CASCADE"),
-        primary_key=True,
-    ),
+    Column("route_name", Unicode, primary_key=True),
+    Column("station_name", Unicode, primary_key=True),
+    Column("event_id", Integer, primary_key=True),
     Column("score", Integer),
     Column(
         "inserted",
@@ -725,6 +847,18 @@ route_station_table = Table(
         server_default=func.now(),
     ),
     Column("updated", DateTime(timezone=True), server_default="null"),
+    ForeignKeyConstraint(
+        ["route_name", "event_id"],
+        ["route.name", "route.event_id"],
+        onupdate="CASCADE",
+        ondelete="CASCADE",
+    ),
+    ForeignKeyConstraint(
+        ["station_name", "event_id"],
+        ["station.name", "station.event_id"],
+        onupdate="CASCADE",
+        ondelete="CASCADE",
+    ),
 )
 
 user_station_table = Table(
@@ -736,14 +870,16 @@ user_station_table = Table(
         ForeignKey("user.name", onupdate="CASCADE", ondelete="CASCADE"),
         primary_key=True,
     ),
-    Column(
-        "station_name",
-        Unicode,
-        ForeignKey("station.name", onupdate="CASCADE", ondelete="CASCADE"),
-        primary_key=True,
-    ),
+    Column("station_name", Unicode, primary_key=True),
+    Column("event_id", Integer, primary_key=True),
     Column("inserted", DateTime(timezone=True), server_default=func.now()),
     Column("updated", DateTime(timezone=True), server_default="null"),
+    ForeignKeyConstraint(
+        ["station_name", "event_id"],
+        ["station.name", "station.event_id"],
+        onupdate="CASCADE",
+        ondelete="CASCADE",
+    ),
 )
 
 user_role_table = Table(
