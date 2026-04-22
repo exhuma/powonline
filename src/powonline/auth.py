@@ -184,14 +184,15 @@ def get_user(
 
 
 async def is_event_admin(
-    session: AsyncSession, event_id: int, user_name: str
+    session: AsyncSession, event_id: int, user: "User"
 ) -> bool:
-    if user_name == "admin":  # TODO: Should be handled with a role/permission
+    # Global admins (by role) are always event admins
+    if "admin" in user.roles or user.name == "admin":
         return True
     query = select(EventUserRole).filter(
         and_(
             EventUserRole.event_id == event_id,
-            EventUserRole.user_name == user_name,
+            EventUserRole.user_name == user.name,
             EventUserRole.role_name.in_(
                 (EVENT_OWNER_ROLE, EVENT_CO_ADMIN_ROLE)
             ),
@@ -206,7 +207,7 @@ async def require_event_admin_user(
     session: Annotated[AsyncSession, Depends(get_db)],
     event_id: int = Path(),
 ) -> User:
-    if await is_event_admin(session, event_id, auth_user.name):
+    if await is_event_admin(session, event_id, auth_user):
         return auth_user
     raise AccessDenied(
         "Access denied (event admin or owner required)",
@@ -228,7 +229,7 @@ async def require_event_mutation_access(
         )
 
     # Event owners and co-admins may mutate outside the event window.
-    if await is_event_admin(session, event_id, auth_user.name):
+    if await is_event_admin(session, event_id, auth_user):
         return auth_user
 
     now = datetime.now(timezone.utc)

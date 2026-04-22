@@ -10,7 +10,9 @@ async def test_all(dbsession: AsyncSession, seed):
 
 
 async def test_create_new(dbsession: AsyncSession, seed):
-    result = await core.Route.create_new(dbsession, {"name": "foo"})
+    result = await core.Route.create_new(
+        dbsession, {"name": "foo", "event_id": seed}
+    )
     await dbsession.commit()
     stored_data = set(await core.Route.all(dbsession))
     assert result.name == "foo"
@@ -19,8 +21,12 @@ async def test_create_new(dbsession: AsyncSession, seed):
 
 
 async def test_upsert(dbsession: AsyncSession, seed):
-    await core.Route.upsert(dbsession, "route-red", {"name": "foo"})
-    result = await core.Route.upsert(dbsession, "foo", {"name": "bar"})
+    await core.Route.upsert(
+        dbsession, "route-red", {"name": "foo", "event_id": seed}
+    )
+    result = await core.Route.upsert(
+        dbsession, "foo", {"name": "bar", "event_id": seed}
+    )
     await dbsession.commit()
     stored_data = set(await core.Route.all(dbsession))
     assert result.name == "bar"

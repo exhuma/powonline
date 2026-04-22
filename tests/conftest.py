@@ -85,7 +85,7 @@ async def seed(dbsession):
     if event_id is None:
         event_id_query = await dbsession.execute(
             text(
-                "INSERT INTO event (name, time_range) VALUES ('event-1', '[2024-01-01, 2024-12-31)') RETURNING id"
+                "INSERT INTO event (name, time_range) VALUES ('event-1', '[2020-01-01, 2099-12-31)') RETURNING id"
             )
         )
         event_id = event_id_query.scalar()

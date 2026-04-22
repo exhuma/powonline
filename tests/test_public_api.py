@@ -41,17 +41,30 @@ async def seed(dbsession: AsyncSession, app: FastAPI, test_client: AsyncClient):
             jwt_secret = testing
             """))
     app.dependency_overrides[get_config] = lambda: test_config
+    event_id = None
     try:
-        with open(here("seed_cleanup.sql")) as seed:
-            await dbsession.execute(text(seed.read()))
-        with open(here("seed.sql")) as seed:
-            await dbsession.execute(text(seed.read()))
+        with open(here("seed_cleanup.sql")) as f:
+            await dbsession.execute(text(f.read()))
+        event_id_result = await dbsession.execute(
+            text("SELECT id FROM event WHERE name='event-1'")
+        )
+        event_id = event_id_result.scalar()
+        if event_id is None:
+            event_id_query = await dbsession.execute(
+                text(
+                    "INSERT INTO event (name, time_range) VALUES ('event-1', '[2020-01-01, 2099-12-31)') RETURNING id"
+                )
+            )
+            event_id = event_id_query.scalar()
+        with open(here("seed.sql")) as f:
+            seed_content = f.read().format(event_id=event_id)
+            await dbsession.execute(text(seed_content))
         await dbsession.commit()
     except Exception:
         LOG.exception("Unable to execute cleanup seed")
         await dbsession.rollback()
     try:
-        yield app
+        yield event_id
     finally:
         app.dependency_overrides.clear()
 
@@ -161,14 +174,14 @@ async def test_update_team(
 
 
 async def test_update_own_station(
-    dbsession: AsyncSession, red_client: AsyncClient
+    dbsession: AsyncSession, red_client: AsyncClient, seed
 ):
     replacement_station = make_dummy_station_dict(
         name="foo", contact="new-contact"
     )
 
     response = await red_client.put(
-        "/station/station-red",
+        f"/events/{seed}/station/station-red",
         headers={"Content-Type": "application/json"},
         content=json.dumps(replacement_station),
     )
@@ -180,14 +193,14 @@ async def test_update_own_station(
 
 
 async def test_update_other_station(
-    dbsession: AsyncSession, red_client: AsyncClient
+    dbsession: AsyncSession, red_client: AsyncClient, seed
 ):
     replacement_station = make_dummy_station_dict(
         name="foo", contact="new-contact"
     )
 
     response = await red_client.put(
-        "/station/station-blue",
+        f"/events/{seed}/station/station-blue",
         headers={"Content-Type": "application/json"},
         content=json.dumps(replacement_station),
     )
@@ -218,11 +231,13 @@ async def test_update_other_station(
 # XXX     assert data == expected
 
 
-async def test_create_team(dbsession: AsyncSession, red_client: AsyncClient):
+async def test_create_team(
+    dbsession: AsyncSession, red_client: AsyncClient, seed
+):
     new_team = make_dummy_team_dict(name="foo", contact="new-contact")
 
     response = await red_client.post(
-        "/team",
+        f"/events/{seed}/team",
         headers={"Content-Type": "application/json"},
         content=json.dumps(new_team),
     )
@@ -235,11 +250,13 @@ async def test_create_team(dbsession: AsyncSession, red_client: AsyncClient):
     assert data == expected
 
 
-async def test_create_station(dbsession: AsyncSession, red_client: AsyncClient):
+async def test_create_station(
+    dbsession: AsyncSession, red_client: AsyncClient, seed
+):
     new_station = make_dummy_station_dict(name="foo", contact="new-contact")
 
     response = await red_client.post(
-        "/station",
+        f"/events/{seed}/station",
         headers={"Content-Type": "application/json"},
         content=json.dumps(new_station),
     )
@@ -250,11 +267,13 @@ async def test_create_station(dbsession: AsyncSession, red_client: AsyncClient):
     assert data == expected
 
 
-async def test_create_route(dbsession: AsyncSession, red_client: AsyncClient):
+async def test_create_route(
+    dbsession: AsyncSession, red_client: AsyncClient, seed
+):
     new_route = make_dummy_route_dict(name="foo", contact="new-contact")
 
     response = await red_client.post(
-        "/route",
+        f"/events/{seed}/route",
         headers={"Content-Type": "application/json"},
         content=json.dumps(new_route),
     )
@@ -265,27 +284,35 @@ async def test_create_route(dbsession: AsyncSession, red_client: AsyncClient):
     assert data == expected
 
 
-async def test_delete_team(dbsession: AsyncSession, red_client: AsyncClient):
-    response = await red_client.delete("/team/example-team")
+async def test_delete_team(
+    dbsession: AsyncSession, red_client: AsyncClient, seed
+):
+    response = await red_client.delete(f"/events/{seed}/team/example-team")
     assert response.status_code == 204, response.content
 
 
-async def test_delete_station(dbsession: AsyncSession, red_client: AsyncClient):
-    response = await red_client.delete("/station/example-station")
+async def test_delete_station(
+    dbsession: AsyncSession, red_client: AsyncClient, seed
+):
+    response = await red_client.delete(
+        f"/events/{seed}/station/example-station"
+    )
     assert response.status_code == 204, response.content
 
 
-async def test_delete_route(dbsession: AsyncSession, red_client: AsyncClient):
-    response = await red_client.delete("/route/example-route")
+async def test_delete_route(
+    dbsession: AsyncSession, red_client: AsyncClient, seed
+):
+    response = await red_client.delete(f"/events/{seed}/route/example-route")
     assert response.status_code == 204, response.content
 
 
 async def test_assign_user_to_station(
-    dbsession: AsyncSession, red_client: AsyncClient
+    dbsession: AsyncSession, red_client: AsyncClient, seed
 ):
     simpleuser = {"name": "john"}
     response = await red_client.post(
-        "/station/station-red/users",
+        f"/events/{seed}/station/station-red/users",
         headers={"Content-Type": "application/json"},
         content=json.dumps(simpleuser),
     )
@@ -293,17 +320,17 @@ async def test_assign_user_to_station(
 
 
 async def test_assign_user_to_two_stations(
-    dbsession: AsyncSession, red_client: AsyncClient
+    dbsession: AsyncSession, red_client: AsyncClient, seed
 ):
     simpleuser = {"name": "john"}
     response = await red_client.post(
-        "/station/station-red/users",
+        f"/events/{seed}/station/station-red/users",
         headers={"Content-Type": "application/json"},
         content=json.dumps(simpleuser),
     )
     assert response.status_code == 204, response.content
     response = await red_client.post(
-        "/station/station-blue/users",
+        f"/events/{seed}/station/station-blue/users",
         headers={"Content-Type": "application/json"},
         content=json.dumps(simpleuser),
     )
@@ -311,18 +338,20 @@ async def test_assign_user_to_two_stations(
 
 
 async def test_unassign_user_from_station(
-    dbsession: AsyncSession, red_client: AsyncClient
+    dbsession: AsyncSession, red_client: AsyncClient, seed
 ):
-    response = await red_client.delete("/station/station-red/users/user-red")
+    response = await red_client.delete(
+        f"/events/{seed}/station/station-red/users/user-red"
+    )
     assert response.status_code == 204, response.content
 
 
 async def test_assign_team_to_route(
-    dbsession: AsyncSession, red_client: AsyncClient
+    dbsession: AsyncSession, red_client: AsyncClient, seed
 ):
     simpleteam = {"name": "team-without-route"}
     response = await red_client.post(
-        "/route/route-red/teams",
+        f"/events/{seed}/route/route-red/teams",
         headers={"Content-Type": "application/json"},
         content=json.dumps(simpleteam),
     )
@@ -330,17 +359,17 @@ async def test_assign_team_to_route(
 
 
 async def test_assign_team_to_two_routes(
-    dbsession: AsyncSession, red_client: AsyncClient
+    dbsession: AsyncSession, red_client: AsyncClient, seed
 ):
     simpleteam = {"name": "team-without-route"}
     response = await red_client.post(
-        "/route/route-red/teams",
+        f"/events/{seed}/route/route-red/teams",
         headers={"Content-Type": "application/json"},
         content=json.dumps(simpleteam),
     )
     assert response.status_code == 204, response.content
     response = await red_client.post(
-        "/route/route-blue/teams",
+        f"/events/{seed}/route/route-blue/teams",
         headers={"Content-Type": "application/json"},
         content=json.dumps(simpleteam),
     )
@@ -348,9 +377,11 @@ async def test_assign_team_to_two_routes(
 
 
 async def test_unassign_team_from_route(
-    dbsession: AsyncSession, red_client: AsyncClient
+    dbsession: AsyncSession, red_client: AsyncClient, seed
 ):
-    response = await red_client.delete("/route/route-red/teams/team-red")
+    response = await red_client.delete(
+        f"/events/{seed}/route/route-red/teams/team-red"
+    )
     assert response.status_code == 204, response.content
 
 
@@ -374,11 +405,11 @@ async def test_unassign_role_from_user(
 
 
 async def test_assign_station_to_route(
-    dbsession: AsyncSession, red_client: AsyncClient
+    dbsession: AsyncSession, red_client: AsyncClient, seed
 ):
     simplestation = {"name": "station-red"}
     response = await red_client.post(
-        "/route/route-red/stations",
+        f"/events/{seed}/route/route-red/stations",
         headers={"Content-Type": "application/json"},
         content=json.dumps(simplestation),
     )
@@ -386,18 +417,18 @@ async def test_assign_station_to_route(
 
 
 async def test_assign_station_to_two_routes(
-    dbsession: AsyncSession, red_client: AsyncClient
+    dbsession: AsyncSession, red_client: AsyncClient, seed
 ):
     # should *pass*. A station can be on multiple routes!
     simplestation = {"name": "station-start"}
     response = await red_client.post(
-        "/route/route-red/stations",
+        f"/events/{seed}/route/route-red/stations",
         headers={"Content-Type": "application/json"},
         content=json.dumps(simplestation),
     )
     assert response.status_code == 204, response.content
     response = await red_client.post(
-        "/route/route-blue/stations",
+        f"/events/{seed}/route/route-blue/stations",
         headers={"Content-Type": "application/json"},
         content=json.dumps(simplestation),
     )
@@ -405,16 +436,20 @@ async def test_assign_station_to_two_routes(
 
 
 async def test_unassign_station_from_route(
-    dbsession: AsyncSession, red_client: AsyncClient
+    dbsession: AsyncSession, red_client: AsyncClient, seed
 ):
-    response = await red_client.delete("/route/route-red/stations/station-red")
+    response = await red_client.delete(
+        f"/events/{seed}/route/route-red/stations/station-red"
+    )
     assert response.status_code == 204, response.content
 
 
 async def test_show_team_station_state(
-    dbsession: AsyncSession, red_client: AsyncClient
+    dbsession: AsyncSession, red_client: AsyncClient, seed
 ):
-    response = await red_client.get("/team/team-red/stations/station-start")
+    response = await red_client.get(
+        f"/events/{seed}/team/team-red/stations/station-start"
+    )
     assert response.status_code == 200, response.content
     assert response.headers["Content-Type"] == "application/json"
     data = json.loads(response.text)
@@ -422,19 +457,23 @@ async def test_show_team_station_state(
 
 
 async def test_show_team_station_state_inverse(
-    dbsession: AsyncSession, red_client: AsyncClient
+    dbsession: AsyncSession, red_client: AsyncClient, seed
 ):
     """
     Team and Station should be interchangeable in the URL
     """
-    response_a = await red_client.get("/station/station-start/teams/team-red")
-    response_b = await red_client.get("/team/team-red/stations/station-start")
+    response_a = await red_client.get(
+        f"/events/{seed}/station/station-start/teams/team-red"
+    )
+    response_b = await red_client.get(
+        f"/events/{seed}/team/team-red/stations/station-start"
+    )
     assert response_a.status_code == response_b.status_code
     assert response_a.content == response_b.content
 
 
 async def test_advance_team_state_auto_start(
-    dbsession: AsyncSession, red_client: AsyncClient
+    dbsession: AsyncSession, red_client: AsyncClient, seed
 ):
     """
     Advancing on a station flagged as "start" station should set the
@@ -456,22 +495,22 @@ async def test_advance_team_state_auto_start(
         _func.now.return_value = "2018-01-01 01:02:03"
         for _ in range(6):
             await red_client.post(
-                "/job", headers=headers, content=json.dumps(job)
+                f"/events/{seed}/job", headers=headers, content=json.dumps(job)
             )
         _func.now.assert_called_once()
     state_response = await red_client.get(
-        "/station/station-start/teams/team-red"
+        f"/events/{seed}/station/station-start/teams/team-red"
     )
     state = json.loads(state_response.text)
     assert state["state"] == "finished"
-    detail_response = await red_client.get("/team/team-red")
+    detail_response = await red_client.get(f"/events/{seed}/team/team-red")
     details = json.loads(detail_response.text)
     assert details["effective_start_time"] == "2018-01-01T01:02:03"
     assert details["finish_time"] is None
 
 
 async def test_advance_team_state_auto_finish(
-    dbsession: AsyncSession, red_client: AsyncClient
+    dbsession: AsyncSession, red_client: AsyncClient, seed
 ):
     """
     Advancing on a station flagged as "end" station should set the
@@ -493,21 +532,23 @@ async def test_advance_team_state_auto_finish(
         _func.now.return_value = "2018-02-03 01:02:03"
         for _ in range(6):
             await red_client.post(
-                "/job", headers=headers, content=json.dumps(job)
+                f"/events/{seed}/job", headers=headers, content=json.dumps(job)
             )
         _func.now.assert_called_once()
 
-    state_response = await red_client.get("/station/station-end/teams/team-red")
+    state_response = await red_client.get(
+        f"/events/{seed}/station/station-end/teams/team-red"
+    )
     state = json.loads(state_response.text)
     assert state["state"] == "arrived"
-    detail_response = await red_client.get("/team/team-red")
+    detail_response = await red_client.get(f"/events/{seed}/team/team-red")
     details = json.loads(detail_response.text)
     assert details["effective_start_time"] is None
     assert details["finish_time"] == "2018-02-03T01:02:03"
 
 
 async def test_advance_team_state(
-    dbsession: AsyncSession, red_client: AsyncClient
+    dbsession: AsyncSession, red_client: AsyncClient, seed
 ):
     simplejob = {
         "action": "advance",
@@ -517,7 +558,7 @@ async def test_advance_team_state(
         },
     }
     response = await red_client.post(
-        "/job",
+        f"/events/{seed}/job",
         headers={"Content-Type": "application/json"},
         content=json.dumps(simplejob),
     )
@@ -682,11 +723,11 @@ def usm_client(app: FastAPI, test_client: AsyncClient, seed):
 # XXX         assert response.status_code < 400
 
 
-async def test_usm_update_team(usm_client):
+async def test_usm_update_team(usm_client, seed):
     replacement_team = make_dummy_team_dict(name="foo", contact="new-contact")
 
     response = await usm_client.put(
-        "/team/old-team",
+        f"/events/{seed}/team/old-team",
         headers={"Content-Type": "application/json"},
         content=json.dumps(replacement_team),
     )
@@ -694,27 +735,27 @@ async def test_usm_update_team(usm_client):
     assert response.status_code == 403, response.content
 
 
-async def test_usm_update_own_station(usm_client):
+async def test_usm_update_own_station(usm_client, seed):
     replacement_station = make_dummy_station_dict(
         name="foo", contact="new-contact"
     )
 
     response = await usm_client.put(
-        "/station/station-red",
+        f"/events/{seed}/station/station-red",
         headers={"Content-Type": "application/json"},
         content=json.dumps(replacement_station),
     )
     assert response.status_code < 400, response.content
 
 
-async def test_usm_update_other_station(usm_client):
+async def test_usm_update_other_station(usm_client, seed):
     # should fail: access denied
     replacement_station = make_dummy_station_dict(
         name="foo", contact="new-contact"
     )
 
     response = await usm_client.put(
-        "/station/station-blue",
+        f"/events/{seed}/station/station-blue",
         headers={"Content-Type": "application/json"},
         content=json.dumps(replacement_station),
     )
@@ -738,91 +779,97 @@ async def test_usm_update_other_station(usm_client):
 # XXX     assert response.status_code == 401, response.content
 
 
-async def test_usm_create_team(usm_client):
+async def test_usm_create_team(usm_client, seed):
     # should fail: access denied
     new_team = make_dummy_team_dict(name="foo", contact="new-contact")
 
     response = await usm_client.post(
-        "/team",
+        f"/events/{seed}/team",
         headers={"Content-Type": "application/json"},
         content=json.dumps(new_team),
     )
     assert response.status_code == 403, response.content
 
 
-async def test_usm_create_station(usm_client):
+async def test_usm_create_station(usm_client, seed):
     # should fail: access denied
     new_station = make_dummy_station_dict(name="foo", contact="new-contact")
 
     response = await usm_client.post(
-        "/station",
+        f"/events/{seed}/station",
         headers={"Content-Type": "application/json"},
         content=json.dumps(new_station),
     )
     assert response.status_code == 403, response.content
 
 
-async def test_usm_create_route(usm_client):
+async def test_usm_create_route(usm_client, seed):
     # should fail: access denied
     new_route = make_dummy_route_dict(name="foo", contact="new-contact")
 
     response = await usm_client.post(
-        "/route",
+        f"/events/{seed}/route",
         headers={"Content-Type": "application/json"},
         content=json.dumps(new_route),
     )
     assert response.status_code == 403, response.content
 
 
-async def test_usm_delete_team(usm_client):
+async def test_usm_delete_team(usm_client, seed):
     # should fail: access denied
-    response = await usm_client.delete("/team/example-team")
+    response = await usm_client.delete(f"/events/{seed}/team/example-team")
     assert response.status_code == 403, response.content
 
 
-async def test_usm_delete_station(usm_client):
+async def test_usm_delete_station(usm_client, seed):
     # should fail: access denied
-    response = await usm_client.delete("/station/example-station")
+    response = await usm_client.delete(
+        f"/events/{seed}/station/example-station"
+    )
     assert response.status_code == 403, response.content
 
 
-async def test_usm_delete_route(usm_client):
+async def test_usm_delete_route(usm_client, seed):
     # should fail: access denied
-    response = await usm_client.delete("/route/example-route")
+    response = await usm_client.delete(f"/events/{seed}/route/example-route")
     assert response.status_code == 403, response.content
 
 
-async def test_usm_assign_user_to_station(usm_client):
+async def test_usm_assign_user_to_station(usm_client, seed):
     # should fail: access denied
     simpleuser = {"name": "john"}
     response = await usm_client.post(
-        "/station/station-red/users",
+        f"/events/{seed}/station/station-red/users",
         headers={"Content-Type": "application/json"},
         content=json.dumps(simpleuser),
     )
     assert response.status_code == 403, response.content
 
 
-async def test_usm_unassign_user_from_station(usm_client):
+async def test_usm_unassign_user_from_station(usm_client, seed):
     # should fail: access denied
-    response = await usm_client.delete("/station/station-red/users/user-red")
+    response = await usm_client.delete(
+        f"/events/{seed}/station/station-red/users/user-red"
+    )
     assert response.status_code == 403, response.content
 
 
-async def test_usm_assign_team_to_route(usm_client):
+async def test_usm_assign_team_to_route(usm_client, seed):
     # should fail: access denied
     simpleteam = {"name": "team-without-route"}
     response = await usm_client.post(
-        "/route/route-red/teams",
+        f"/events/{seed}/route/route-red/teams",
         headers={"Content-Type": "application/json"},
         content=json.dumps(simpleteam),
     )
     assert response.status_code == 403, response.content
 
 
-async def test_usm_unassign_team_from_route(usm_client):
+async def test_usm_unassign_team_from_route(usm_client, seed):
     # should fail: access denied
-    response = await usm_client.delete("/route/route-red/teams/team-red")
+    response = await usm_client.delete(
+        f"/events/{seed}/route/route-red/teams/team-red"
+    )
     assert response.status_code == 403, response.content
 
 
@@ -843,24 +890,26 @@ async def test_usm_unassign_role_from_user(usm_client):
     assert response.status_code == 403, response.content
 
 
-async def test_usm_assign_station_to_route(usm_client):
+async def test_usm_assign_station_to_route(usm_client, seed):
     # should fail: access denied
     simplestation = {"name": "station-red"}
     response = await usm_client.post(
-        "/route/route-red/stations",
+        f"/events/{seed}/route/route-red/stations",
         headers={"Content-Type": "application/json"},
         content=json.dumps(simplestation),
     )
     assert response.status_code == 403, response.content
 
 
-async def test_usm_unassign_station_from_route(usm_client):
+async def test_usm_unassign_station_from_route(usm_client, seed):
     # should fail: access denied
-    response = await usm_client.delete("/route/route-red/stations/station-red")
+    response = await usm_client.delete(
+        f"/events/{seed}/route/route-red/stations/station-red"
+    )
     assert response.status_code == 403, response.content
 
 
-async def test_usm_advance_team_state(usm_client):
+async def test_usm_advance_team_state(usm_client, seed):
     # should pass: user has permission for this station
     simplejob = {
         "action": "advance",
@@ -870,7 +919,7 @@ async def test_usm_advance_team_state(usm_client):
         },
     }
     response = await usm_client.post(
-        "/job",
+        f"/events/{seed}/job",
         headers={"Content-Type": "application/json"},
         content=json.dumps(simplejob),
     )
@@ -880,7 +929,7 @@ async def test_usm_advance_team_state(usm_client):
     assert result == {"state": "arrived"}
 
 
-async def test_usm_advance_team_state_on_other_stations(usm_client):
+async def test_usm_advance_team_state_on_other_stations(usm_client, seed):
     # should fail: access denied
     simplejob = {
         "action": "advance",
@@ -890,7 +939,7 @@ async def test_usm_advance_team_state_on_other_stations(usm_client):
         },
     }
     response = await usm_client.post(
-        "/job",
+        f"/events/{seed}/job",
         headers={"Content-Type": "application/json"},
         content=json.dumps(simplejob),
     )
@@ -918,40 +967,40 @@ async def test_usm_advance_team_state_on_other_stations(usm_client):
 # XXX     assert response.status_code < 400, response.content
 
 
-async def test_anon_update_team(test_client: AsyncClient):
+async def test_anon_update_team(test_client: AsyncClient, seed):
     # should fail: access denied
     replacement_team = make_dummy_team_dict(name="foo", contact="new-contact")
 
     response = await test_client.put(
-        "/team/old-team",
+        f"/events/{seed}/team/old-team",
         headers={"Content-Type": "application/json"},
         content=json.dumps(replacement_team),
     )
     assert response.status_code == 401, response.content
 
 
-async def test_anon_update_own_station(test_client: AsyncClient):
+async def test_anon_update_own_station(test_client: AsyncClient, seed):
     # should fail: access denied
     replacement_station = make_dummy_station_dict(
         name="foo", contact="new-contact"
     )
 
     response = await test_client.put(
-        "/station/station-red",
+        f"/events/{seed}/station/station-red",
         headers={"Content-Type": "application/json"},
         content=json.dumps(replacement_station),
     )
     assert response.status_code == 401, response.content
 
 
-async def test_anon_update_other_station(test_client: AsyncClient):
+async def test_anon_update_other_station(test_client: AsyncClient, seed):
     # should fail: access denied
     replacement_station = make_dummy_station_dict(
         name="foo", contact="new-contact"
     )
 
     response = await test_client.put(
-        "/station/not-my-station",
+        f"/events/{seed}/station/not-my-station",
         headers={"Content-Type": "application/json"},
         content=json.dumps(replacement_station),
     )
@@ -975,91 +1024,97 @@ async def test_anon_update_other_station(test_client: AsyncClient):
 # XXX     assert response.status_code == 401, response.content
 
 
-async def test_anon_create_team(test_client: AsyncClient):
+async def test_anon_create_team(test_client: AsyncClient, seed):
     # should fail: access denied
     new_team = make_dummy_team_dict(name="foo", contact="new-contact")
 
     response = await test_client.post(
-        "/team",
+        f"/events/{seed}/team",
         headers={"Content-Type": "application/json"},
         content=json.dumps(new_team),
     )
     assert response.status_code == 401, response.content
 
 
-async def test_anon_create_station(test_client: AsyncClient):
+async def test_anon_create_station(test_client: AsyncClient, seed):
     # should fail: access denied
     new_station = make_dummy_station_dict(name="foo", contact="new-contact")
 
     response = await test_client.post(
-        "/station",
+        f"/events/{seed}/station",
         headers={"Content-Type": "application/json"},
         content=json.dumps(new_station),
     )
     assert response.status_code == 401, response.content
 
 
-async def test_anon_create_route(test_client: AsyncClient):
+async def test_anon_create_route(test_client: AsyncClient, seed):
     # should fail: access denied
     new_route = make_dummy_route_dict(name="foo", contact="new-contact")
 
     response = await test_client.post(
-        "/route",
+        f"/events/{seed}/route",
         headers={"Content-Type": "application/json"},
         content=json.dumps(new_route),
     )
     assert response.status_code == 401, response.content
 
 
-async def test_anon_delete_team(test_client: AsyncClient):
+async def test_anon_delete_team(test_client: AsyncClient, seed):
     # should fail
-    response = await test_client.delete("/team/example-team")
+    response = await test_client.delete(f"/events/{seed}/team/example-team")
     assert response.status_code == 401, response.content
 
 
-async def test_anon_delete_station(test_client: AsyncClient):
+async def test_anon_delete_station(test_client: AsyncClient, seed):
     # should fail: access denied
-    response = await test_client.delete("/station/example-station")
+    response = await test_client.delete(
+        f"/events/{seed}/station/example-station"
+    )
     assert response.status_code == 401, response.content
 
 
-async def test_anon_delete_route(test_client: AsyncClient):
+async def test_anon_delete_route(test_client: AsyncClient, seed):
     # should fail: access denied
-    response = await test_client.delete("/route/example-route")
+    response = await test_client.delete(f"/events/{seed}/route/example-route")
     assert response.status_code == 401, response.content
 
 
-async def test_anon_assign_user_to_station(test_client: AsyncClient):
+async def test_anon_assign_user_to_station(test_client: AsyncClient, seed):
     # should fail: access denied
     simpleuser = {"name": "john"}
     response = await test_client.post(
-        "/station/station-red/users",
+        f"/events/{seed}/station/station-red/users",
         headers={"Content-Type": "application/json"},
         content=json.dumps(simpleuser),
     )
     assert response.status_code == 401, response.content
 
 
-async def test_anon_unassign_user_from_station(test_client: AsyncClient):
+async def test_anon_unassign_user_from_station(test_client: AsyncClient, seed):
     # should fail: access denied
-    response = await test_client.delete("/station/station-red/users/user-red")
+    response = await test_client.delete(
+        f"/events/{seed}/station/station-red/users/user-red"
+    )
     assert response.status_code == 401, response.content
 
 
-async def test_anon_assign_team_to_route(test_client: AsyncClient):
+async def test_anon_assign_team_to_route(test_client: AsyncClient, seed):
     # should fail: access denied
     simpleteam = {"name": "team-without-route"}
     response = await test_client.post(
-        "/route/route-red/teams",
+        f"/events/{seed}/route/route-red/teams",
         headers={"Content-Type": "application/json"},
         content=json.dumps(simpleteam),
     )
     assert response.status_code == 401, response.content
 
 
-async def test_anon_unassign_team_from_route(test_client: AsyncClient):
+async def test_anon_unassign_team_from_route(test_client: AsyncClient, seed):
     # should fail: access denied
-    response = await test_client.delete("/route/route-red/teams/team-red")
+    response = await test_client.delete(
+        f"/events/{seed}/route/route-red/teams/team-red"
+    )
     assert response.status_code == 401, response.content
 
 
@@ -1080,24 +1135,26 @@ async def test_anon_unassign_role_from_user(test_client: AsyncClient):
     assert response.status_code == 401, response.content
 
 
-async def test_anon_assign_station_to_route(test_client: AsyncClient):
+async def test_anon_assign_station_to_route(test_client: AsyncClient, seed):
     # should fail: access denied
     simplestation = {"name": "station-red"}
     response = await test_client.post(
-        "/route/route-red/stations",
+        f"/events/{seed}/route/route-red/stations",
         headers={"Content-Type": "application/json"},
         content=json.dumps(simplestation),
     )
     assert response.status_code == 401, response.content
 
 
-async def test_anon_unassign_station_from_route(test_client: AsyncClient):
+async def test_anon_unassign_station_from_route(test_client: AsyncClient, seed):
     # should fail: access denied
-    response = await test_client.delete("/route/route-red/stations/station-red")
+    response = await test_client.delete(
+        f"/events/{seed}/route/route-red/stations/station-red"
+    )
     assert response.status_code == 401, response.content
 
 
-async def test_anon_advance_team_state(test_client: AsyncClient):
+async def test_anon_advance_team_state(test_client: AsyncClient, seed):
     # should fail: access denied
     simplejob = {
         "action": "advance",
@@ -1107,7 +1164,7 @@ async def test_anon_advance_team_state(test_client: AsyncClient):
         },
     }
     response = await test_client.post(
-        "/job",
+        f"/events/{seed}/job",
         headers={"Content-Type": "application/json"},
         content=json.dumps(simplejob),
     )
@@ -1116,6 +1173,7 @@ async def test_anon_advance_team_state(test_client: AsyncClient):
 
 async def test_anon_advance_team_state_on_other_stations(
     test_client: AsyncClient,
+    seed,
 ):
     # should fail: access denied
     simplejob = {
@@ -1126,7 +1184,7 @@ async def test_anon_advance_team_state_on_other_stations(
         },
     }
     response = await test_client.post(
-        "/job",
+        f"/events/{seed}/job",
         headers={"Content-Type": "application/json"},
         content=json.dumps(simplejob),
     )
@@ -1183,15 +1241,16 @@ async def test_anon_advance_team_state_on_other_stations(
 # XXX         assert testable == expected
 
 
-async def test_anon_related_states_invalid_state(test_client: AsyncClient):
-    """
-    If a user specifies an invalid state, we want a 4xx error, not a 5xx error
-    """
-    response = await test_client.get(
-        "/station/station-1/this-state-is-wrong/dashboard"
-    )
-    assert response.status_code == 422, response.content
-    assert "this-state-is-wrong" in response.text
+# XXX async def test_anon_related_states_invalid_state(test_client: AsyncClient):
+# XXX     """
+# XXX     If a user specifies an invalid state, we want a 4xx error, not a 5xx error
+# XXX     Route no longer exists (dashboard endpoint removed).
+# XXX     """
+# XXX     response = await test_client.get(
+# XXX         "/station/station-1/this-state-is-wrong/dashboard"
+# XXX     )
+# XXX     assert response.status_code == 422, response.content
+# XXX     assert "this-state-is-wrong" in response.text
 
 
 # XXX async def test_anon_related_station_next(
@@ -1237,7 +1296,7 @@ async def test_anon_related_station_invalid_state(test_client: AsyncClient):
     If a user specifies an invalid state, we want a 4xx error, not a 5xx error
     """
     response = await test_client.get(
-        "/station/station-1/related/this-state-is-wrong"
+        "/events/1/station/station-1/related/this-state-is-wrong"
     )
     assert response.status_code == 422, response.text
     assert "this-state-is-wrong" in response.text

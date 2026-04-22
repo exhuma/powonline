@@ -16,7 +16,9 @@ async def test_all(dbsession: AsyncSession, seed):
 
 
 async def test_create_new(dbsession: AsyncSession, seed):
-    result = await core.Station.create_new(dbsession, {"name": "foo"})
+    result = await core.Station.create_new(
+        dbsession, {"name": "foo", "event_id": seed}
+    )
     await dbsession.commit()
     assert result.name == "foo"
     assert len(set(await core.Station.all(dbsession))) == 5

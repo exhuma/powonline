@@ -32,7 +32,8 @@ async def test_assigned_to_route(dbsession: AsyncSession, seed):
 
 async def test_create_new(dbsession: AsyncSession, seed):
     result = await core.Team.create_new(
-        dbsession, {"name": "foo", "email": "foo@example.com"}
+        dbsession,
+        {"name": "foo", "email": "foo@example.com", "event_id": seed},
     )
     await dbsession.commit()
     assert result.name == "foo"
@@ -58,10 +59,10 @@ async def test_delete(dbsession: AsyncSession, seed):
 
 async def test_get_station_data(dbsession: AsyncSession, seed):
     result1 = await core.Team.get_station_data(
-        dbsession, "team-red", "station-start"
+        dbsession, "team-red", "station-start", event_id=seed
     )
     result2 = await core.Team.get_station_data(
-        dbsession, "team-blue", "station-finish"
+        dbsession, "team-blue", "station-finish", event_id=seed
     )
     expected1 = core.TeamState.FINISHED
     expected2 = core.TeamState.UNKNOWN

@@ -7,7 +7,7 @@ from random import SystemRandom
 from string import ascii_letters, digits, punctuation
 from typing import Any, AsyncGenerator, Iterator, Optional, Tuple
 
-from sqlalchemy import ScalarResult, and_, delete, func, select
+from sqlalchemy import ScalarResult, and_, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from powonline import schema
@@ -144,10 +144,13 @@ async def set_questionnaire_score(
     result = await session.execute(query)
     state = result.scalar_one_or_none()
     if not state:
-        state = model.TeamQuestionnaire(team, questionnaire_name, score)
+        state = model.TeamQuestionnaire(
+            team, questionnaire_name, existing_questionnaire.event_id, score=0
+        )
         session.add(state)
     old_score = state.score
     state.score = score
+    await session.flush()
     return old_score, score
 
 
@@ -230,7 +233,7 @@ class Team:
         session: AsyncSession,
     ) -> ScalarResult[model.Team]:
         query = select(model.Team).filter(
-            model.Team.route == None  # noqa: E711
+            model.Team.route_name == None  # noqa: E711
         )
         result = await session.execute(query)
         return result.scalars()
@@ -310,6 +313,7 @@ class Team:
                 return model.TeamStation(
                     team_name=team_name,
                     station_name=station_name,
+                    event_id=event_id or 0,
                 )
         query = select(model.TeamStation).filter_by(
             team_name=team_name, station_name=station_name
@@ -318,7 +322,20 @@ class Team:
         state = result.scalar_one_or_none()
         if not state:
             return model.TeamStation(
-                team_name=team_name, station_name=station_name
+                team_name=team_name,
+                station_name=station_name,
+                event_id=event_id or 0,
+            )
+        query = select(model.TeamStation).filter_by(
+            team_name=team_name, station_name=station_name
+        )
+        result = await session.execute(query)
+        state = result.scalar_one_or_none()
+        if not state:
+            return model.TeamStation(
+                team_name=team_name,
+                station_name=station_name,
+                event_id=event_id or 0,
             )
         else:
             return state
@@ -352,7 +369,9 @@ class Team:
         state = result.scalar_one_or_none()
         if not state:
             state = model.TeamStation(
-                team_name=team_name, station_name=station_name
+                team_name=team_name,
+                station_name=station_name,
+                event_id=event_id or 0,
             )
             state = await session.merge(state)
             await session.flush()
@@ -406,7 +425,9 @@ class Team:
 
         if not state:
             state = model.TeamStation(
-                team_name=team_name, station_name=station_name
+                team_name=team_name,
+                station_name=station_name,
+                event_id=event_id or 0,
             )
             state = await session.merge(state)
         old_score = state.score
@@ -442,7 +463,8 @@ class Station:
         query = select(model.Station).filter_by(name=name)
         if event_id is not None:
             query = query.filter_by(event_id=event_id)
-        return await session.execute(query).scalar_one_or_none()
+        result = await session.execute(query)
+        return result.scalar_one_or_none()
 
     @staticmethod
     async def all(
@@ -566,6 +588,7 @@ class Station:
                     model.TeamStation(
                         team_name=team.name,
                         station_name=station_name,
+                        event_id=station.event_id,
                         state=TeamState.UNKNOWN,
                     ),
                 )
@@ -711,6 +734,16 @@ class Route:
         name: str,
         event_id: int | None = None,
     ) -> None:
+        # Clear route_name on teams before deleting (composite FK ON DELETE SET NULL
+        # would try to also NULL event_id which is NOT NULL).
+        clear_query = (
+            update(model.Team)
+            .where(model.Team.route_name == name)
+            .values(route_name=None)
+        )
+        if event_id is not None:
+            clear_query = clear_query.where(model.Team.event_id == event_id)
+        await session.execute(clear_query)
         delete_query = delete(model.Route).filter_by(name=name)
         if event_id is not None:
             delete_query = delete_query.filter_by(event_id=event_id)
