@@ -2,6 +2,7 @@ import logging
 import os
 from pathlib import Path
 from textwrap import dedent
+from tkinter import INSERT
 
 from config_resolver.core import get_config
 from fastapi import FastAPI
@@ -77,6 +78,23 @@ async def dbsession():
 
 @fixture
 async def seed(dbsession):
+    event_id_select = await dbsession.execute(
+        text("SELECT id FROM event WHERE name='event-1'")
+    )
+    event_id = event_id_select.scalar()
+    if event_id is None:
+        event_id_query = await dbsession.execute(
+            text(
+                "INSERT INTO event (name, time_range) VALUES ('event-1', '[2024-01-01, 2024-12-31)') RETURNING id"
+            )
+        )
+        event_id = event_id_query.scalar()
     with open(here("seed.sql")) as seed:
-        await dbsession.execute(text(seed.read()))
+        seed_content = seed.read().format(event_id=event_id)
+        await dbsession.execute(text(seed_content))
+        await dbsession.commit()
+    try:
+        yield event_id
+    finally:
+        await dbsession.execute(text("DELETE FROM event WHERE name='event-1'"))
         await dbsession.commit()

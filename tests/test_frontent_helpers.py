@@ -27,10 +27,11 @@ def drop_all_except(dct, *keep):
             del dct[key]
 
 
-async def test_fetch_assignments_api(test_client: AsyncClient):
-    response = await test_client.get("/assignments")
+async def test_fetch_assignments_api(seed, test_client: AsyncClient):
+    response = await test_client.get(f"/events/{seed}/assignments")
     assert response.status_code == 200, response.text
     result_data = json.loads(response.text)
+    print(result_data)
 
     # To be testing a bit easier, we drop all the irrelevant keys
     for k1, k2 in [

@@ -137,11 +137,13 @@ def red_client(app: FastAPI, test_client: AsyncClient, seed):
 # XXX     TEST_HELPER.assertCountEqual(items, expected)
 
 
-async def test_update_team(dbsession: AsyncSession, red_client: AsyncClient):
+async def test_update_team(
+    dbsession: AsyncSession, red_client: AsyncClient, seed
+):
     replacement_team = make_dummy_team_dict(name="foo", contact="new-contact")
 
     response = await red_client.put(
-        "/team/old-team",
+        f"/events/{seed}/team/old-team",
         headers={"Content-Type": "application/json"},
         content=json.dumps(replacement_team),
     )
