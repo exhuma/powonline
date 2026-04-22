@@ -15,8 +15,8 @@ from powonline import schema
 from . import model
 from .exc import (
     NoQuestionnaireForStation,
-    NoSuchQuestionnaire,
     PowonlineException,
+    UserInputError,
 )
 from .model import TeamState
 
@@ -344,7 +344,7 @@ class Team:
                 await session.execute(station_query)
             ).scalar_one_or_none()
             if not team or not station:
-                raise PowonlineException("Unknown team or station for event")
+                raise UserInputError("Unknown team or station for event")
         query = select(model.TeamStation).filter_by(
             team_name=team_name, station_name=station_name
         )
@@ -397,7 +397,7 @@ class Team:
                 await session.execute(station_query)
             ).scalar_one_or_none()
             if not team or not station:
-                raise PowonlineException("Unknown team or station for event")
+                raise UserInputError("Unknown team or station for event")
         query = select(model.TeamStation).filter_by(
             team_name=team_name, station_name=station_name
         )
@@ -650,9 +650,7 @@ class Station:
             .one()
         )
         if len(station.questionnaires) >= 1:
-            raise PowonlineException(
-                "Station already has a questionnaire assigned"
-            )
+            raise UserInputError("Station already has a questionnaire assigned")
         station.questionnaires.append(questionnaire)
         return True
 
@@ -1361,12 +1359,10 @@ class Questionnaire:
             len(station_questionnaires) >= 1
             and questionnaire not in station_questionnaires
         ):
-            raise PowonlineException(
-                "Station already has a questionnaire assigned"
-            )
+            raise UserInputError("Station already has a questionnaire assigned")
         questionnaire_station = await questionnaire.awaitable_attrs.station
         if questionnaire_station and questionnaire_station != station:
-            raise PowonlineException(
+            raise UserInputError(
                 "Questionnaire already assigned to another station"
             )
 
