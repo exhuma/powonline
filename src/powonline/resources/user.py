@@ -25,7 +25,7 @@ async def list_my_admin_events(
     event_co_admin.  Used by the user-management UI to populate the event
     dropdown when assigning stations to a user.
     """
-    items = await core.Event.all_admin_upcoming(session, auth_user.name)
+    items = await core.Event.all_admin_upcoming(session, auth_user)
     output = [schema.EventSchema.model_validate(item) for item in items]
     return schema.ListResult(items=output)
 

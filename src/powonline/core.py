@@ -10,7 +10,7 @@ from typing import Any, AsyncGenerator, Iterator, Optional, Tuple
 from sqlalchemy import ScalarResult, and_, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from powonline import schema
+from powonline import auth, schema
 
 from . import model
 from .exc import (
@@ -990,7 +990,7 @@ class User:
             if not station:
                 return False
         user_query = select(model.User).filter_by(name=user_name)
-        user = (await session.execute(user_query)).scalar_one()
+        user = (await session.execute(user_query)).scalar_one_or_none()
         if not user:
             return False
         user_stations = {_.name for _ in await user.awaitable_attrs.stations}
@@ -1056,27 +1056,25 @@ class Event:
 
     @staticmethod
     async def all_admin_upcoming(
-        session: AsyncSession, user_name: str
+        session: AsyncSession, user: auth.User
     ) -> ScalarResult[model.Event]:
         """Return upcoming events where user_name is event_owner or event_co_admin."""
         now = datetime.now(timezone.utc)
-        query = (
-            select(model.Event)
-            .join(
+        query = select(model.Event)
+        if not user.has_permission("admin_events"):
+            query = query.join(
                 model.EventUserRole,
                 model.EventUserRole.event_id == model.Event.id,
-            )
-            .where(
+            ).where(
                 and_(
-                    model.EventUserRole.user_name == user_name,
+                    model.EventUserRole.user_name == user.name,
                     model.EventUserRole.role_name.in_(
                         ("event_owner", "event_co_admin")
                     ),
                     func.upper(model.Event.time_range) > now,
                 )
             )
-            .order_by(model.Event.time_range.asc())
-        )
+        query = query.order_by(model.Event.time_range.asc())
         result = await session.execute(query)
         return result.scalars()
 

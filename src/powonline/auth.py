@@ -29,6 +29,7 @@ PERMISSION_MAP = {
         "admin_routes",
         "admin_stations",
         "admin_teams",
+        "admin_events",
         "manage_permissions",
         "manage_station",
         "view_audit_log",
@@ -88,6 +89,9 @@ class User(BaseModel):
 
     def require_permission(self, permission: str) -> None:
         self.require_any_permission({permission})
+
+    def has_permission(self, permission: str) -> bool:
+        return permission in self.permissions
 
 
 def local_dev_user(
