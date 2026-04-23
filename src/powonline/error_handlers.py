@@ -3,7 +3,7 @@ import logging
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 
-from .exc import AccessDenied, AuthDeniedReason, UserInputError
+from .exc import AccessDenied, AuthDeniedReason, NotFound, UserInputError
 from .schema import ErrorMessage
 
 LOG = logging.getLogger(__name__)
@@ -34,10 +34,16 @@ def handle_unhandled_exceptions(request: Request, exc: Exception) -> Response:
     return JSONResponse(output.model_dump(), 500)
 
 
+def handle_not_found(request: Request, error: NotFound):
+    output = ErrorMessage(message="Not Found", detail=str(error))
+    return JSONResponse(output.model_dump(), 404)
+
+
 def register(app: FastAPI) -> None:
     """
     Register the error-handlers with the given app.
     """
     app.exception_handler(AccessDenied)(handle_access_errors)
+    app.exception_handler(NotFound)(handle_not_found)
     app.exception_handler(UserInputError)(handle_value_error)
     app.exception_handler(Exception)(handle_unhandled_exceptions)

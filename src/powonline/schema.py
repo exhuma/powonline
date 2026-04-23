@@ -75,6 +75,11 @@ class RouteSchema(BaseModel):
     name: str
     color: str = ""
 
+    @field_validator("color", mode="before")
+    @classmethod
+    def coerce_none_color(cls, v: object) -> str:
+        return v if v is not None else ""
+
 
 class TimeRange(BaseModel):
     """Represents a time range with inclusive start and exclusive end."""
@@ -177,8 +182,14 @@ class UserSchemaLeaky(UserSchema):
 class QuestionnaireSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     name: str
-    max_score: int
+    max_score: int = 0
     order: int = 0
+
+    @field_validator("max_score", mode="before")
+    @classmethod
+    def coerce_none_max_score(cls, v: object) -> int:
+        return 0 if v is None else v
+
     station_name: str | None = None
     inserted: datetime | None = Field(
         default_factory=lambda: datetime.now(tz=timezone.utc)

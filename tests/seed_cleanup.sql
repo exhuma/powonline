@@ -5,6 +5,7 @@ TRUNCATE
     role,
     oauth_connection,
     message,
+    event,
     route,
     route_station,
     station,
