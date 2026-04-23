@@ -1,7 +1,7 @@
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Body, Depends, Path, Response
+from fastapi import APIRouter, Body, Depends, Path, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from powonline import core, schema
@@ -161,17 +161,24 @@ async def query_station_by_user(
     auth_user: Annotated[User, Depends(get_auth_user)],
     session: Annotated[AsyncSession, Depends(get_db)],
     user_name: str = Path(),
+    event_id: int | None = Query(default=None),
 ) -> list[tuple[str, bool]]:
-    auth_user.require_permission("manage_permissions")
+    """
+    Return all stations (optionally scoped to an event) with a boolean
+    indicating whether each station is assigned to the given user.
+
+    This endpoint is freely accessible to any authenticated user so that the
+    frontend can determine which station dashboards a user may open.
+    """
     user = await core.User.get(session, user_name)
     if not user:
         raise NotFound("No such user")
-    all_stations = await core.Station.all(session)
+    all_stations = await core.Station.all(session, event_id=event_id)
     user_stations = await user.awaitable_attrs.stations
-    user_stations = {station.name for station in user_stations or []}
+    user_station_names = {station.name for station in user_stations or []}
     output = []
     for station in all_stations:
-        output.append((station.name, station.name in user_stations))
+        output.append((station.name, station.name in user_station_names))
     return output
 
 
@@ -181,12 +188,15 @@ async def assign_user_to_station(
     session: Annotated[AsyncSession, Depends(get_db)],
     user_name: str,
     station: schema.StationSchema = Body(),
+    event_id: int | None = Query(default=None),
 ):
     """
-    Assigns a user to a station
+    Assigns a user to a station (optionally scoped to an event).
     """
     auth_user.require_permission("manage_permissions")
-    success = await core.Station.assign_user(session, station.name, user_name)
+    success = await core.Station.assign_user(
+        session, station.name, user_name, event_id=event_id
+    )
     if success:
         return Response("", 204)
     else:
@@ -199,10 +209,13 @@ async def unassign_user_from_station(
     session: Annotated[AsyncSession, Depends(get_db)],
     user_name: str,
     station_name: str = Path(),
+    event_id: int | None = Query(default=None),
 ):
     """
-    Removes a station assignment from a user.
+    Removes a station assignment from a user (optionally scoped to an event).
     """
     auth_user.require_permission("manage_permissions")
-    await core.Station.unassign_user(session, station_name, user_name)
+    await core.Station.unassign_user(
+        session, station_name, user_name, event_id=event_id
+    )
     return Response("", 204)

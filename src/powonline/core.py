@@ -529,13 +529,18 @@ class Station:
 
     @staticmethod
     async def assign_user(
-        session: AsyncSession, station_name: str, user_name: str
+        session: AsyncSession,
+        station_name: str,
+        user_name: str,
+        event_id: int | None = None,
     ) -> bool:
         """
         Returns true if the operation worked, false if the use is already
         assigned to another station.
         """
         station_query = select(model.Station).filter_by(name=station_name)
+        if event_id is not None:
+            station_query = station_query.filter_by(event_id=event_id)
         station_result = await session.execute(station_query)
         station = station_result.scalar_one()
         user_query = select(model.User).filter_by(name=user_name)
@@ -547,9 +552,14 @@ class Station:
 
     @staticmethod
     async def unassign_user(
-        session: AsyncSession, station_name: str, user_name: str
+        session: AsyncSession,
+        station_name: str,
+        user_name: str,
+        event_id: int | None = None,
     ) -> bool:
         station_query = select(model.Station).filter_by(name=station_name)
+        if event_id is not None:
+            station_query = station_query.filter_by(event_id=event_id)
         station_result = await session.execute(station_query)
         station = station_result.scalar_one()
         found_user = None
