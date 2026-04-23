@@ -72,7 +72,18 @@ async def update_team_for_event(
         event_id=event_id,
     )
     await session.flush()
-    await sse.publish(event_id, "team-details-change", {"name": name})
+    await sse.publish(
+        event_id,
+        "team-details-change",
+        {
+            "name": output.name,
+            "route_name": output.route_name,
+            "cancelled": output.cancelled,
+            "accepted": output.accepted,
+            "completed": output.completed,
+            "order": output.order,
+        },
+    )
     return schema.TeamSchema.model_validate(output)
 
 
