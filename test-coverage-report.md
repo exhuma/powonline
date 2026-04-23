@@ -7,7 +7,7 @@ Coverage after adding tests: **68%** (172 passed, 2 skipped)
 
 ## 1. Schema: NULL values from DB rejected by strict Pydantic fields
 
-**Class:** Data validation / schema definition  
+**Class:** Data validation / schema definition
 **Severity:** High — causes HTTP 500 on otherwise valid list endpoints
 
 ### Affected fields
@@ -35,7 +35,7 @@ Audit all schema fields that map to nullable DB columns and either:
 
 ## 2. Missing error handler for `NotFound` exception
 
-**Class:** Exception handling / HTTP error mapping  
+**Class:** Exception handling / HTTP error mapping
 **Severity:** Medium — `NotFound` silently becomes HTTP 500
 
 ### Description
@@ -58,7 +58,7 @@ has a registered handler with the correct HTTP status code.
 ## 3. Synchronous lazy-relationship access inside async handlers
    (MissingGreenlet)
 
-**Class:** SQLAlchemy async / ORM usage  
+**Class:** SQLAlchemy async / ORM usage
 **Severity:** High — causes HTTP 500 for affected endpoints
 
 ### Affected endpoints
@@ -110,7 +110,7 @@ obj.awaitable_attrs.<rel>`. Consider enabling SQLAlchemy's
 
 ## 4. Test data: `seed_cleanup.sql` did not truncate `event` table
 
-**Class:** Test infrastructure  
+**Class:** Test infrastructure
 **Severity:** Medium — stale rows with `NULL time_range` caused
 `list_events` to crash with a Pydantic `ValidationError` in subsequent
 tests when `event` rows were not cleaned up between runs.

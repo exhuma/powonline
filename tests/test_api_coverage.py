@@ -49,12 +49,10 @@ async def seed(dbsession: AsyncSession, app: FastAPI, test_client: AsyncClient):
     from configparser import ConfigParser
 
     test_config = ConfigParser()
-    test_config.read_string(
-        dedent("""\
+    test_config.read_string(dedent("""\
             [security]
             jwt_secret = testing
-            """)
-    )
+            """))
     app.dependency_overrides[get_config] = lambda: test_config
     event_id = None
     try:
@@ -89,7 +87,9 @@ async def seed(dbsession: AsyncSession, app: FastAPI, test_client: AsyncClient):
 @pytest.fixture
 def admin_client(app: FastAPI, test_client: AsyncClient, seed):
     """Authenticated client with full admin role."""
-    app.dependency_overrides[get_user] = lambda: User(name="user-red", roles={"admin"})
+    app.dependency_overrides[get_user] = lambda: User(
+        name="user-red", roles={"admin"}
+    )
     try:
         yield test_client
     finally:
@@ -171,7 +171,9 @@ async def test_add_and_remove_event_member(admin_client: AsyncClient, seed):
     assert data["user_name"] == "john"
     assert data["role_name"] == "event_owner"
 
-    del_resp = await admin_client.delete(f"/events/{seed}/members/john/event_owner")
+    del_resp = await admin_client.delete(
+        f"/events/{seed}/members/john/event_owner"
+    )
     assert del_resp.status_code == 204, del_resp.content
 
 
@@ -201,7 +203,9 @@ async def test_add_and_remove_event_domain(admin_client: AsyncClient, seed):
     )
     assert add_resp.status_code == 201, add_resp.content
 
-    del_resp = await admin_client.delete(f"/events/{seed}/domains/test.example.com")
+    del_resp = await admin_client.delete(
+        f"/events/{seed}/domains/test.example.com"
+    )
     assert del_resp.status_code == 204, del_resp.content
 
 
@@ -252,7 +256,12 @@ async def test_list_stations(test_client: AsyncClient, seed):
     assert response.status_code == 200, response.content
     data = response.json()
     names = {s["name"] for s in data["items"]}
-    assert {"station-red", "station-blue", "station-start", "station-end"} == names
+    assert {
+        "station-red",
+        "station-blue",
+        "station-start",
+        "station-end",
+    } == names
 
 
 async def test_get_station(test_client: AsyncClient, seed):
@@ -267,8 +276,12 @@ async def test_get_station_related_next(test_client: AsyncClient, seed):
     assert response.status_code == 200, response.content
 
 
-@pytest.mark.skip(reason="MissingGreenlet bug: lazy async relationship in sync context")
-async def test_is_user_assigned_to_station_true(admin_client: AsyncClient, seed):
+@pytest.mark.skip(
+    reason="MissingGreenlet bug: lazy async relationship in sync context"
+)
+async def test_is_user_assigned_to_station_true(
+    admin_client: AsyncClient, seed
+):
     response = await admin_client.get(
         f"/events/{seed}/station/station-red/users/user-red"
     )
@@ -276,8 +289,12 @@ async def test_is_user_assigned_to_station_true(admin_client: AsyncClient, seed)
     assert response.json() is True
 
 
-@pytest.mark.skip(reason="MissingGreenlet bug: lazy async relationship in sync context")
-async def test_is_user_assigned_to_station_false(admin_client: AsyncClient, seed):
+@pytest.mark.skip(
+    reason="MissingGreenlet bug: lazy async relationship in sync context"
+)
+async def test_is_user_assigned_to_station_false(
+    admin_client: AsyncClient, seed
+):
     response = await admin_client.get(
         f"/events/{seed}/station/station-start/users/user-red"
     )
@@ -285,7 +302,9 @@ async def test_is_user_assigned_to_station_false(admin_client: AsyncClient, seed
     assert response.json() is False
 
 
-async def test_unassign_user_from_station_event_route(admin_client: AsyncClient, seed):
+async def test_unassign_user_from_station_event_route(
+    admin_client: AsyncClient, seed
+):
     response = await admin_client.delete(
         f"/events/{seed}/station/station-red/users/user-red"
     )
@@ -307,7 +326,9 @@ async def test_list_teams(test_client: AsyncClient, seed):
 
 
 async def test_list_teams_by_route(test_client: AsyncClient, seed):
-    response = await test_client.get(f"/events/{seed}/team?assigned_to_route=route-red")
+    response = await test_client.get(
+        f"/events/{seed}/team?assigned_to_route=route-red"
+    )
     assert response.status_code == 200, response.content
     data = response.json()
     names = {t["name"] for t in data["items"]}
@@ -315,8 +336,12 @@ async def test_list_teams_by_route(test_client: AsyncClient, seed):
     assert "team-blue" not in names
 
 
-async def test_list_teams_quickfilter_without_route(test_client: AsyncClient, seed):
-    response = await test_client.get(f"/events/{seed}/team?quickfilter=without_route")
+async def test_list_teams_quickfilter_without_route(
+    test_client: AsyncClient, seed
+):
+    response = await test_client.get(
+        f"/events/{seed}/team?quickfilter=without_route"
+    )
     assert response.status_code == 200, response.content
     data = response.json()
     names = {t["name"] for t in data["items"]}
@@ -415,7 +440,9 @@ async def test_assign_questionnaire_to_station(admin_client: AsyncClient, seed):
     assert response.status_code == 204, response.content
 
 
-async def test_unassign_questionnaire_from_station(admin_client: AsyncClient, seed):
+async def test_unassign_questionnaire_from_station(
+    admin_client: AsyncClient, seed
+):
     """questionnaire_1 is linked to station-blue in seed; unassign it."""
     response = await admin_client.delete(
         f"/events/{seed}/questionnaire/questionnaire_1/station"
@@ -434,7 +461,9 @@ async def test_questionnaire_scores(test_client: AsyncClient, seed):
 
 
 async def test_station_dashboard(test_client: AsyncClient, seed):
-    response = await test_client.get(f"/events/{seed}/station/station-red/dashboard")
+    response = await test_client.get(
+        f"/events/{seed}/station/station-red/dashboard"
+    )
     assert response.status_code == 200, response.content
     data = response.json()
     assert isinstance(data, list)
@@ -574,7 +603,9 @@ async def test_get_user_stations_endpoint(admin_client: AsyncClient, seed):
     assert assigned.get("station-red") is True
 
 
-async def test_assign_user_to_station_via_user_route(admin_client: AsyncClient, seed):
+async def test_assign_user_to_station_via_user_route(
+    admin_client: AsyncClient, seed
+):
     payload = {"name": "station-blue"}
     response = await admin_client.post(
         "/user/jane/stations",
