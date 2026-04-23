@@ -1,14 +1,19 @@
+import logging
 import os
 from pathlib import Path
 from textwrap import dedent
+from tkinter import INSERT
 
-import alembic.config
-from config_resolver import get_config
+from config_resolver.core import get_config
+from fastapi import FastAPI
+from httpx import ASGITransport, AsyncClient
 from pytest import fixture
 from sqlalchemy import text
 
-from powonline import model
-from powonline.web import make_app
+import alembic.config
+from powonline.main import create_app
+
+LOG = logging.getLogger(__name__)
 
 
 def here(localname):
@@ -19,18 +24,12 @@ def here(localname):
 
 @fixture(scope="session", autouse=True)
 def upgrade_db():
-    alembic_root = Path.cwd() / "database"
-    current_dir = Path.cwd()
+    alembic.config.main(argv=["--raiseerr", "upgrade", "head"])
+    yield
     try:
-        os.chdir(alembic_root)
-        alembic.config.main(argv=["--raiseerr", "upgrade", "head"])
-        yield
-        try:
-            alembic.config.main(argv=["--raiseerr", "downgrade", "base"])
-        except:
-            print("Unable to downgrade database")
-    finally:
-        os.chdir(current_dir)
+        alembic.config.main(argv=["--raiseerr", "downgrade", "base"])
+    except:
+        print("Unable to downgrade database")
 
 
 @fixture
@@ -45,36 +44,57 @@ def test_config():
 
 @fixture
 def app(test_config):
-    test_config.read_string(
-        dedent(
-            """\
+    test_config.read_string(dedent("""\
         [security]
         jwt_secret = %s
-        secret_key = testing
-        """
-            % ("testing",)
-        )
+        """ % ("testing",)))
+    app = create_app()
+    return app
+
+
+@fixture
+def test_client(app: FastAPI) -> AsyncClient:
+    client = AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://testserver"
     )
-    return make_app(test_config)
+    return client
 
 
 @fixture
-def dbsession():
-    try:
-        yield model.DB.session
-    finally:
-        model.DB.session.remove()
+async def dbsession():
+    from powonline.dependencies import get_async_session_maker
 
-
-@fixture
-def seed(dbsession):
-    with open(here("seed_cleanup.sql")) as seed:
+    session_maker = get_async_session_maker()
+    async with session_maker() as session:
+        with open(here("seed_cleanup.sql")) as seed:
+            await session.execute(text(seed.read()))
+            await session.commit()
         try:
-            model.DB.session.execute(text(seed.read()))
-            model.DB.session.commit()
-        except Exception as exc:
-            LOG.exception("Unable to execute cleanup seed")
-            model.DB.session.rollback()
+            yield session
+        finally:
+            await session.rollback()
+            await session.close()
+
+
+@fixture
+async def seed(dbsession):
+    event_id_select = await dbsession.execute(
+        text("SELECT id FROM event WHERE name='event-1'")
+    )
+    event_id = event_id_select.scalar()
+    if event_id is None:
+        event_id_query = await dbsession.execute(
+            text(
+                "INSERT INTO event (name, time_range) VALUES ('event-1', '[2020-01-01, 2099-12-31)') RETURNING id"
+            )
+        )
+        event_id = event_id_query.scalar()
     with open(here("seed.sql")) as seed:
-        model.DB.session.execute(text(seed.read()))
-        model.DB.session.commit()
+        seed_content = seed.read().format(event_id=event_id)
+        await dbsession.execute(text(seed_content))
+        await dbsession.commit()
+    try:
+        yield event_id
+    finally:
+        await dbsession.execute(text("DELETE FROM event WHERE name='event-1'"))
+        await dbsession.commit()

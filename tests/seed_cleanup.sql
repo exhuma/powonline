@@ -5,6 +5,7 @@ TRUNCATE
     role,
     oauth_connection,
     message,
+    event,
     route,
     route_station,
     station,
@@ -14,4 +15,4 @@ TRUNCATE
     user_station,
     questionnaire,
     questionnaire_score
-;
+CASCADE;

@@ -7,31 +7,52 @@ services:
       dockerfile: .devcontainer/Dockerfile
     volumes:
       - ..:/workspace:cached
+    extra_hosts:
+      # Let the dev container reach the same Keycloak hostname the browser uses.
+      - idp.127.0.0.1.nip.io:host-gateway
     environment:
       POWONLINE_DSN: postgresql://postgres:postgres@db/powonline
     command: sleep infinity
-    # Runs app on the same network as the database container, allows
-    # "forwardPorts" in devcontainer.json function.
-    network_mode: service:db
-    # Use "forwardPorts" in **devcontainer.json** to forward an app port
-    # locally.  (Adding the "ports" property to this file will not forward from
-    # a Codespace.)
   db:
-    build:
-      context: ../database
+    image: postgres:17-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_DB: postgres
+      POSTGRES_DB: powonline
       POSTGRES_PASSWORD: postgres
-    # Add "forwardPorts": ["5432"] to **devcontainer.json** to forward
-    # PostgreSQL locally.  (Adding the "ports" property to this file will not
-    # forward from a Codespace.)
   test-db:
-    build:
-      context: ../database
+    image: postgres:17-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_DB: postgres
+      POSTGRES_DB: powonline
       POSTGRES_PASSWORD: postgres
+
+  keycloak-db:
+    image: postgres:15
+    restart: unless-stopped
+    volumes:
+      - ./docker-resources/keycloak-db-init:/docker-entrypoint-initdb.d:ro
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: keycloak
+      POSTGRES_PASSWORD: postgres
+
+  idp:
+    image: quay.io/keycloak/keycloak:26.6.0
+    restart: unless-stopped
+    command:
+      - start-dev
+      - --db=postgres
+      - --db-url-host=keycloak-db
+      - --db-username=postgres
+      - --db-password=postgres
+      - --hostname=http://idp.127.0.0.1.nip.io:8080
+      - --import-realm
+    ports:
+      - 8080:8080
+    volumes:
+      - ./docker-resources/keycloak-realm:/opt/keycloak/data/import:ro
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
