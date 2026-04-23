@@ -24,7 +24,7 @@ def upgrade():
     result = bind.execute(sa.text("""
             WITH inserted AS (
                 INSERT INTO event (name, time_range)
-                VALUES ('Default Event', tstzrange(now(), now()))
+                VALUES ('Default Event', tstzrange(now() - interval '2 days', now() - interval '1 day'))
                 ON CONFLICT DO NOTHING
                 RETURNING id
             )
