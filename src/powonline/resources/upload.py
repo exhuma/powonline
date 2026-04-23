@@ -14,13 +14,12 @@ from fastapi import APIRouter, Depends, File, Request, Response, UploadFile
 from PIL import ExifTags, Image
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from powonline import core, schema
+from powonline import core, schema, sse
 from powonline.auth import User, get_user
 from powonline.config import default
-from powonline.dependencies import get_db, get_pusher
+from powonline.dependencies import get_db
 from powonline.exc import AccessDenied, AuthDeniedReason, NotFound
 from powonline.model import Upload
-from powonline.pusher import PusherWrapper
 
 ROUTER = APIRouter(prefix="/events/{event_id}", tags=["files", "uploads"])
 LOG = logging.getLogger(__name__)
@@ -139,7 +138,6 @@ async def create_upload(
     session: Annotated[AsyncSession, Depends(get_db)],
     event_id: int,
     config: Annotated[ConfigParser, Depends(default)],
-    pusher: Annotated[PusherWrapper, Depends(get_pusher)],
     request: Request,
     upload_file: UploadFile = File(),
 ):
@@ -180,7 +178,9 @@ async def create_upload(
             headers={"Location": file_data.href},
             status_code=201,
         )
-        pusher.send_file_event("file-added", file_data)
+        await sse.publish(
+            event_id, "file-added", file_data.model_dump(mode="json")
+        )
         return response
 
     return Response("The given file is not allowed", 400)
@@ -297,7 +297,6 @@ async def delete_file(
     user: Annotated[User, Depends(get_user)],
     request: Request,
     config: Annotated[ConfigParser, Depends(default)],
-    pusher: Annotated[PusherWrapper, Depends(get_pusher)],
 ):
     """
     Retrieve a single file
@@ -315,5 +314,5 @@ async def delete_file(
         "app", "upload_folder", fallback=core.Upload.FALLBACK_FOLDER
     )
     await core.Upload.delete(session, data_folder, db_instance)
-    pusher.send_file_event("file-deleted", {"id": uuid})
+    await sse.publish(event_id, "file-deleted", {"id": str(uuid)})
     return "OK"

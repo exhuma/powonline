@@ -18,7 +18,6 @@ dependencies = [
     "imapclient",
     "pillow",
     "psycopg[binary]",
-    "pusher",
     "pydantic[email]",
     "pyjwt",
     "python-dateutil",

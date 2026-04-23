@@ -4,11 +4,10 @@ from typing import Annotated
 from fastapi import APIRouter, Body, Depends, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from powonline import core, schema
+from powonline import core, schema, sse
 from powonline.auth import User, require_event_admin_user
-from powonline.dependencies import get_db, get_pusher
+from powonline.dependencies import get_db
 from powonline.exc import NotFound
-from powonline.pusher import PusherWrapper
 
 ROUTER = APIRouter(prefix="", tags=["team"])
 LOG = logging.getLogger(__name__)
@@ -61,7 +60,6 @@ async def update_team_for_event(
     session: Annotated[AsyncSession, Depends(get_db)],
     event_id: int,
     name: str,
-    pusher: Annotated[PusherWrapper, Depends(get_pusher)],
     team: schema.TeamSchema = Body(),
 ):
     _ = auth_user
@@ -74,7 +72,7 @@ async def update_team_for_event(
         event_id=event_id,
     )
     await session.flush()
-    pusher.send_team_event("team-details-change", {"name": name})
+    await sse.publish(event_id, "team-details-change", {"name": name})
     return schema.TeamSchema.model_validate(output)
 
 
@@ -84,11 +82,10 @@ async def delete_team_for_event(
     session: Annotated[AsyncSession, Depends(get_db)],
     event_id: int,
     name: str,
-    pusher: Annotated[PusherWrapper, Depends(get_pusher)],
 ):
     _ = auth_user
     await core.Team.delete(session, name, event_id=event_id)
-    pusher.send_team_event("team-deleted", {"name": name})
+    await sse.publish(event_id, "team-deleted", {"name": name})
     return Response(None, 204)
 
 

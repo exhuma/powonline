@@ -50,6 +50,7 @@ def create_app():
     app.include_router(resources.questionnaire.ROUTER)
     app.include_router(resources.route.ROUTER)
     app.include_router(resources.scoreboard.ROUTER)
+    app.include_router(resources.sse.ROUTER)
     app.include_router(resources.station.ROUTER)
     app.include_router(resources.team.ROUTER)
     app.include_router(resources.upload.ROUTER)

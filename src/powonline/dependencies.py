@@ -12,7 +12,6 @@ from sqlalchemy.ext.asyncio import (
 
 from powonline.config import default
 from powonline.model import get_dsn
-from powonline.pusher import PusherWrapper
 
 # Global variables for lazy initialization
 _engine: AsyncEngine | None = None
@@ -67,13 +66,3 @@ async def get_db():
     async with session_maker() as session:
         yield session
         await session.commit()
-
-
-def get_pusher(config: Annotated[ConfigParser, Depends(default)]):
-    output = PusherWrapper.create(
-        config,
-        config.get("pusher", "app_id", fallback=""),
-        config.get("pusher", "key", fallback=""),
-        config.get("pusher", "secret", fallback=""),
-    )
-    return output
