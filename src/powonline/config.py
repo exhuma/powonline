@@ -22,6 +22,12 @@ contain production secrets:
   POWONLINE_EMAIL_LOGIN         → [email] login
   POWONLINE_EMAIL_PASSWORD      → [email] password
   POWONLINE_ALLOWED_ORIGINS     → [app] allowed_origins  (comma-separated)
+
+Legal / data-controller identity (used in auto-generated legal documents):
+
+  POWONLINE_SITE_NAME           → [legal] site_name
+  POWONLINE_SITE_URL            → [legal] site_url
+  POWONLINE_CONTACT_EMAIL       → [legal] contact_email
 """
 
 import os
@@ -49,6 +55,9 @@ def _apply_env_overrides(cfg: ConfigParser) -> None:
     _set("email", "login", "POWONLINE_EMAIL_LOGIN")
     _set("email", "password", "POWONLINE_EMAIL_PASSWORD")
     _set("app", "allowed_origins", "POWONLINE_ALLOWED_ORIGINS")
+    _set("legal", "site_name", "POWONLINE_SITE_NAME")
+    _set("legal", "site_url", "POWONLINE_SITE_URL")
+    _set("legal", "contact_email", "POWONLINE_CONTACT_EMAIL")
 
 
 @lru_cache

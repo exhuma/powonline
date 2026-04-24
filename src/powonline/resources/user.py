@@ -10,6 +10,7 @@ from powonline.auth import get_user as get_auth_user
 from powonline.db2api import map_user
 from powonline.dependencies import get_db
 from powonline.exc import NotFound
+from powonline.routers.auth import _clear_auth_cookies
 
 ROUTER = APIRouter(prefix="/user", tags=["user"])
 LOG = logging.getLogger(__name__)
@@ -86,6 +87,39 @@ async def delete_user(
     auth_user.require_permission("manage_permissions")
     await core.User.delete(session, name)
     return Response("", 204)
+
+
+@ROUTER.delete("/me")
+async def delete_my_account(
+    auth_user: Annotated[User, Depends(get_auth_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+):
+    """
+    GDPR right to erasure — self-service account deletion.
+
+    The authenticated user's account and all associated personal data are
+    permanently removed:
+    - OAuth connections
+    - File uploads
+    - Role assignments (global and per-event)
+    - Station assignments
+    - Messages authored by this user
+
+    Teams *owned* by the user are **reassigned** to a system sentinel
+    (``__deleted__``) rather than deleted, so that event history (scores,
+    progress states) is preserved for other participants.
+
+    Audit log entries are retained but the ``username`` field is nulled to
+    comply with data minimisation requirements while preserving operational
+    integrity.
+
+    On success the access and refresh cookies are cleared, effectively
+    terminating the session.
+    """
+    await core.User.delete_self(session, auth_user.username)
+    response = Response("", 204)
+    _clear_auth_cookies(response)
+    return response
 
 
 @ROUTER.get("/{user_name}/roles")
