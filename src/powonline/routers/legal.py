@@ -120,25 +120,16 @@ protect your personal data in accordance with Regulation (EU) 2016/679
 identifiers, or any form of analytics or tracking data.</p>
 
 <h2>3. Cookies</h2>
-<p>This Service uses <strong>strictly necessary</strong> HttpOnly cookies only.
-No consent banner is displayed because no non-essential cookies are set.</p>
-<table>
-  <tr><th>Cookie</th><th>Purpose</th><th>Lifetime</th></tr>
-  <tr><td><code>access_token</code></td>
-      <td>Signed JWT authenticating your session. Read by the server on every
-      request; never accessible to JavaScript.</td>
-      <td>15 minutes</td></tr>
-  <tr><td><code>refresh_token</code></td>
-      <td>Long-lived JWT used solely to issue a new access token without
-      requiring you to log in again.</td>
-      <td>7 days</td></tr>
-  <tr><td><code>pkce_state</code></td>
-      <td>Transient PKCE state carried across the OAuth redirect round-trip.
-      Deleted immediately after use.</td>
-      <td>10 minutes</td></tr>
-</table>
+<p>This Service uses <strong>strictly necessary</strong> cookies only.
+No consent banner is displayed because no non-essential cookies are set.
+The cookies are set by the server, are not accessible to page scripts,
+and are automatically removed when you log out or your session expires.</p>
+<p>Three short-lived authentication cookies are used: one carries your active
+session credential, one allows the session to be renewed without requiring you
+to log in again, and one protects the OAuth login flow against cross-site
+request forgery. All three are cleared on logout or account deletion.</p>
 <p>You may refuse cookies by adjusting your browser settings; however, the
-Service will not function without the authentication cookies above.</p>
+Service will not function without the authentication cookies.</p>
 
 <h2>4. Legal Basis for Processing</h2>
 <ul>
@@ -230,26 +221,17 @@ identifiants de dispositifs ni aucune donnée d'analyse ou de traçage.</p>
 
 <h2>3. Cookies</h2>
 <p>Ce Service utilise uniquement des cookies <strong>strictement
-nécessaires</strong> de type HttpOnly. Aucune bannière de consentement
-n'est affichée car aucun cookie non essentiel n'est posé.</p>
-<table>
-  <tr><th>Cookie</th><th>Finalité</th><th>Durée</th></tr>
-  <tr><td><code>access_token</code></td>
-      <td>JWT signé authentifiant votre session. Lu par le serveur à chaque
-      requête ; jamais accessible au JavaScript.</td>
-      <td>15 minutes</td></tr>
-  <tr><td><code>refresh_token</code></td>
-      <td>JWT longue durée utilisé uniquement pour émettre un nouveau jeton
-      d'accès sans reconnexion.</td>
-      <td>7 jours</td></tr>
-  <tr><td><code>pkce_state</code></td>
-      <td>État PKCE transitoire transmis lors de la redirection OAuth.
-      Supprimé immédiatement après utilisation.</td>
-      <td>10 minutes</td></tr>
-</table>
+nécessaires</strong>. Aucune bannière de consentement n'est affichée car aucun
+cookie non essentiel n'est posé. Les cookies sont déposés par le serveur, ne
+sont pas accessibles aux scripts de la page et sont supprimés automatiquement
+à la déconnexion ou à l'expiration de la session.</p>
+<p>Trois cookies d'authentification à courte durée de vie sont utilisés&nbsp;:
+l'un transporte votre identifiant de session actif, l'un permet le
+renouvellement de session sans nouvelle connexion, et l'un protège le flux de
+connexion OAuth contre les attaques CSRF. Les trois sont supprimés à la
+déconnexion ou lors de la suppression du compte.</p>
 <p>Vous pouvez refuser les cookies via les paramètres de votre navigateur,
-mais le Service ne fonctionnera pas sans les cookies d'authentification
-ci-dessus.</p>
+mais le Service ne fonctionnera pas sans les cookies d'authentification.</p>
 
 <h2>4. Base juridique du traitement</h2>
 <ul>
@@ -340,26 +322,17 @@ Gerätekennungen oder Analyse- und Tracking-Daten.</p>
 
 <h2>3. Cookies</h2>
 <p>Dieser Dienst verwendet ausschließlich <strong>technisch notwendige</strong>
-HttpOnly-Cookies. Da keine nicht notwendigen Cookies gesetzt werden, wird kein
-Cookie-Einwilligungsbanner angezeigt.</p>
-<table>
-  <tr><th>Cookie</th><th>Zweck</th><th>Lebensdauer</th></tr>
-  <tr><td><code>access_token</code></td>
-      <td>Signiertes JWT zur Sitzungsauthentifizierung. Wird vom Server bei
-      jeder Anfrage gelesen; für JavaScript nicht zugänglich.</td>
-      <td>15 Minuten</td></tr>
-  <tr><td><code>refresh_token</code></td>
-      <td>Langlebiges JWT, das ausschließlich dazu dient, ein neues
-      Zugriffstoken ohne erneute Anmeldung auszustellen.</td>
-      <td>7 Tage</td></tr>
-  <tr><td><code>pkce_state</code></td>
-      <td>Transienter PKCE-Zustand für den OAuth-Redirect. Wird unmittelbar nach
-      Verwendung gelöscht.</td>
-      <td>10 Minuten</td></tr>
-</table>
+Cookies. Da keine nicht notwendigen Cookies gesetzt werden, wird kein
+Cookie-Einwilligungsbanner angezeigt. Die Cookies werden vom Server gesetzt,
+sind für Seitenscripts nicht zugänglich und werden bei der Abmeldung oder nach
+Sitzungsablauf automatisch entfernt.</p>
+<p>Es werden drei kurzlebige Authentifizierungs-Cookies verwendet: eines
+überträgt Ihre aktive Sitzungskennung, eines ermöglicht die Sitzungserneuerung
+ohne erneute Anmeldung, und eines schützt den OAuth-Anmeldeablauf vor
+CSRF-Angriffen. Alle drei werden bei der Abmeldung oder Kontolöschung
+gelöscht.</p>
 <p>Sie können Cookies über Ihre Browsereinstellungen ablehnen; der Dienst
-funktioniert jedoch ohne die oben genannten Authentifizierungs-Cookies
-nicht.</p>
+funktioniert jedoch ohne die Authentifizierungs-Cookies nicht.</p>
 
 <h2>4. Rechtsgrundlage der Verarbeitung</h2>
 <ul>
@@ -744,54 +717,52 @@ and how you can exercise your right to erasure (GDPR Art. 17).</p>
   </tr>
   <tr>
     <td>Username &amp; e-mail address</td>
-    <td>Server database (<code>user</code> table)</td>
+    <td>Server database</td>
     <td>Until account is deleted</td>
     <td>Permanently erased</td>
   </tr>
   <tr>
     <td>Hashed password</td>
-    <td>Server database (<code>user</code> table)</td>
+    <td>Server database</td>
     <td>Until account is deleted</td>
     <td>Permanently erased</td>
   </tr>
   <tr>
     <td>OAuth connection data (provider ID, access token, avatar URL)</td>
-    <td>Server database (<code>oauth_connection</code> table)</td>
+    <td>Server database</td>
     <td>Until account is deleted or provider is unlinked</td>
-    <td>Permanently erased (CASCADE)</td>
+    <td>Permanently erased</td>
   </tr>
   <tr>
     <td>Role and event membership assignments</td>
-    <td>Server database (<code>user_role</code>, <code>event_user_role</code>,
-    <code>user_station</code> tables)</td>
+    <td>Server database</td>
     <td>Until account is deleted</td>
-    <td>Permanently erased (CASCADE)</td>
+    <td>Permanently erased</td>
   </tr>
   <tr>
     <td>Uploaded files</td>
     <td>Server database &amp; file storage</td>
     <td>Until file is deleted or account is deleted</td>
-    <td>Permanently erased (CASCADE)</td>
+    <td>Permanently erased</td>
   </tr>
   <tr>
     <td>Audit log entries (action type, timestamp, message)</td>
-    <td>Server database (<code>auditlog</code> table)</td>
+    <td>Server database</td>
     <td>Indefinitely (anonymised on account deletion)</td>
-    <td>Username field set to NULL; log entry retained for operational
+    <td>Identifying information removed; log entry retained for operational
     integrity</td>
   </tr>
   <tr>
     <td>Team ownership</td>
-    <td>Server database (<code>team</code> table)</td>
+    <td>Server database</td>
     <td>Until event data is purged</td>
-    <td>Ownership transferred to anonymous sentinel &mdash; team history
+    <td>Ownership transferred to an anonymous placeholder &mdash; team history
     preserved for other participants</td>
   </tr>
   <tr>
-    <td>Authentication cookies (<code>access_token</code>,
-    <code>refresh_token</code>, <code>pkce_state</code>)</td>
-    <td>Browser (HttpOnly cookies, never accessible to JavaScript)</td>
-    <td>15 min / 7 days / 10 min respectively</td>
+    <td>Authentication session data</td>
+    <td>Browser (cookies not accessible to page scripts)</td>
+    <td>Short-lived; expires automatically</td>
     <td>Cleared immediately on logout or account deletion</td>
   </tr>
 </table>
