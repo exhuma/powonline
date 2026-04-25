@@ -1,1 +1,47 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Python caches and bytecode
+__pycache__
+*.py[cod]
+*.pyo
+.mypy_cache
+.ruff_cache
+.pytest_cache
+
+# Virtual environments
+.venv
 env
+venv
+
+# Development / test artefacts
+htmlcov
+.coverage
+.coveragerc
+test-coverage-report.md
+tests/
+
+# Dev tooling configs (not needed in the image)
+.pre-commit-config.yaml
+.vscode
+.devcontainer
+
+# Documentation
+docs/
+*.rst
+*.md
+CHANGELOG*
+LICENSE
+TODO
+
+# Local build / packaging leftovers
+dist/
+build/
+*.egg-info
+release-*
+
+# OS noise
+.DS_Store
+Thumbs.db
