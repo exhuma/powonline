@@ -901,6 +901,44 @@ class User:
         return None
 
     @staticmethod
+    async def delete_self(session: AsyncSession, name: str) -> None:
+        """
+        Delete the user identified by *name*, satisfying the GDPR right to
+        erasure.  Before the deletion, any teams owned by the user are
+        reassigned to the sentinel account ``__deleted__`` so that event
+        history (scores, station states, etc.) is preserved.  The sentinel
+        user is created as an inactive system account if it does not already
+        exist.
+        """
+        _SENTINEL = "__deleted__"
+
+        # Ensure the sentinel user exists (inactive, no password)
+        sentinel = await User.get(session, _SENTINEL)
+        if not sentinel:
+            sentinel = model.User(
+                name=_SENTINEL,
+                password=None,
+                active=False,
+            )
+            session.add(sentinel)
+            await session.flush()
+
+        # Reassign owned teams to the sentinel before deleting the user so
+        # that the DB-level CASCADE on team.owner does not wipe team rows.
+        await session.execute(
+            update(model.Team)
+            .where(model.Team.owner == name)
+            .values(owner=_SENTINEL)
+        )
+        await session.flush()
+
+        # Now delete the user — remaining FK cascades (oauth_connection,
+        # uploads, roles, event memberships, station assignments, messages)
+        # are handled at the database level.
+        await session.execute(delete(model.User).filter_by(name=name))
+        return None
+
+    @staticmethod
     async def create_new(
         session: AsyncSession, data: dict[str, Any]
     ) -> model.User:
