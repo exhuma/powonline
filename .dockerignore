@@ -30,7 +30,6 @@ tests/
 
 # Documentation
 docs/
-*.rst
 *.md
 CHANGELOG*
 LICENSE

@@ -12,7 +12,7 @@ WORKDIR /app
 
 # Layer-cache dependencies: copy lockfiles before source so this layer is only
 # invalidated when dependencies actually change.
-COPY pyproject.toml uv.lock ./
+COPY README.rst pyproject.toml uv.lock ./
 
 # Sync production dependencies into /app/.venv (no dev extras).
 RUN uv sync --frozen --no-dev --no-install-project
@@ -45,6 +45,12 @@ COPY --from=build /app/alembic.ini /alembic/alembic.ini
 # Copy entrypoint scripts from the repository.
 COPY containers/main/resources/start.bash /start.bash
 COPY containers/main/resources/migrate.bash /migrate.bash
+
+# Rewrite shebangs in venv scripts that were baked with the build-stage path
+# (/app/.venv/...) so they resolve correctly from /opt/powonline/... at runtime.
+RUN find /opt/powonline/bin -maxdepth 1 -type f \
+    | xargs -r grep -rlF '/app/.venv' \
+    | xargs -r sed -i 's|/app/.venv|/opt/powonline|g'
 
 # Prepare a writable uploads directory owned by the application user.
 # At runtime, mount a named volume over /var/lib/powonline/uploads.
