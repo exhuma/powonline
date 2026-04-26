@@ -1,0 +1,178 @@
+# Local development / smoke-test compose
+#
+# Builds the backend image from source (no registry pull needed) and wires it
+# together with a PostgreSQL database so you can simulate a deployment on
+# your laptop.
+#
+# NOTE: Run all docker compose commands from the backend/ directory
+# (i.e. the parent of this file's docs/deploy/ folder), or adjust the
+# build context paths accordingly.  The paths below use ../../ to reach the
+# repository root relative to this file's location.
+#
+# Usage
+# -----
+#   1. Copy the sample backend config (already committed):
+#
+#        cp ../../backend/sample-files/app.ini config/app.ini
+#
+#      (Or, when running from backend/: cp sample-files/app.ini config/app.ini)
+#      Then edit config/app.ini as needed (jwt_secret, allowed_origins, etc.)
+#      The file is mounted read-only into the API container.
+#
+#   2. Optionally create a .env file next to this compose file to override
+#      any of the variables below (see .env.example for the full list).
+#      The defaults in this file are intentionally safe for local HTTP use.
+#
+#   3. Build and start:
+#
+#        docker compose -f docs/deploy/docker-compose.local.yml up --build
+#
+#      (Run from backend/)
+#
+#   4. Open http://localhost:8000 in your browser / API client.
+#      If you have the frontend running separately (see below), set
+#      POWONLINE_ALLOWED_ORIGINS to include your frontend's origin.
+#
+# Stopping / cleaning up
+# ----------------------
+#   docker compose -f docs/deploy/docker-compose.local.yml down          # keep volumes
+#   docker compose -f docs/deploy/docker-compose.local.yml down -v       # drop volumes too
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Database
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: powonline
+      POSTGRES_USER: powonline
+      POSTGRES_PASSWORD: "${DB_PASSWORD:-localdev}"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U powonline
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # Bootstrap admin user (one-shot; exits after seeding)
+  #
+  # Credentials are taken from ADMIN_USER / ADMIN_PASSWORD env vars, which
+  # default to admin / admin.  Override them in a .env file for anything
+  # beyond a throwaway local session.
+  # ---------------------------------------------------------------------------
+  bootstrap:
+    build:
+      context: ../../
+      dockerfile: Dockerfile
+    restart: "no"
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      POWONLINE_DSN: >-
+        postgresql+psycopg://powonline:${DB_PASSWORD:-localdev}@db/powonline
+    entrypoint:
+      - /opt/powonline/bin/python
+      - -m
+      - powonline.bootstrap_admin
+      - "${ADMIN_USER:-admin}"
+      - "${ADMIN_PASSWORD:-admin}"
+
+  # ---------------------------------------------------------------------------
+  # Backend API
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: ../../
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.create_connection(('localhost',8000),2)\" 2>/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
+    environment:
+      # --- Database (required) -----------------------------------------------
+      POWONLINE_DSN: >-
+        postgresql+psycopg://powonline:${DB_PASSWORD:-localdev}@db/powonline
+
+      # --- Config file (non-secret structured config) ------------------------
+      POWONLINE_CONFIG_FILE: /etc/powonline/app.ini
+
+      # --- Secrets (safe local defaults; override via .env in production) ----
+      POWONLINE_JWT_SECRET: "${POWONLINE_JWT_SECRET:-local-dev-jwt-secret-change-me}"
+
+      # --- CORS: allow requests from the browser-visible frontend origin -----
+      # Must match the host:port the browser uses — not the container name.
+      # If you run the frontend separately (see the commented-out service
+      # below), set this to its origin, e.g. http://localhost:8080.
+      POWONLINE_ALLOWED_ORIGINS: "${POWONLINE_ALLOWED_ORIGINS:-http://localhost:8080}"
+
+      # --- Enable plain-HTTP cookies for local testing (HTTP, not HTTPS) -----
+      POWONLINE_INSECURE_COOKIES: "1"
+
+      # --- Optional social-login secrets (leave blank to disable) ------------
+      POWONLINE_GOOGLE_CLIENT_SECRET: "${POWONLINE_GOOGLE_CLIENT_SECRET:-}"
+      POWONLINE_OIDC_CLIENT_SECRET: "${POWONLINE_OIDC_CLIENT_SECRET:-}"
+
+      # --- Optional uvicorn tuning -------------------------------------------
+      # UVICORN_ARGS: "--workers 2"
+    volumes:
+      # Structured config: upload_folder, email, OAuth client IDs, etc.
+      # Copy sample-files/app.ini to config/app.ini and edit it.
+      - ../../config/app.ini:/etc/powonline/app.ini:ro
+      # Persistent file uploads
+      - uploads:/var/lib/powonline/uploads
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  # ---------------------------------------------------------------------------
+  # Frontend
+  #
+  # The frontend is a separate component maintained in its own repository (or
+  # sub-directory).  During backend development it is NOT required — the API
+  # is fully usable on its own.
+  #
+  # When you need a full-stack smoke test, you have two options:
+  #
+  # Option A — run the frontend dev server on your host:
+  #   cd ../frontend
+  #   npm install && BACKEND_URL=http://localhost:8000 npm run dev
+  #   (The Vite/webpack dev server typically binds to http://localhost:8080)
+  #
+  # Option B — add it to this compose file:
+  #   1. Build the frontend image locally:
+  #        docker build -t powonline-frontend ../frontend
+  #   2. Uncomment the block below and adjust the image name / build context.
+  #
+  # frontend:
+  #   # Use a pre-built image from your registry:
+  #   # image: "${DOCKER_REGISTRY}/${DOCKER_REGISTRY_NAMESPACE}/powonline-frontend:latest"
+  #   #
+  #   # OR build from local source (adjust the context path as needed):
+  #   # build:
+  #   #   context: ../../frontend
+  #   #   dockerfile: Dockerfile
+  #   restart: unless-stopped
+  #   environment:
+  #     # The URL the end-user's *browser* uses to reach the API.
+  #     # On a laptop this is the host port we expose above.
+  #     BACKEND_URL: "${BACKEND_URL:-http://localhost:8000}"
+  #   ports:
+  #     - "127.0.0.1:8080:8080"
+  # ---------------------------------------------------------------------------
+
+volumes:
+  db_data:
+  uploads:

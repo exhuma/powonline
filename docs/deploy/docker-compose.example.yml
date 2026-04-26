@@ -1,0 +1,112 @@
+# Example docker-compose for powonline
+#
+# This file is a REFERENCE for Ansible deployments — it is NOT used directly
+# in production.  Copy and adapt it; do not commit real secrets here.
+#
+# Services
+# --------
+#   db        — PostgreSQL (standard upstream image, no customisation needed)
+#   api       — powonline backend (FastAPI / uvicorn)
+#   frontend  — powonline frontend (nginx SPA + runtime config injection)
+#               See the commented-out service block below for details.
+#
+# An upstream nginx reverse proxy (managed separately) is expected to
+# terminate TLS and route:
+#   /       → frontend:80   (or wherever your frontend is served from)
+#   /api/   → api:8000      (or whichever path prefix you choose)
+#
+# All secrets below are illustrative.  In Ansible, drive them from
+# ansible-vault variables.
+
+version: "3.9"
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Database
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: powonline
+      POSTGRES_USER: powonline
+      POSTGRES_PASSWORD: "${DB_PASSWORD}"   # set in .env or Ansible template
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U powonline"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # Backend API
+  # ---------------------------------------------------------------------------
+  api:
+    image: "${DOCKER_REGISTRY}/${DOCKER_REGISTRY_NAMESPACE}/powonline-api:${API_VERSION}"
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # --- Database (required) -----------------------------------------------
+      POWONLINE_DSN: "postgresql+psycopg://powonline:${DB_PASSWORD}@db/powonline"
+
+      # --- Config file path (required) ---------------------------------------
+      # Mount app.ini (see volumes below) and point to it.
+      POWONLINE_CONFIG_FILE: /etc/powonline/app.ini
+
+      # --- Secrets that shadow INI values ------------------------------------
+      POWONLINE_JWT_SECRET: "${JWT_SECRET}"
+      POWONLINE_GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET}"
+      POWONLINE_OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET}"
+      POWONLINE_EMAIL_LOGIN: "${EMAIL_LOGIN}"
+      POWONLINE_EMAIL_PASSWORD: "${EMAIL_PASSWORD}"
+
+      # --- CORS (comma-separated list of allowed origins) --------------------
+      # Must include the public origin of the frontend (see service below).
+      POWONLINE_ALLOWED_ORIGINS: "https://powonline.example.com"
+
+      # --- Uvicorn tuning (optional) -----------------------------------------
+      # UVICORN_ARGS: "--workers 2"
+
+      # --- Cookie security (set to 1 only for HTTP-only local testing) -------
+      # POWONLINE_INSECURE_COOKIES: "0"
+    volumes:
+      # Structured config (non-secret values: upload_folder, email host/port,
+      # OAuth client_id, redirect_uri, discovery_url, jwt_lifetime …)
+      - ./config/app.ini:/etc/powonline/app.ini:ro
+      # Persistent upload storage
+      - uploads:/var/lib/powonline/uploads
+    expose:
+      - "8000"
+
+  # ---------------------------------------------------------------------------
+  # Frontend
+  #
+  # The frontend is a separate component.  In a typical production stack it is
+  # deployed independently (different image, different release cadence).
+  #
+  # To include it in this compose file:
+  #   1. Provide the image reference (registry / tag) via env vars, or replace
+  #      the `image:` line with a `build:` block pointing to the frontend
+  #      source tree.
+  #   2. Ensure POWONLINE_ALLOWED_ORIGINS on the `api` service includes the
+  #      public URL that browsers use to reach the frontend.
+  #   3. Point your reverse proxy to frontend:80 for the / path.
+  #
+  # frontend:
+  #   image: "${DOCKER_REGISTRY}/${DOCKER_REGISTRY_NAMESPACE}/powonline-frontend:${FRONTEND_VERSION}"
+  #   restart: unless-stopped
+  #   environment:
+  #     # The only runtime config the frontend needs — must be the public URL
+  #     # that end-user browsers can reach (not the internal container name).
+  #     BACKEND_URL: "https://api.powonline.example.com"
+  #   expose:
+  #     - "80"
+  # ---------------------------------------------------------------------------
+
+volumes:
+  db_data:
+  uploads:

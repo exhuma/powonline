@@ -63,6 +63,16 @@ services:
       - "traefik.http.routers.powonline-fe.tls.certresolver=myresolver"
 ```
 
+## Local Development / Smoke Testing
+
+To spin up the full stack locally (database + API, with optional frontend) for
+smoke-testing, see [Local Stack](./local-stack.md).  That guide covers:
+
+- Starting the stack with `docker compose`
+- Wiring in the frontend (dev server or container)
+- Admin bootstrapping
+- Available environment variables
+
 ## Identity Providers (OIDC)
 
 See the detailed configuration for each provider:
