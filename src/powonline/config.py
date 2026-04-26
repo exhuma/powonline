@@ -28,6 +28,12 @@ Legal / data-controller identity (used in auto-generated legal documents):
   POWONLINE_SITE_NAME           → [legal] site_name
   POWONLINE_SITE_URL            → [legal] site_url
   POWONLINE_CONTACT_EMAIL       → [legal] contact_email
+
+Asset storage:
+
+  POWONLINE_ASSET_DIR           → [app] asset_dir
+    Directory where uploaded event assets (e.g. favicons) are stored.
+    Defaults to /var/lib/powonline/assets when not set.
 """
 
 import os
@@ -58,6 +64,7 @@ def _apply_env_overrides(cfg: ConfigParser) -> None:
     _set("legal", "site_name", "POWONLINE_SITE_NAME")
     _set("legal", "site_url", "POWONLINE_SITE_URL")
     _set("legal", "contact_email", "POWONLINE_CONTACT_EMAIL")
+    _set("app", "asset_dir", "POWONLINE_ASSET_DIR")
 
 
 @lru_cache
@@ -79,3 +86,16 @@ def default() -> ConfigParser:
 
     _apply_env_overrides(cfg)
     return cfg
+
+
+def get_asset_dir() -> str:
+    """Return the filesystem path where event assets (favicons etc.) are stored.
+
+    Reads from [app] asset_dir in the INI config (or POWONLINE_ASSET_DIR env
+    var).  Falls back to /var/lib/powonline/assets when not configured.
+    """
+    try:
+        cfg = default()
+        return cfg.get("app", "asset_dir", fallback="/var/lib/powonline/assets")
+    except Exception:
+        return "/var/lib/powonline/assets"

@@ -1376,3 +1376,152 @@ async def test_anon_related_station_invalid_state(test_client: AsyncClient):
 # TODO:         "/station/station-blue/questionnaires/questionnaire_1"
 # TODO:     )
 # TODO:     self.assertEqual(response.status_code, 204, response.data)
+
+
+# ---------------------------------------------------------------------------
+# Event title & favicon tests
+# ---------------------------------------------------------------------------
+
+
+async def test_event_title_round_trip(dbsession, red_client: AsyncClient, seed):
+    """Setting a title on an event is persisted and returned."""
+    event_id = seed
+    response = await red_client.put(
+        f"/events/{event_id}",
+        json={
+            "name": "event-1",
+            "title": "My Custom Site",
+            "time_range": {
+                "start": "2020-01-01T00:00:00Z",
+                "end": "2099-12-31T00:00:00Z",
+            },
+        },
+    )
+    assert response.status_code == 200, response.content
+    data = response.json()
+    assert data["title"] == "My Custom Site"
+
+
+async def test_event_title_nullable(dbsession, red_client: AsyncClient, seed):
+    """Omitting title leaves it null."""
+    event_id = seed
+    response = await red_client.put(
+        f"/events/{event_id}",
+        json={
+            "name": "event-1",
+            "time_range": {
+                "start": "2020-01-01T00:00:00Z",
+                "end": "2099-12-31T00:00:00Z",
+            },
+        },
+    )
+    assert response.status_code == 200, response.content
+    data = response.json()
+    assert data["title"] is None
+
+
+async def test_favicon_not_found(dbsession, red_client: AsyncClient, seed):
+    """GET /events/{id}/favicon returns 404 when no favicon exists."""
+    event_id = seed
+    response = await red_client.get(f"/events/{event_id}/favicon")
+    assert response.status_code == 404
+
+
+async def test_favicon_upload_and_serve(
+    tmp_path, monkeypatch, dbsession, red_client: AsyncClient, seed
+):
+    """Upload a PNG favicon and retrieve it."""
+    import powonline.config as cfg_module
+    import powonline.resources.event as ev_module
+
+    monkeypatch.setattr(cfg_module, "get_asset_dir", lambda: str(tmp_path))
+    monkeypatch.setattr(ev_module, "get_asset_dir", lambda: str(tmp_path))
+
+    event_id = seed
+    png_bytes = (
+        b"\x89PNG\r\n\x1a\n"
+        b"\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+        b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx"
+        b"\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18\xd8N"
+        b"\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+
+    upload_response = await red_client.post(
+        f"/events/{event_id}/favicon",
+        files={"file": ("favicon.png", png_bytes, "image/png")},
+    )
+    assert upload_response.status_code == 204, upload_response.content
+
+    get_response = await red_client.get(f"/events/{event_id}/favicon")
+    assert get_response.status_code == 200
+    assert get_response.headers["content-type"].startswith("image/png")
+    assert get_response.content == png_bytes
+
+
+async def test_favicon_reject_bad_extension(
+    tmp_path, monkeypatch, dbsession, red_client: AsyncClient, seed
+):
+    """Uploading a .gif is rejected with 400."""
+    import powonline.config as cfg_module
+    import powonline.resources.event as ev_module
+
+    monkeypatch.setattr(cfg_module, "get_asset_dir", lambda: str(tmp_path))
+    monkeypatch.setattr(ev_module, "get_asset_dir", lambda: str(tmp_path))
+
+    event_id = seed
+    response = await red_client.post(
+        f"/events/{event_id}/favicon",
+        files={"file": ("favicon.gif", b"GIF89a", "image/gif")},
+    )
+    assert response.status_code == 400
+
+
+async def test_favicon_delete(
+    tmp_path, monkeypatch, dbsession, red_client: AsyncClient, seed
+):
+    """Delete a favicon; subsequent GET returns 404."""
+    import powonline.config as cfg_module
+    import powonline.resources.event as ev_module
+
+    monkeypatch.setattr(cfg_module, "get_asset_dir", lambda: str(tmp_path))
+    monkeypatch.setattr(ev_module, "get_asset_dir", lambda: str(tmp_path))
+
+    event_id = seed
+    (tmp_path / "favicons").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "favicons" / f"{event_id}.ico").write_bytes(b"\x00\x00\x01\x00")
+
+    delete_response = await red_client.delete(f"/events/{event_id}/favicon")
+    assert delete_response.status_code == 204
+
+    get_response = await red_client.get(f"/events/{event_id}/favicon")
+    assert get_response.status_code == 404
+
+
+async def test_has_favicon_in_event_response(
+    tmp_path, monkeypatch, dbsession, red_client: AsyncClient, seed
+):
+    """Event response has has_favicon=True after upload, False before."""
+    import powonline.config as cfg_module
+    import powonline.resources.event as ev_module
+
+    monkeypatch.setattr(cfg_module, "get_asset_dir", lambda: str(tmp_path))
+    monkeypatch.setattr(ev_module, "get_asset_dir", lambda: str(tmp_path))
+
+    event_id = seed
+
+    list_before = await red_client.get("/events")
+    event_before = next(
+        (e for e in list_before.json()["items"] if e["id"] == event_id), None
+    )
+    assert event_before is not None
+    assert event_before["has_favicon"] is False
+
+    (tmp_path / "favicons").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "favicons" / f"{event_id}.png").write_bytes(b"fakepng")
+
+    list_after = await red_client.get("/events")
+    event_after = next(
+        (e for e in list_after.json()["items"] if e["id"] == event_id), None
+    )
+    assert event_after is not None
+    assert event_after["has_favicon"] is True

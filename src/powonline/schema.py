@@ -99,6 +99,8 @@ class EventSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
     name: str
+    title: str | None = None
+    has_favicon: bool = False
     time_range: TimeRange
     inserted: datetime | None = None
     updated: datetime | None = None
@@ -118,11 +120,13 @@ class EventSchema(BaseModel):
 
 class EventCreateSchema(BaseModel):
     name: str
+    title: str | None = None
     time_range: TimeRange
 
 
 class EventUpdateSchema(BaseModel):
     name: str | None = None
+    title: str | None = None
     time_range: TimeRange | None = None
 
 
