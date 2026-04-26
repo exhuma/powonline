@@ -1,6 +1,6 @@
 [project]
 name = "powonline"
-version = "2025.05.13"
+version = "2026.4.1"
 authors = [{ name = "Michel Albert", email = "michel@albert.lu" }]
 description = "Tracker for PowWow 2017"
 readme = "README.rst"
