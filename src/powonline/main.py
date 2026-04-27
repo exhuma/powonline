@@ -41,6 +41,7 @@ def create_app():
     error_handlers.register(app)
     app.include_router(routers.app.ROUTER)
     app.include_router(routers.auth.ROUTER)
+    app.include_router(routers.health.ROUTER)
     app.include_router(routers.legal.ROUTER)
     app.include_router(resources.assignment.ROUTER)
     app.include_router(resources.audit.ROUTER)

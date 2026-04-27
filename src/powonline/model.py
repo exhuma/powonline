@@ -331,6 +331,7 @@ class Event(Base, TimestampMixin):  # type: ignore
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(Unicode, unique=True, nullable=False)
+    title: Mapped[str | None] = mapped_column(Unicode, nullable=True)
     time_range: Mapped[Range[datetime]] = mapped_column(
         TSTZRANGE, nullable=False
     )

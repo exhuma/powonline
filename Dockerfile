@@ -31,6 +31,11 @@ COPY alembic.ini ./
 # =============================================================================
 FROM python:3.12-slim AS runtime
 
+# Bake the source commit SHA into the image so /healthz can report it.
+# Pass at build time with: --build-arg COMMIT_SHA=$(git rev-parse HEAD)
+ARG COMMIT_SHA=unknown
+ENV COMMIT_SHA=${COMMIT_SHA}
+
 # Create a non-root user/group for the application process.
 RUN groupadd --system appgroup \
     && useradd --system --gid appgroup --no-create-home appuser

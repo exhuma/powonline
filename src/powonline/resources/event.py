@@ -1,7 +1,19 @@
 import logging
+import os
+from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, Response
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    Response,
+    UploadFile,
+)
+from fastapi.responses import FileResponse
 from sqlalchemy.dialects.postgresql import Range
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +25,7 @@ from powonline.auth import (
     get_user,
     require_event_admin_user,
 )
+from powonline.config import get_asset_dir
 from powonline.dependencies import get_db
 from powonline.exc import NotFound
 
@@ -21,6 +34,28 @@ DOMAIN_ROUTER = APIRouter(tags=["event"])
 LOG = logging.getLogger(__name__)
 
 ALLOWED_MEMBER_ROLES = {EVENT_OWNER_ROLE, EVENT_CO_ADMIN_ROLE}
+ALLOWED_FAVICON_EXTENSIONS = {".ico", ".png"}
+FAVICON_CONTENT_TYPES = {
+    ".ico": "image/x-icon",
+    ".png": "image/png",
+}
+
+
+def _favicon_path(event_id: int) -> Path | None:
+    """Return the path to the stored favicon for *event_id*, or None."""
+    base = Path(get_asset_dir()) / "favicons"
+    for ext in (".ico", ".png"):
+        candidate = base / f"{event_id}{ext}"
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _event_schema(event: Any) -> schema.EventSchema:
+    """Build an EventSchema, computing has_favicon from disk."""
+    obj = schema.EventSchema.model_validate(event)
+    obj.has_favicon = _favicon_path(event.id) is not None
+    return obj
 
 
 def _convert_time_range_for_db(data: dict[str, Any]) -> dict[str, Any]:
@@ -50,7 +85,7 @@ async def list_events(
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> schema.ListResult[schema.EventSchema]:
     items = await core.Event.all(session)
-    output = [schema.EventSchema.model_validate(item) for item in items]
+    output = [_event_schema(item) for item in items]
     return schema.ListResult(items=output)
 
 
@@ -66,7 +101,7 @@ async def create_event(
         data=data,
         owner_name=auth_user.name,
     )
-    return schema.EventSchema.model_validate(output)
+    return _event_schema(output)
 
 
 @ROUTER.get("/{event_id}")
@@ -79,7 +114,7 @@ async def get_event(
     output = await core.Event.get(session, event_id)
     if not output:
         raise NotFound("No such event")
-    return schema.EventSchema.model_validate(output)
+    return _event_schema(output)
 
 
 @ROUTER.put("/{event_id}")
@@ -100,7 +135,7 @@ async def update_event(
         existing,
         data,
     )
-    return schema.EventSchema.model_validate(updated)
+    return _event_schema(updated)
 
 
 @ROUTER.get("/{event_id}/members")
@@ -173,7 +208,7 @@ async def domain_lookup(
         raise HTTPException(
             status_code=404, detail="No event mapped to this domain"
         )
-    return schema.EventSchema.model_validate(event)
+    return _event_schema(event)
 
 
 # ---------------------------------------------------------------------------
@@ -222,4 +257,82 @@ async def remove_event_domain(
 ):
     _ = auth_user
     await core.EventDomain.delete(session, event_id, domain)
+    return Response(status_code=204)
+
+
+# ---------------------------------------------------------------------------
+# Per-event favicon management
+# ---------------------------------------------------------------------------
+
+
+@ROUTER.get("/{event_id}/favicon")
+async def get_event_favicon(event_id: int):
+    """Return the favicon file for an event (public, no auth required)."""
+    path = _favicon_path(event_id)
+    if path is None:
+        raise HTTPException(status_code=404, detail="No favicon for this event")
+    content_type = FAVICON_CONTENT_TYPES.get(
+        path.suffix, "application/octet-stream"
+    )
+    return FileResponse(str(path), media_type=content_type)
+
+
+@ROUTER.post("/{event_id}/favicon", status_code=204)
+async def upload_event_favicon(
+    auth_user: Annotated[User, Depends(require_event_admin_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+    event_id: int,
+    file: UploadFile = File(...),
+):
+    """Upload a favicon (.ico or .png) for an event (event admin only)."""
+    _ = auth_user
+    event = await core.Event.get(session, event_id)
+    if not event:
+        raise NotFound("No such event")
+
+    filename = file.filename or ""
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in ALLOWED_FAVICON_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type {ext!r}. Allowed: .ico, .png",
+        )
+
+    base = Path(get_asset_dir()) / "favicons"
+    base.mkdir(parents=True, exist_ok=True)
+
+    # Remove any existing favicon(s) for this event before saving the new one.
+    for old_ext in ALLOWED_FAVICON_EXTENSIONS:
+        old_path = base / f"{event_id}{old_ext}"
+        if old_path.exists():
+            old_path.unlink()
+
+    dest = base / f"{event_id}{ext}"
+    content = await file.read()
+    dest.write_bytes(content)
+    return Response(status_code=204)
+
+
+@ROUTER.delete("/{event_id}/favicon", status_code=204)
+async def delete_event_favicon(
+    auth_user: Annotated[User, Depends(require_event_admin_user)],
+    session: Annotated[AsyncSession, Depends(get_db)],
+    event_id: int,
+):
+    """Remove the favicon for an event (event admin only)."""
+    _ = auth_user
+    event = await core.Event.get(session, event_id)
+    if not event:
+        raise NotFound("No such event")
+
+    base = Path(get_asset_dir()) / "favicons"
+    removed = False
+    for ext in ALLOWED_FAVICON_EXTENSIONS:
+        path = base / f"{event_id}{ext}"
+        if path.exists():
+            path.unlink()
+            removed = True
+
+    if not removed:
+        raise HTTPException(status_code=404, detail="No favicon for this event")
     return Response(status_code=204)
