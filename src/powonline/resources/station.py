@@ -1,5 +1,5 @@
 import logging
-from typing import Annotated
+from typing import Annotated, Union
 
 from fastapi import APIRouter, Body, Depends, Response
 from fastapi.responses import JSONResponse
@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from powonline import core, schema
 from powonline.auth import (
     User,
+    get_optional_user,
     get_user,
     require_event_admin_user,
     require_event_mutation_access,
@@ -18,15 +19,34 @@ from powonline.exc import AccessDenied, AuthDeniedReason
 ROUTER = APIRouter(prefix="/events/{event_id}", tags=["station"])
 LOG = logging.getLogger(__name__)
 
+_CONTACT_PERMISSIONS = {"view_team_contact", "view_event_team_contact"}
+
+
+def _can_view_contact(user: User | None) -> bool:
+    if user is None:
+        return False
+    return bool(user.permissions & _CONTACT_PERMISSIONS)
+
 
 @ROUTER.get("/station")
 async def all_stations(
     session: Annotated[AsyncSession, Depends(get_db)],
     event_id: int,
-) -> schema.ListResult[schema.StationSchema]:
+    user: Annotated[User | None, Depends(get_optional_user)],
+) -> Union[
+    schema.ListResult[schema.StationSchema],
+    schema.ListResult[schema.StationSchemaPublic],
+]:
     items = await core.Station.all(session, event_id=event_id)
-    items = [schema.StationSchema.model_validate(item) for item in items]
-    return schema.ListResult(items=items)
+    if _can_view_contact(user):
+        return schema.ListResult(
+            items=[schema.StationSchema.model_validate(item) for item in items]
+        )
+    return schema.ListResult(
+        items=[
+            schema.StationSchemaPublic.model_validate(item) for item in items
+        ]
+    )
 
 
 @ROUTER.post("/station", status_code=201)

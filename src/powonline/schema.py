@@ -178,11 +178,6 @@ class JobSchema(BaseModel):
     args: dict[str, Any]
 
 
-class UserSchemaLeaky(UserSchema):
-    model_config = ConfigDict(from_attributes=True)
-    password: str = ""
-
-
 class QuestionnaireSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     name: str
@@ -203,9 +198,53 @@ class QuestionnaireSchema(BaseModel):
     )
 
 
+class TeamSchemaPublic(BaseModel):
+    """Minimal team representation returned to unauthenticated callers.
+
+    Only non-PII operational fields are included. Callers that need contact
+    details (contact, phone, email, comments, confirmation_key) must hold the
+    ``view_team_contact`` or ``view_event_team_contact`` permission.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+    name: str
+    order: int = 500
+    route_name: str | None = None
+    cancelled: bool = False
+    accepted: bool = False
+    completed: bool = False
+    planned_start_time: datetime | None = None
+
+
+class StationSchemaPublic(BaseModel):
+    """Minimal station representation returned to unauthenticated callers.
+
+    Contact details (contact, phone) are omitted.  Authenticated users with
+    ``view_team_contact`` or ``view_event_team_contact`` receive the full
+    :class:`StationSchema` instead.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+    name: str
+    is_start: bool = False
+    is_end: bool = False
+    order: int = 500
+
+
 class AssignmentMap(BaseModel, frozen=True):
     teams: dict[str, list[TeamSchema]]
     stations: dict[str, list[StationSchema]]
+
+
+class AssignmentMapPublic(BaseModel, frozen=True):
+    """Assignment map variant returned to unauthenticated callers.
+
+    Embeds :class:`TeamSchemaPublic` and :class:`StationSchemaPublic` so that
+    no PII is exposed in the public route-assignment overview.
+    """
+
+    teams: dict[str, list[TeamSchemaPublic]]
+    stations: dict[str, list[StationSchemaPublic]]
 
 
 class AuditLogEntry(BaseModel, frozen=True):

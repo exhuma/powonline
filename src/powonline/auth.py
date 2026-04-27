@@ -45,11 +45,13 @@ PERMISSION_MAP = {
         "manage_event",
         "manage_event_members",
         "bypass_event_window",
+        "view_event_team_contact",
     },
     "event_co_admin": {
         "manage_event",
         "manage_event_members",
         "bypass_event_window",
+        "view_event_team_contact",
     },
 }
 
