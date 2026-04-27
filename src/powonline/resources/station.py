@@ -1,5 +1,5 @@
 import logging
-from typing import Annotated, Union
+from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, Response
 from fastapi.responses import JSONResponse
@@ -15,6 +15,7 @@ from powonline.auth import (
 )
 from powonline.dependencies import get_db
 from powonline.exc import AccessDenied, AuthDeniedReason
+from powonline.schema import pii_responses
 
 ROUTER = APIRouter(prefix="/events/{event_id}", tags=["station"])
 LOG = logging.getLogger(__name__)
@@ -28,25 +29,26 @@ def _can_view_contact(user: User | None) -> bool:
     return bool(user.permissions & _CONTACT_PERMISSIONS)
 
 
-@ROUTER.get("/station")
+@ROUTER.get(
+    "/station",
+    response_model=None,
+    responses=pii_responses(schema.StationListFull, schema.StationListPublic),
+)
 async def all_stations(
     session: Annotated[AsyncSession, Depends(get_db)],
     event_id: int,
     user: Annotated[User | None, Depends(get_optional_user)],
-) -> Union[
-    schema.ListResult[schema.StationSchema],
-    schema.ListResult[schema.StationSchemaPublic],
-]:
+) -> Response:
     items = await core.Station.all(session, event_id=event_id)
     if _can_view_contact(user):
-        return schema.ListResult(
-            items=[schema.StationSchema.model_validate(item) for item in items]
+        result = schema.StationListFull(
+            items=[schema.StationSchema.model_validate(s) for s in items]
         )
-    return schema.ListResult(
-        items=[
-            schema.StationSchemaPublic.model_validate(item) for item in items
-        ]
-    )
+    else:
+        result = schema.StationListPublic(
+            items=[schema.StationSchemaPublic.model_validate(s) for s in items]
+        )
+    return JSONResponse(content=result.model_dump(mode="json"))
 
 
 @ROUTER.post("/station", status_code=201)

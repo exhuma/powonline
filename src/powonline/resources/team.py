@@ -1,13 +1,15 @@
 import logging
-from typing import Annotated, Union
+from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, Response
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from powonline import core, schema, sse
 from powonline.auth import User, get_optional_user, require_event_admin_user
 from powonline.dependencies import get_db
 from powonline.exc import NotFound
+from powonline.schema import pii_responses
 
 ROUTER = APIRouter(prefix="", tags=["team"])
 LOG = logging.getLogger(__name__)
@@ -22,17 +24,18 @@ def _can_view_contact(user: User | None) -> bool:
     return bool(user.permissions & _CONTACT_PERMISSIONS)
 
 
-@ROUTER.get("/events/{event_id}/team")
+@ROUTER.get(
+    "/events/{event_id}/team",
+    response_model=None,
+    responses=pii_responses(schema.TeamListFull, schema.TeamListPublic),
+)
 async def query_teams_for_event(
     session: Annotated[AsyncSession, Depends(get_db)],
     event_id: int,
     user: Annotated[User | None, Depends(get_optional_user)],
     quickfilter: str = "",
     assigned_to_route: str = "",
-) -> Union[
-    schema.ListResult[schema.TeamSchema],
-    schema.ListResult[schema.TeamSchemaPublic],
-]:
+) -> Response:
     if quickfilter:
         func_name = "quickfilter_%s" % quickfilter
         filter_func = getattr(core.Team, func_name, None)
@@ -50,10 +53,14 @@ async def query_teams_for_event(
         teams = await core.Team.all(session, event_id=event_id)
 
     if _can_view_contact(user):
-        output = [schema.TeamSchema.model_validate(item) for item in teams]
-        return schema.ListResult(items=output)
-    output = [schema.TeamSchemaPublic.model_validate(item) for item in teams]
-    return schema.ListResult(items=output)
+        result = schema.TeamListFull(
+            items=[schema.TeamSchema.model_validate(t) for t in teams]
+        )
+    else:
+        result = schema.TeamListPublic(
+            items=[schema.TeamSchemaPublic.model_validate(t) for t in teams]
+        )
+    return JSONResponse(content=result.model_dump(mode="json"))
 
 
 @ROUTER.post("/events/{event_id}/team", status_code=201)
@@ -116,19 +123,25 @@ async def delete_team_for_event(
     return Response(None, 204)
 
 
-@ROUTER.get("/events/{event_id}/team/{name}")
+@ROUTER.get(
+    "/events/{event_id}/team/{name}",
+    response_model=None,
+    responses=pii_responses(schema.TeamSchema, schema.TeamSchemaPublic),
+)
 async def query_team_info_for_event(
     session: Annotated[AsyncSession, Depends(get_db)],
     event_id: int,
     name: str,
     user: Annotated[User | None, Depends(get_optional_user)],
-) -> Union[schema.TeamSchema, schema.TeamSchemaPublic]:
+) -> Response:
     team = await core.Team.get(session, name, event_id=event_id)
     if not team:
         raise NotFound("No such team")
     if _can_view_contact(user):
-        return schema.TeamSchema.model_validate(team)
-    return schema.TeamSchemaPublic.model_validate(team)
+        result = schema.TeamSchema.model_validate(team)
+    else:
+        result = schema.TeamSchemaPublic.model_validate(team)
+    return JSONResponse(content=result.model_dump(mode="json"))
 
 
 @ROUTER.get("/events/{event_id}/team/{team_name}/stations/{station_name}")
@@ -151,15 +164,27 @@ async def query_team_station_assignment(
         return schema.TeamStateInfo(state=schema.TeamState.UNKNOWN)
 
 
-@ROUTER.get("/events/{event_id}/team/{team_name}/stations")
+@ROUTER.get(
+    "/events/{event_id}/team/{team_name}/stations",
+    response_model=None,
+    responses=pii_responses(schema.StationListFull, schema.StationListPublic),
+)
 async def get_stations_assigned_to_team(
     session: Annotated[AsyncSession, Depends(get_db)],
     event_id: int,
     team_name: str,
     user: Annotated[User | None, Depends(get_optional_user)],
-) -> Union[list[schema.StationSchema], list[schema.StationSchemaPublic]]:
+) -> Response:
     items = await core.Team.stations(session, team_name, event_id=event_id)
     ordered = sorted(items, key=lambda x: x.name)
     if _can_view_contact(user):
-        return [schema.StationSchema.model_validate(item) for item in ordered]
-    return [schema.StationSchemaPublic.model_validate(item) for item in ordered]
+        result = schema.StationListFull(
+            items=[schema.StationSchema.model_validate(s) for s in ordered]
+        )
+    else:
+        result = schema.StationListPublic(
+            items=[
+                schema.StationSchemaPublic.model_validate(s) for s in ordered
+            ]
+        )
+    return JSONResponse(content=result.model_dump(mode="json"))

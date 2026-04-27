@@ -6,6 +6,39 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
+def pii_responses(*models: type[BaseModel]) -> dict:
+    """Build a FastAPI ``responses`` dict advertising a ``oneOf`` across *models*.
+
+    Use this on endpoints that return different schemas depending on whether the
+    caller has PII-access permissions.  Pass the models in the order you want
+    them to appear in the Swagger UI (privileged shape first).
+
+    Example::
+
+        @ROUTER.get(
+            "/events/{event_id}/team",
+            response_model=None,
+            responses=pii_responses(TeamListFull, TeamListPublic),
+        )
+        async def query_teams_for_event(...) -> Response:
+            ...
+    """
+    return {
+        200: {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "oneOf": [
+                            {"$ref": f"#/components/schemas/{m.__name__}"}
+                            for m in models
+                        ]
+                    }
+                }
+            }
+        }
+    }
+
+
 class ErrorType(Enum):
     INVALID_SCHEMA = "invalid-schema"
 
@@ -293,6 +326,29 @@ class ErrorMessage(BaseModel, frozen=True):
 
 class ListResult[T](BaseModel, frozen=True):
     items: list[T]
+
+
+# ---------------------------------------------------------------------------
+# Named list wrappers for dual-schema (PII / public) endpoints.
+# These subclasses exist solely to give the OpenAPI component registry stable,
+# readable names so that pii_responses() $ref entries resolve correctly.
+# ---------------------------------------------------------------------------
+
+
+class TeamListFull(ListResult[TeamSchema]):
+    """Full team list returned to callers with PII-access permission."""
+
+
+class TeamListPublic(ListResult[TeamSchemaPublic]):
+    """Redacted team list returned to unauthenticated / unprivileged callers."""
+
+
+class StationListFull(ListResult[StationSchema]):
+    """Full station list returned to callers with PII-access permission."""
+
+
+class StationListPublic(ListResult[StationSchemaPublic]):
+    """Redacted station list returned to unauthenticated / unprivileged callers."""
 
 
 class SessionInfo(BaseModel, frozen=True):
