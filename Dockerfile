@@ -50,6 +50,11 @@ COPY --from=build /app/alembic.ini /alembic/alembic.ini
 # Copy entrypoint scripts from the repository.
 COPY containers/main/resources/start.bash /start.bash
 COPY containers/main/resources/migrate.bash /migrate.bash
+COPY containers/main/resources/seed.bash /seed.bash
+
+# Copy scripts that are run inside the container but are not part of the
+# installed package (e.g. data-seeding utilities).
+COPY scripts/ /scripts/
 
 # Rewrite shebangs in venv scripts that were baked with the build-stage path
 # (/app/.venv/...) so they resolve correctly from /opt/powonline/... at runtime.
@@ -59,7 +64,7 @@ RUN find /opt/powonline/bin -maxdepth 1 -type f \
 
 # Prepare a writable uploads directory owned by the application user.
 # At runtime, mount a named volume over /var/lib/powonline/uploads.
-RUN chmod +x /start.bash /migrate.bash \
+RUN chmod +x /start.bash /migrate.bash /seed.bash \
     && chown -R appuser:appgroup /alembic \
     && mkdir -p /var/lib/powonline/uploads \
     && chown -R appuser:appgroup /var/lib/powonline
