@@ -13,18 +13,6 @@ def develop(context):
 
 
 @task
-def build_docker(ctx, datever, environment="staging"):  # type: ignore
-    tag = f"registry.digitalocean.com/michel-albert/powonline-api:{datever}"
-    ctx.run(f"docker build -t {tag} .", replace_env=False, pty=True)
-
-
-@task
-def push(ctx, datever, environment="staging"):  # type: ignore
-    tag = f"registry.digitalocean.com/michel-albert/powonline-api:{datever}"
-    ctx.run(f"docker push {tag}", pty=True, replace_env=False)
-
-
-@task
 def run(context):
     """
     Run a development server
