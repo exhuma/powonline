@@ -401,8 +401,8 @@ class OauthConnection(Base, TimestampMixin):  # type: ignore
     access_token: Mapped[str | None] = mapped_column(Unicode(255))
     secret: Mapped[str | None] = mapped_column(Unicode(255))
     display_name: Mapped[str | None] = mapped_column(Unicode(255))
-    profile_url: Mapped[str | None] = mapped_column(Unicode(512))
-    image_url: Mapped[str | None] = mapped_column(Unicode(512))
+    profile_url: Mapped[str | None] = mapped_column(Unicode)
+    image_url: Mapped[str | None] = mapped_column(Unicode)
     rank: Mapped[int | None] = mapped_column()
 
     user: Mapped["User"] = relationship(
