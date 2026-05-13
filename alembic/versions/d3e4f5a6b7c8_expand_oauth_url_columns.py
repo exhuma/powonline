@@ -24,13 +24,13 @@ def upgrade() -> None:
     op.alter_column(
         "oauth_connection",
         "profile_url",
-        type_=sa.Unicode(),
+        type_=sa.Unicode(2048),
         existing_type=sa.Unicode(512),
     )
     op.alter_column(
         "oauth_connection",
         "image_url",
-        type_=sa.Unicode(),
+        type_=sa.Unicode(2048),
         existing_type=sa.Unicode(512),
     )
 
@@ -40,11 +40,11 @@ def downgrade() -> None:
         "oauth_connection",
         "image_url",
         type_=sa.Unicode(512),
-        existing_type=sa.Unicode(),
+        existing_type=sa.Unicode(2048),
     )
     op.alter_column(
         "oauth_connection",
         "profile_url",
         type_=sa.Unicode(512),
-        existing_type=sa.Unicode(),
+        existing_type=sa.Unicode(2048),
     )
